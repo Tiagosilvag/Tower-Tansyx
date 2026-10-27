@@ -129,8 +129,6 @@ class TranscriptSource implements ConversationSource {
       entries = entries.slice(-keep);
       dropped = true;
     }
-    // TEMPORARIO (diagnostico): remover junto com o log de sourceFor.
-    log.info(`[diag] load agent=${this.agentId} path=${this.tail.path} offset=${offset} entradas=${entries.length}`);
     return { agentId: this.agentId, entries, truncated: offset > 0 || dropped };
   }
 
@@ -292,8 +290,6 @@ export class TerminalStreams {
       const path = this.opts.transcriptPathOf(agentId);
       if (!path) return tr('transcript do agente não encontrado');
       const parserFor = this.opts.parserFor;
-      // TEMPORARIO (diagnostico): remover depois de achar por que o init vem vazio.
-      log.info(`[diag] stream agent=${agentId} path=${path} parserProprio=${parserFor ? !!parserFor(agentId) : 'sem parserFor'}`);
       const createParser = parserFor ? () => parserFor(agentId) ?? this.createParser() : this.createParser;
       const o = { transcriptPathOf: this.opts.transcriptPathOf, createParser, initTailBytes: this.initTailBytes, initEntries: this.initEntries };
       return new TranscriptSource(agentId, path, o, this.pollMs);

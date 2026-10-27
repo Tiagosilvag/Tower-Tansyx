@@ -744,3 +744,45 @@ describe('ClaudeWatcher — shell lançado no começo de um transcript maior que
     }
   });
 });
+
+
+describe('ClaudeWatcher — transcript que muda de pasta (git worktree)', () => {
+  let c: Ctx;
+  beforeEach(() => {
+    c = setup();
+  });
+  afterEach(() => {
+    c.watcher.stop();
+    c.tmp.cleanup();
+  });
+
+  // O Claude Code leva o transcript para a pasta do worktree quando a sessão entra num (EnterWorktree). Sem
+  // procurar de novo, o FileTail fica preso no caminho antigo e a conversa some da tela.
+  it('segue o transcript quando ele some da pasta antiga e reaparece noutra', () => {
+    const sid = 'sess-worktree';
+    const pid = 101;
+    const antes = c.transcript(sid);
+    writeLines(antes, [L.prompt('Arruma o total do carrinho', { at: c.now() - 5000 })]);
+    c.openSession(pid, sid);
+    c.watcher.boot();
+    c.office.commit();
+    const id = `.claude:${pid}`;
+    expect(c.agent(id)?.activity?.text).toBeDefined();
+
+    // A sessão entra no worktree: o arquivo muda de pasta e ganha linhas novas.
+    const worktree = `${CWD}/.claude/worktrees/ajuste`;
+    const depois = join(c.dir, 'projects', encodeCwd(worktree), `${sid}.jsonl`);
+    mkdirSync(join(depois, '..'), { recursive: true });
+    writeLines(depois, [
+      L.prompt('Arruma o total do carrinho', { at: c.now() - 5000 }),
+      L.assistant([L.tool('r9', 'Read', { file_path: `${worktree}/src/Total.tsx` })], { at: c.now() - 1000 }),
+    ]);
+    rmSync(antes);
+
+    c.advance(5_000);
+    c.poll();
+    c.office.commit();
+
+    expect(c.agent(id)?.activity?.text).toBe('Lendo Total.tsx');
+  });
+});

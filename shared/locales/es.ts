@@ -3282,4 +3282,5 @@ export const ES: Readonly<Record<string, string>> = {
   "Retomando…": "Retomando…",
   "Abre esta conversa de novo num terminal daqui, de onde ela parou": "Abre esta conversación de nuevo en una terminal de aquí, desde donde se quedó",
   "retomar sessão encerrada está desligado": "retomar una sesión terminada está desactivado",
+  "Transcript da sessão {0} mudou de pasta; relendo em {1}.": "El transcript de la sesión {0} cambió de carpeta; releyendo desde {1}.",
 };
