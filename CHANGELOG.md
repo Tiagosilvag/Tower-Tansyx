@@ -16,7 +16,9 @@ do meio (0.**3**.0).
   abre a mesma conversa num terminal daqui (`claude --resume`), de onde ela parou — antes só dava pelo terminal do
   computador. O `POST /api/pty` aceita `resume` e só retoma quando o transcript daquela sessão está mesmo na pasta
   daquela conta, conferido pelo histórico; sem essa conferência a rota viraria um `claude --resume <qualquer id>`.
-  O botão não aparece quando o transcript não traz a pasta do projeto.
+  O botão não aparece quando o transcript não traz a pasta do projeto. Quem decide a pasta é o servidor, pela de
+  onde a sessão rodou por último: uma sessão que mudou de pasta no meio (o agente criou um git worktree) retoma no
+  worktree, não no projeto onde começou — era o que fazia o `claude --resume` abrir conversa nova em silêncio.
 
 - **Novo agente: escolher em qual conta do Claude Code a sessão começa.** Com mais de uma conta, o painel mostra
   **Conta** acima de **Projeto** e a sessão em segundo plano roda naquela conta (`CLAUDE_CONFIG_DIR`, a mesma regra do

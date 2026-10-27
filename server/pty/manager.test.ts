@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -369,7 +369,7 @@ describe('carregar o node-pty e achar o claude', () => {
 describe('retomar sessão encerrada', () => {
   const CWD = tmpdir();
 
-  function make(sessionExists?: (account: string, sessionId: string) => boolean) {
+  function make(sessionCwd?: (account: string, sessionId: string) => string | undefined) {
     const spawned: Array<{ args: readonly string[]; cwd: string }> = [];
     const m = new PtyManager({
       spawn: (_file, args, o) => {
@@ -380,31 +380,39 @@ describe('retomar sessão encerrada', () => {
       accounts: () => [{ id: '.claude', dir: '/home/eu/.claude', isDefault: true }],
       agent: () => undefined,
       onChange: () => {},
-      ...(sessionExists ? { sessionExists } : {}),
+      ...(sessionCwd ? { sessionCwd } : {}),
     });
     return { m, spawned };
   }
 
   it('retoma quando o histórico confirma a sessão naquela conta', () => {
-    const { m, spawned } = make(() => true);
+    const { m, spawned } = make(() => CWD);
     m.create({ cwd: CWD, resume: SESSION });
     expect(spawned[0].args).toContain('--resume');
     expect(spawned[0].args).toContain(SESSION);
   });
 
   it('sem resume, abre sessão nova', () => {
-    const { m, spawned } = make(() => true);
+    const { m, spawned } = make(() => CWD);
     m.create({ cwd: CWD });
     expect(spawned[0].args).not.toContain('--resume');
   });
 
   it('recusa sessão que não é daquela conta', () => {
-    const { m } = make(() => false);
+    const { m } = make(() => undefined);
     expect(() => m.create({ cwd: CWD, resume: SESSION })).toThrow();
   });
 
   it('sem histórico, retomar fica desligado', () => {
     const { m } = make();
     expect(() => m.create({ cwd: CWD, resume: SESSION })).toThrow();
+  });
+
+  it('usa a pasta de onde a sessão rodou, não a que veio no pedido (worktree)', () => {
+    const real = mkdtempSync(join(tmpdir(), 'worktree-'));
+    const { m, spawned } = make(() => real);
+    m.create({ cwd: CWD, resume: SESSION });
+    expect(spawned[0].cwd).toBe(realpathSync(real));
+    expect(spawned[0].args).toContain(SESSION);
   });
 });

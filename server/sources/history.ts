@@ -3,7 +3,7 @@
 // <config>/projects/<projeto>/<sessionId>.jsonl (no Docker, a pasta projects/ de cada conta montada só para leitura). De cada arquivo lê só o começo (projeto, primeira
 // atividade e o primeiro prompt) e o fim (título e última atividade), nunca o arquivo inteiro, e guarda o
 // resultado enquanto o mtime e o tamanho não mudam. Subagentes (<sessão>/subagents/) ficam de fora.
-import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readdirSync, readSync, realpathSync, statSync } from 'node:fs';
 import { open, readdir, stat } from 'node:fs/promises';
 import { join, sep } from 'node:path';
 import { truncate } from '../../shared/activity';
@@ -285,6 +285,31 @@ function projectOf(lines: readonly string[]): string | undefined {
     }
   }
   return undefined;
+}
+
+/**
+ * O `cwd` da ÚLTIMA linha que o traz: numa sessão que mudou de pasta no meio (o agente criou um git worktree), é
+ * onde ela está agora — e é essa pasta que o `claude --resume` precisa, não a do começo (que o `project` guarda).
+ */
+export function currentCwdOf(path: string, tailBytes = TAIL_RETRY_BYTES): string | undefined {
+  let text: string;
+  try {
+    const size = statSync(path).size;
+    const start = Math.max(0, size - tailBytes);
+    const fd = openSync(path, 'r');
+    try {
+      const buf = Buffer.alloc(Math.min(size, tailBytes));
+      readSync(fd, buf, 0, buf.length, start);
+      text = buf.toString('utf8');
+    } finally {
+      closeSync(fd);
+    }
+  } catch {
+    return undefined;
+  }
+  // O recorte do fim do arquivo pode partir a primeira linha ao meio: descarta quando ela não começa um JSON.
+  const lines = splitLines(text, !text.startsWith('{'), false);
+  return projectOf([...lines].reverse());
 }
 
 /** Sem nenhum título no transcript: o primeiro prompt (já limpo e com segredos mascarados pelo parser do terminal). */

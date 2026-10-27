@@ -72,8 +72,11 @@ export interface PtyManagerOptions {
   disabledReason?: string;
   claudeBin: string;
   accounts: () => PtyAccount[];
-  /** Confere se a sessão encerrada existe naquela conta; ausente = retomar fica desligado. */
-  sessionExists?: (account: string, sessionId: string) => boolean;
+  /**
+   * A pasta de onde a sessão encerrada rodou por último, naquela conta; undefined = não existe ali. Serve de
+   * conferência (sem ela, retomar fica desligado) e de fonte do `cwd` certo.
+   */
+  sessionCwd?: (account: string, sessionId: string) => string | undefined;
   agent: (id: string) => PtyAgentRef | undefined;
   onChange: () => void;
   env?: NodeJS.ProcessEnv;
@@ -228,10 +231,14 @@ export class PtyManager {
    * uma sessão encerrada daquela conta (`claude --resume`), mantendo a conversa.
    */
   create(p: { cwd: unknown; account?: unknown; resume?: unknown; cols?: unknown; rows?: unknown }): PtyInfo {
-    // TEMPORARIO (diagnostico): remover depois de achar por que o resume nao chega.
-    log.info(`[diag] create resume=${JSON.stringify(p.resume)} tipo=${typeof p.resume} temSessionExists=${!!this.opts.sessionExists}`);
-    const plan = this.plan(p, this.takeovers.size);
+    let plan = this.plan(p, this.takeovers.size);
     const resume = this.resumeOf(p.resume, plan.account.id);
+    // A sessão pode ter mudado de pasta no meio (o agente criou um git worktree): quem manda é a pasta de onde ela
+    // rodou por último, não a que o pedido trouxe — o `claude --resume` procura as sessões da pasta atual.
+    if (resume) {
+      const real = this.opts.sessionCwd?.(plan.account.id, resume);
+      if (real && real !== plan.cwd) plan = this.plan({ ...p, cwd: real }, this.takeovers.size);
+    }
     return this.spawn(plan, resume ? { resume } : {});
   }
 
@@ -242,8 +249,8 @@ export class PtyManager {
   private resumeOf(raw: unknown, account: string): string | undefined {
     if (raw === undefined || raw === null || raw === '') return undefined;
     if (typeof raw !== 'string') throw new PtyError(400, tr('id de sessão inválido'));
-    if (!this.opts.sessionExists) throw new PtyError(503, tr('retomar sessão encerrada está desligado'));
-    if (!this.opts.sessionExists(account, raw)) throw new PtyError(404, tr('sessão não encontrada'));
+    if (!this.opts.sessionCwd) throw new PtyError(503, tr('retomar sessão encerrada está desligado'));
+    if (!this.opts.sessionCwd(account, raw)) throw new PtyError(404, tr('sessão não encontrada'));
     return raw;
   }
 

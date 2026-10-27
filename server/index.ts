@@ -24,7 +24,7 @@ import { RoomAliases } from './model/room-aliases';
 import { createPtyRoutes } from './http/pty';
 import { claudeBinFrom, isExecutableFile, loadPty, PtyManager, type ScreenFactory, type SpawnPty } from './pty/manager';
 import { loadHeadlessScreen } from './pty/screen';
-import { openMainAgent, SessionHistory } from './sources/history';
+import { currentCwdOf, openMainAgent, SessionHistory } from './sources/history';
 import { HistorySet, SourceSet } from './sources/source';
 import { createPermissionRoutes } from './permissions/http';
 import { PermissionRegistry } from './permissions/registry';
@@ -312,7 +312,14 @@ const ptys = spawnPty
       claudeBin: claudeBin ?? 'claude',
       accounts: () => accounts.entries().map((a) => ({ id: a.id, dir: a.dir, isDefault: isDefaultDir(a.dir, config.home) })),
       // Retomar uma sessão encerrada: quem diz se ela existe naquela conta é o histórico (ele resolve links).
-      ...(history ? { sessionExists: (acc: string, sid: string) => !('status' in history.resolve(acc, sid)) } : {}),
+      ...(history
+        ? {
+            sessionCwd: (acc: string, sid: string) => {
+              const r = history.resolve(acc, sid);
+              return 'status' in r ? undefined : currentCwdOf(r.path);
+            },
+          }
+        : {}),
       agent: (id) => {
         const a = office.get(id);
         return a && { id: a.id, kind: a.kind, account: a.account, sessionId: a.sessionId, cwd: office.roomPath(a.roomId) };
