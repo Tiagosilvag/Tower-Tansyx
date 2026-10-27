@@ -270,7 +270,7 @@ export class MessageComposer {
     }
     if (!paths.length) return;
     // Caminhos com espaço vão entre aspas, um por linha.
-    const list = paths.map((p) => (/\s/.test(p) ? `"${p}"` : p)).join('\n');
+    const list = paths.map((p) => `${tr('Anexo')}: ${/\s/.test(p) ? `"${p}"` : p}`).join('\n');
     const cur = key === this.agentId ? this.box.value : (this.drafts.get(key) ?? '');
     const next = `${cur}${cur && !cur.endsWith('\n') ? '\n' : ''}${list}\n`.slice(0, MESSAGE_MAX);
     this.drafts.set(key, next);

@@ -68,7 +68,8 @@ export class PtyPane {
       }
     }
     // Caminhos entre aspas quando têm espaço; o espaço final deixa continuar a digitar.
-    if (paths.length) this.send(`${paths.map((p) => (/\s/.test(p) ? `"${p}"` : p)).join(' ')} `);
+    // O prefixo evita que o caminho (que começa com /) no início do prompt seja tratado como comando.
+    if (paths.length) this.send(`${tr('Anexo')}: ${paths.map((p) => (/\s/.test(p) ? `"${p}"` : p)).join(' ')} `);
   }
 
   get ptyId(): string | null {
