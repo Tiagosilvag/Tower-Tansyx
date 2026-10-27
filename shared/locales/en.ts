@@ -3284,4 +3284,8 @@ export const EN: Readonly<Record<string, string>> = {
   "Anexo não enviado": "Attachment not sent",
   "arquivo": "file",
   "Transcript da sessão {0} mudou de pasta; relendo em {1}.": "Session {0} transcript moved to another folder; re-reading from {1}.",
+  "Anexar imagens ou arquivos (ou cole / solte aqui)": "Attach images or files (or paste / drop here)",
+  "Anexar imagens ou arquivos": "Attach images or files",
+  "{0} anexos adicionados à mensagem": "{0} attachments added to the message",
+  "Anexo adicionado à mensagem": "Attachment added to the message",
 };

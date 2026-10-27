@@ -5205,6 +5205,29 @@ button.ui-term__think:hover,
   color: var(--ui-danger, #ff8a8a);
 }
 
+/* Clipe de anexo ao lado do enviar: discreto, no tamanho do ícone. */
+.ui-msg__attach {
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ui-muted);
+  cursor: pointer;
+}
+
+.ui-msg__attach:hover {
+  color: var(--ui-text);
+}
+
+.ui-msg__attach[hidden] {
+  display: none;
+}
+
 /* No terminal: o botão fica na ponta da linha do prompt, discreto como o resto. */
 .ui-msg--terminal .ui-msg__send {
   align-self: end;

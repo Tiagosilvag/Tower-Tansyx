@@ -22,6 +22,10 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Anexar arquivos na caixa de mensagem.** Agentes sem terminal interativo (sessões em segundo plano, Codex)
+  ganham um clipe ao lado do **Enviar**, e a caixa aceita colar (Ctrl+V) e soltar imagens e arquivos. Eles são
+  gravados em `~/.habblaud/attachments` pelo novo `POST /api/messages/attachments` (mesmos limites do Novo agente) e o
+  caminho entra no texto da mensagem, de onde o agente lê. Vale a trava das mensagens (só pelo próprio computador).
 - **Anexar imagens e arquivos numa sessão em andamento.** No terminal interativo, colar (Ctrl+V) uma imagem ou
   arquivo, ou soltá-lo sobre a janela, grava o arquivo em `~/.habblaud/attachments` pelo novo
   `POST /api/pty/:id/attach` (mesmas regras de nome e tamanho dos anexos do Novo agente, 15 MB) e digita o caminho no

@@ -2,14 +2,17 @@
 // guard (http/guard.ts) já exigiu JSON e Origin local nos POST (contra CSRF).
 //
 //   POST /api/messages          (página)  {agentId, text}: 201 OutboxMessage (queued) | 400 | 404 | 409 | 429
+//   POST /api/messages/attachments (página) {name, type?, data (base64)}: 201 {path, name, size}; o caminho vai no texto
 //   GET  /api/messages/:id      (página)  situação da mensagem: 200 OutboxMessage | 404
 //   POST /api/mod/inbox         (plugin)  {session, account?}: 200 {messages: InboxMessage[]} (e marca a presença)
 //   POST /api/mod/inbox/ack     (plugin)  {session, results: [{id, ok, error?}]}: 200 {ok: true}
 //   POST /api/codex/bridge/poll (auxiliar do Codex no host, npm run codex:bridge)
 //                                         {}: 200 {messages: [{id, account, codexHome, thread, text}]} (marca a presença)
 //   POST /api/codex/bridge/ack  (auxiliar) {results: [{id, ok, error?}]}: 200 {ok: true}
+import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { HttpError, readJson, sendJson } from '../http/app';
+import { ATTACHMENT_BODY_MAX, attachmentsRoot, parseAttachment, writeAttachments } from '../spawn/attachments';
 import { InvalidRequest, MAX_OPEN, type MessageRegistry } from './registry';
 import { tr } from '../../shared/i18n';
 
@@ -41,6 +44,14 @@ export function createMessageRoutes(registry: MessageRegistry): (req: IncomingMe
     }
   };
 
+  // Arquivo colado ou anexado na caixa de mensagem: vai para o disco e a página põe o caminho no texto (o agente lê por ele).
+  const attach = async (req: IncomingMessage, res: ServerResponse) => {
+    const a = parseAttachment(await readJson(req, ATTACHMENT_BODY_MAX));
+    if ('error' in a) throw new HttpError(400, a.error);
+    const [path] = writeAttachments(attachmentsRoot(), randomUUID(), [a]);
+    sendJson(res, 201, { path, name: a.name, size: a.data.length });
+  };
+
   const inbox = async (req: IncomingMessage, res: ServerResponse) => {
     sendJson(res, 200, { messages: registry.inbox(await readJson(req)) });
   };
@@ -66,6 +77,7 @@ export function createMessageRoutes(registry: MessageRegistry): (req: IncomingMe
 
   return (req, res, path) => {
     if (path === '/api/messages') return post(req, res, send);
+    if (path === '/api/messages/attachments') return post(req, res, attach);
     if (path === '/api/mod/inbox') return post(req, res, inbox);
     if (path === '/api/mod/inbox/ack') return post(req, res, ack);
     if (path === '/api/codex/bridge/poll') return post(req, res, codexPoll);

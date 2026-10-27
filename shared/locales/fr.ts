@@ -3301,4 +3301,8 @@ export const FR: Readonly<Record<string, string>> = {
   "Anexo não enviado": "Pièce jointe non envoyée",
   "arquivo": "fichier",
   "Transcript da sessão {0} mudou de pasta; relendo em {1}.": "Le transcript de la session {0} a changé de dossier ; relecture depuis {1}.",
+  "Anexar imagens ou arquivos (ou cole / solte aqui)": "Joindre des images ou fichiers (ou coller / déposer ici)",
+  "Anexar imagens ou arquivos": "Joindre des images ou fichiers",
+  "{0} anexos adicionados à mensagem": "{0} pièces jointes ajoutées au message",
+  "Anexo adicionado à mensagem": "Pièce jointe ajoutée au message",
 };

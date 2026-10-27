@@ -56,8 +56,17 @@ function fileToBase64(file: Blob): Promise<string> {
 }
 
 /** Envia um arquivo ao computador (~/.habblaud/attachments) e devolve o caminho onde ficou. */
-export async function attachToPty(id: string, file: File): Promise<string> {
-  const r = await postPty<{ path: string }>(`/api/pty/${encodeURIComponent(id)}/attach`, {
+export function attachToPty(id: string, file: File): Promise<string> {
+  return uploadFile(`/api/pty/${encodeURIComponent(id)}/attach`, file);
+}
+
+/** O mesmo para a caixa de mensagem (agentes sem terminal interativo). */
+export function attachToMessage(file: File): Promise<string> {
+  return uploadFile('/api/messages/attachments', file);
+}
+
+async function uploadFile(url: string, file: File): Promise<string> {
+  const r = await postPty<{ path: string }>(url, {
     name: file.name || 'imagem.png',
     type: file.type,
     data: await fileToBase64(file),

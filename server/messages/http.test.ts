@@ -1,6 +1,7 @@
 // Mensagens pelo escritório pelas rotas de verdade (guard, app e server/messages/http.ts): a trava da config
 // (terminal + HABBLAUD_MENSAGENS), a trava das rotas (recurso desligado / Host que não é local), os status (400, 404,
 // 405, 409, 429), o fluxo completo página → caixa de entrada do plugin → confirmação → consulta, e o demo.
+import { readFileSync } from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -203,6 +204,30 @@ describe('rotas', () => {
     const full = await post(srv, '/api/messages', { agentId: MAIN, text: 'demais' });
     expect(full.status).toBe(429);
     expect(full.json).toMatchObject({ error: expect.stringMatching(/5 mensagens/) });
+  });
+
+  it('anexos: grava o arquivo em HABBLAUD_ATTACHMENTS_DIR e devolve o caminho; recusa arquivo vazio e a rota desligada', async () => {
+    const dir = tempDir();
+    const prev = process.env.HABBLAUD_ATTACHMENTS_DIR;
+    process.env.HABBLAUD_ATTACHMENTS_DIR = dir.dir;
+    try {
+      srv = await serveMessages();
+      const ok = await post(srv, '/api/messages/attachments', { name: '../foto.png', type: 'image/png', data: Buffer.from('png!').toString('base64') });
+      expect(ok.status).toBe(201);
+      const j = ok.json as { path: string; name: string; size: number };
+      expect(j).toMatchObject({ name: 'foto.png', size: 4 });
+      expect(j.path.startsWith(dir.dir)).toBe(true);
+      expect(readFileSync(j.path, 'utf8')).toBe('png!');
+      expect((await post(srv, '/api/messages/attachments', { name: 'a', data: '' })).status).toBe(400);
+      expect((await request(srv.base, '/api/messages/attachments')).status).toBe(405);
+      const off = await serveMessages({ enabled: false });
+      expect((await post(off, '/api/messages/attachments', { name: 'a', data: 'AAAA' })).status).toBe(403);
+      await off.close();
+    } finally {
+      if (prev === undefined) delete process.env.HABBLAUD_ATTACHMENTS_DIR;
+      else process.env.HABBLAUD_ATTACHMENTS_DIR = prev;
+      dir.cleanup();
+    }
   });
 
   it('caixa de entrada de sessão desconhecida: 200 com nenhuma mensagem (nunca 404)', async () => {

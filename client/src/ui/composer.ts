@@ -25,6 +25,8 @@ import {
 } from './composer-model';
 import type { UiContext } from './context';
 import { DictationButton, dictationAvailable, insertDictation } from './dictation';
+import { ICONS } from './icons';
+import { attachToMessage } from './ptyapi';
 import { h, setAttr, setHidden, setText, setTitle } from './dom';
 import { access } from '../net/access';
 import { tr } from '../../../shared/i18n';
@@ -64,6 +66,8 @@ export class MessageComposer {
   private dictTimer: ReturnType<typeof setTimeout> | null = null;
   /** Rascunho que recebe o ditado em andamento (o agente pode mudar enquanto o Mac transcreve). */
   private dictKey = '';
+  private attachBtn: HTMLButtonElement;
+  private fileInput: HTMLInputElement;
   private canDictate = false;
 
   constructor(
@@ -102,9 +106,40 @@ export class MessageComposer {
     );
     this.dictate.el.classList.add('ui-msg__mic');
     setHidden(this.dictate.el, true);
+    this.fileInput = h('input', { type: 'file', hidden: true, attrs: { multiple: true, 'aria-hidden': 'true', tabindex: '-1' } });
+    this.fileInput.addEventListener('change', () => {
+      void this.attachFiles([...(this.fileInput.files ?? [])]);
+      this.fileInput.value = '';
+    });
+    this.attachBtn = h('button', {
+      class: 'ui-msg__attach',
+      type: 'button',
+      title: tr('Anexar imagens ou arquivos (ou cole / solte aqui)'),
+      attrs: { 'aria-label': tr('Anexar imagens ou arquivos') },
+      on: { click: () => this.fileInput.click() },
+    });
+    const clip = h('span', { attrs: { 'aria-hidden': 'true' } });
+    clip.innerHTML = ICONS.attach;
+    this.attachBtn.append(clip);
+    // Colar (Ctrl+V) ou soltar arquivos na caixa: sobem para o computador e o caminho entra no texto.
+    this.box.addEventListener('paste', (e) => {
+      const files = [...(e.clipboardData?.files ?? [])];
+      if (!files.length) return;
+      e.preventDefault();
+      void this.attachFiles(files);
+    });
+    this.box.addEventListener('dragover', (e) => {
+      if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+    });
+    this.box.addEventListener('drop', (e) => {
+      const files = [...(e.dataTransfer?.files ?? [])];
+      if (!files.length) return;
+      e.preventDefault();
+      void this.attachFiles(files);
+    });
     this.row = h('div', { class: `ui-msg__row${term ? ' ui-term__prompt ui-term__prompt--mic' : ''}` });
     if (term) this.row.append(h('span', { class: 'ui-term__caret', text: '>', attrs: { 'aria-hidden': 'true' } }));
-    this.row.append(this.box, this.dictate.el, this.sendBtn);
+    this.row.append(this.box, this.attachBtn, this.fileInput, this.dictate.el, this.sendBtn);
     // Clique na "linha do prompt" (fora do botão) põe o cursor na caixa, como num terminal.
     this.row.addEventListener('mousedown', (e) => {
       if (e.target === this.row && !this.box.disabled) {
@@ -153,6 +188,7 @@ export class MessageComposer {
     setTitle(this.box, ready ? '' : mode.text);
     this.row.classList.toggle('is-disabled', !ready);
     setHidden(this.sendBtn, !ready);
+    setHidden(this.attachBtn, !ready);
     // Consulta em cache (30 s): o Mac pode instalar o Whisper ou parar o auxiliar com a página aberta.
     void dictationAvailable().then((ok) => {
       if (ok === this.canDictate) return;
@@ -216,6 +252,35 @@ export class MessageComposer {
       const cur = this.drafts.get(key) ?? '';
       this.drafts.set(key, insertDictation(cur, cur.length, cur.length, text).value.slice(0, MESSAGE_MAX));
     }
+  }
+
+  /** Sobe os arquivos e põe os caminhos no texto, depois do que já estava escrito. */
+  private async attachFiles(files: File[]): Promise<void> {
+    const key = this.agentId;
+    if (this.mode.kind !== 'ready' || !files.length) return;
+    const paths: string[] = [];
+    for (const [i, f] of files.entries()) {
+      this.sayDictation(files.length > 1 ? tr('Enviando anexos ({0} de {1})…', [i + 1, files.length]) : tr('Enviando o anexo…'));
+      try {
+        paths.push(await attachToMessage(f));
+      } catch (err) {
+        this.sayDictation(`${tr('Anexo não enviado')}: ${f.name || tr('arquivo')} — ${err instanceof Error ? err.message : ''}`, true);
+        if (!paths.length) return;
+      }
+    }
+    if (!paths.length) return;
+    // Caminhos com espaço vão entre aspas, um por linha.
+    const list = paths.map((p) => (/\s/.test(p) ? `"${p}"` : p)).join('\n');
+    const cur = key === this.agentId ? this.box.value : (this.drafts.get(key) ?? '');
+    const next = `${cur}${cur && !cur.endsWith('\n') ? '\n' : ''}${list}\n`.slice(0, MESSAGE_MAX);
+    this.drafts.set(key, next);
+    if (key === this.agentId) {
+      this.box.value = next;
+      this.resize();
+      this.syncButton();
+      this.box.focus({ preventScroll: true });
+    }
+    this.sayDictation(paths.length > 1 ? tr('{0} anexos adicionados à mensagem', [paths.length]) : tr('Anexo adicionado à mensagem'));
   }
 
   private sayDictation(text: string, error = false): void {
