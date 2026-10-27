@@ -228,6 +228,8 @@ export class PtyManager {
    * uma sessão encerrada daquela conta (`claude --resume`), mantendo a conversa.
    */
   create(p: { cwd: unknown; account?: unknown; resume?: unknown; cols?: unknown; rows?: unknown }): PtyInfo {
+    // TEMPORARIO (diagnostico): remover depois de achar por que o resume nao chega.
+    log.info(`[diag] create resume=${JSON.stringify(p.resume)} tipo=${typeof p.resume} temSessionExists=${!!this.opts.sessionExists}`);
     const plan = this.plan(p, this.takeovers.size);
     const resume = this.resumeOf(p.resume, plan.account.id);
     return this.spawn(plan, resume ? { resume } : {});
