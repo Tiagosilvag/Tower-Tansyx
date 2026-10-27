@@ -115,6 +115,7 @@ confiança) — e isso vale **por conta**.
 | `ERR_CONNECTION_TIMED_OUT` no `sslip.io` | O servidor não tem portas abertas: tudo entra pelo túnel. Testes por IP direto não servem |
 | `origem não permitida para o terminal` | Faltava `header_up Origin http://localhost` no Caddy |
 | **Restart não reiniciava nada** | `KillMode=process` mata só o processo principal, que com `ExecStart=npm start` era o **npm**, não o node. O node ficava órfão segurando a 4747 e todo restart falhava com "porta em uso". Corrigido com `ExecStart=/usr/bin/node dist/server/index.js` |
+| Conversa vazia na janela ao vivo | Transcript movido para a pasta do worktree; o watcher ficava preso no caminho antigo. Corrigido em `26a7e55` — ver 6b |
 
 A última custou horas de diagnóstico: o servidor antigo respondia a todos os testes, então nenhuma mudança
 parecia fazer efeito.
@@ -132,7 +133,10 @@ daqui" exige agente vivo. O `d196c60` corrigiu o caso que importava: uma sessão
 (o agente cria um git worktree) retoma **no worktree**, porque o servidor lê o `cwd` da última linha do
 transcript em vez de confiar no que o cliente manda.
 
-Ambas valem como contribuição para o upstream — o autor deixou o servidor meio-caminho pronto nos dois casos.
+**`26a7e55` — correção do transcript que muda de pasta.** Detalhada na seção 6b.
+
+As três valem como contribuição para o upstream: as duas primeiras porque o autor deixou o servidor
+meio-caminho pronto, e a terceira porque o teste demonstra o defeito.
 
 ### Limites conhecidos
 
@@ -141,38 +145,36 @@ Ambas valem como contribuição para o upstream — o autor deixou o servidor me
 - No Docker, escolher a conta é recusado (quem executa é o auxiliar do host).
 - Quando o pedido cai na tela do app do Claude, o link `claude://` não leva a conta — o painel avisa.
 
-## 6b. Bug em aberto: conversa vazia na janela ao vivo
+## 6b. Bug corrigido: conversa vazia na janela ao vivo
 
-**Sintoma (intermitente).** Clicar num agente abre a janela com "Nenhuma mensagem nesta sessão ainda",
-embora o escritório mostre o nome da tarefa e o "Concluiu em Xs" normalmente. Visto uma vez, numa sessão
-`kind: bg` (criada pelo Novo agente) que já estava ociosa havia ~56 min. Não reproduziu depois.
+**Sintoma.** Clicar num agente abria o terminal com "Nenhuma mensagem nesta sessão ainda", embora o
+escritório mostrasse a atividade normalmente e o histórico mostrasse a conversa inteira do mesmo arquivo.
+Parecia intermitente; só um restart do Habblaud contornava.
 
-**Contorno:** Encerrar + **Retomar**. A sessão vira interativa e a conversa aparece (vem do processo pelo
-PTY, não da leitura do transcript). A conversa nunca se perde: o transcript está sempre no disco.
+**Causa.** O Claude Code leva o transcript para a pasta do worktree quando a sessão entra num
+(`EnterWorktree`). O watcher resolvia o caminho **uma única vez** (`pumpMain`, só `if (!t.tail)`), então o
+`FileTail` ficava preso no arquivo antigo, que já não existia. O `poll()` do terminal troca de arquivo, mas
+só quando `transcriptPathOf` devolve caminho diferente — e ele devolve o caminho guardado, que nunca mudava.
+Daí a aparência de intermitência: só quebrava quando o agente criava um worktree no meio da sessão.
 
-**Já descartado, com evidência:**
+**Correção (`26a7e55`).** Quando a leitura devolve `missing`, o watcher procura o transcript de novo pelo id
+da sessão e troca o `FileTail`. O teste novo reproduz o cenário e falha sem a correção.
 
-| Suspeita | Por que não é |
+**Como foi encontrado.** Vale registrar o método, porque quatro hipóteses foram descartadas antes:
+
+| Hipótese | Como caiu |
 | --- | --- |
-| Localização do arquivo (worktree) | `resolveTranscript` (`sources/watcher.ts:438`) varre todas as pastas de `projects/` pelo id da sessão |
-| Chave do agente | Sessões indexadas como `${conta}:${pid}` (`watcher.ts:280`), o mesmo formato que a interface manda |
-| Parser | `GET /api/sessions/:conta/:id/terminal` renderizou a conversa inteira do mesmo arquivo, com o mesmo parser |
+| Localização do arquivo | `resolveTranscript` varre todas as pastas de `projects/` pelo id |
+| Chave do agente | `/api/snapshot` confirmou `.claude:<pid>`, o mesmo id que a interface usa |
+| Parser | `GET /api/sessions/:conta/:id/terminal` renderizou a conversa inteira do mesmo arquivo |
+| Filtro da interface | Trocar para "Tudo" não mudou nada |
 
-**Onde resta olhar:** a rota ao vivo, `GET /api/agents/:id/terminal` (`server/http/terminal.ts`), que usa
-`SourceSet.transcriptPathOf`. Suspeita principal: corrida entre abrir o stream e o watcher ter resolvido o
-`transcriptPath` daquela sessão.
+O que fechou foi um **build instrumentado**, logando caminho resolvido, offset e número de entradas: deu
+`entradas=0` antes do restart e `entradas=95` depois, com o mesmo caminho e o mesmo parser. Isso isolou o
+cache velho de todo o resto.
 
-**Se acontecer de novo, capture antes de mexer:**
-
-```bash
-ls -lt /root/.claude/sessions/*.json | head -3          # pid da sessão
-cat /root/.claude/sessions/<PID>.json                    # sessionId e cwd
-curl -s -H 'Host: localhost' 'http://127.0.0.1:4747/api/agents/.claude:<PID>/terminal' | head -c 500
-curl -s -H 'Host: localhost' 'http://127.0.0.1:4747/api/sessions/.claude/<SESSION_ID>/terminal' | head -c 500
-```
-
-As duas últimas lado a lado dizem tudo: se a de baixo traz conteúdo e a de cima vem vazia, está confirmado
-na rota ao vivo. É defeito do upstream, não das mudanças deste repositório.
+Lição que vale para o próximo: num sintoma intermitente, comparar a rota ao vivo com a do histórico (mesmo
+arquivo, mesmo parser) separa dados de estado em memória mais rápido do que ler código.
 
 ## 7. Pendências
 
@@ -182,7 +184,7 @@ na rota ao vivo. É defeito do upstream, não das mudanças deste repositório.
    reinstalar o serviço. Também circulou.
 3. **Cloudflare Access** no lugar do Basic Auth, quando puderem assinar o Zero Trust.
 4. **Migrar para um LXC isolado**, tirando o PTY de cima do hypervisor.
-5. **Mandar as duas funcionalidades como PR** para o upstream.
+5. **Mandar as duas funcionalidades e a correção como PR** para o upstream (ver 6 e 6b).
 6. `DEPLOY-COOLIFY.md` está superado — vale marcar ou remover.
 
 ## 8. Documentos relacionados
