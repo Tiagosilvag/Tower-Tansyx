@@ -141,6 +141,39 @@ Ambas valem como contribuição para o upstream — o autor deixou o servidor me
 - No Docker, escolher a conta é recusado (quem executa é o auxiliar do host).
 - Quando o pedido cai na tela do app do Claude, o link `claude://` não leva a conta — o painel avisa.
 
+## 6b. Bug em aberto: conversa vazia na janela ao vivo
+
+**Sintoma (intermitente).** Clicar num agente abre a janela com "Nenhuma mensagem nesta sessão ainda",
+embora o escritório mostre o nome da tarefa e o "Concluiu em Xs" normalmente. Visto uma vez, numa sessão
+`kind: bg` (criada pelo Novo agente) que já estava ociosa havia ~56 min. Não reproduziu depois.
+
+**Contorno:** Encerrar + **Retomar**. A sessão vira interativa e a conversa aparece (vem do processo pelo
+PTY, não da leitura do transcript). A conversa nunca se perde: o transcript está sempre no disco.
+
+**Já descartado, com evidência:**
+
+| Suspeita | Por que não é |
+| --- | --- |
+| Localização do arquivo (worktree) | `resolveTranscript` (`sources/watcher.ts:438`) varre todas as pastas de `projects/` pelo id da sessão |
+| Chave do agente | Sessões indexadas como `${conta}:${pid}` (`watcher.ts:280`), o mesmo formato que a interface manda |
+| Parser | `GET /api/sessions/:conta/:id/terminal` renderizou a conversa inteira do mesmo arquivo, com o mesmo parser |
+
+**Onde resta olhar:** a rota ao vivo, `GET /api/agents/:id/terminal` (`server/http/terminal.ts`), que usa
+`SourceSet.transcriptPathOf`. Suspeita principal: corrida entre abrir o stream e o watcher ter resolvido o
+`transcriptPath` daquela sessão.
+
+**Se acontecer de novo, capture antes de mexer:**
+
+```bash
+ls -lt /root/.claude/sessions/*.json | head -3          # pid da sessão
+cat /root/.claude/sessions/<PID>.json                    # sessionId e cwd
+curl -s -H 'Host: localhost' 'http://127.0.0.1:4747/api/agents/.claude:<PID>/terminal' | head -c 500
+curl -s -H 'Host: localhost' 'http://127.0.0.1:4747/api/sessions/.claude/<SESSION_ID>/terminal' | head -c 500
+```
+
+As duas últimas lado a lado dizem tudo: se a de baixo traz conteúdo e a de cima vem vazia, está confirmado
+na rota ao vivo. É defeito do upstream, não das mudanças deste repositório.
+
 ## 7. Pendências
 
 1. **Trocar a senha do Caddy** (`caddy hash-password` → editar o Caddyfile → `systemctl reload caddy`). A
