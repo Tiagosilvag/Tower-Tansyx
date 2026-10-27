@@ -3300,4 +3300,5 @@ export const FR: Readonly<Record<string, string>> = {
   "retomar sessão encerrada está desligado": "reprendre une session terminée est désactivé",
   "Anexo não enviado": "Pièce jointe non envoyée",
   "arquivo": "fichier",
+  "Transcript da sessão {0} mudou de pasta; relendo em {1}.": "Le transcript de la session {0} a changé de dossier ; relecture depuis {1}.",
 };

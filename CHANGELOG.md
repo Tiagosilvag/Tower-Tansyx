@@ -10,6 +10,16 @@ do meio (0.**3**.0).
 
 ## [Não lançado]
 
+### Corrigido
+
+- **A conversa somia da janela quando o agente entrava num git worktree.** Clicar no agente abria o terminal
+  com "Nenhuma mensagem nesta sessão ainda", embora o escritório mostrasse a atividade e o histórico
+  mostrasse a conversa inteira. O Claude Code leva o transcript para a pasta do worktree ao entrar num
+  (`EnterWorktree`), e o watcher resolvia o caminho uma única vez: o `FileTail` ficava preso no arquivo
+  antigo, que já não existia, e nada mais chegava à tela. Agora, quando o arquivo some, ele procura o
+  transcript de novo pelo id da sessão e segue de onde ele estiver — a sala também passa a mostrar a pasta
+  certa. Só um restart do Habblaud contornava isso antes.
+
 ### Adicionado
 
 - **Anexar imagens e arquivos numa sessão em andamento.** No terminal interativo, colar (Ctrl+V) uma imagem ou

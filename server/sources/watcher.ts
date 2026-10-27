@@ -456,6 +456,17 @@ export class ClaudeWatcher implements AgentSource {
     }
     for (let i = 0; i < 4; i++) {
       const r = t.tail.read();
+      // Arquivo sumiu: o Claude Code leva o transcript para outra pasta quando a sessão entra num git worktree
+      // (EnterWorktree). Sem procurar de novo, o FileTail fica preso no caminho antigo e a conversa some da tela.
+      if (r.missing) {
+        const path = this.resolveTranscript(t);
+        if (path && path !== t.tail.path) {
+          log.info(tr('Transcript da sessão {0} mudou de pasta; relendo em {1}.', [t.key, path]));
+          t.transcriptPath = path;
+          this.loadMain(t, path);
+        }
+        return;
+      }
       if (r.reset) {
         log.warn(tr('Transcript da sessão {0} foi truncado/substituído; relendo.', [t.key]));
         this.loadMain(t, t.tail.path);

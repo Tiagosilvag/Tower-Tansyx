@@ -3284,4 +3284,5 @@ export const ES: Readonly<Record<string, string>> = {
   "retomar sessão encerrada está desligado": "retomar una sesión terminada está desactivado",
   "Anexo não enviado": "Adjunto no enviado",
   "arquivo": "archivo",
+  "Transcript da sessão {0} mudou de pasta; relendo em {1}.": "El transcript de la sesión {0} cambió de carpeta; releyendo desde {1}.",
 };
