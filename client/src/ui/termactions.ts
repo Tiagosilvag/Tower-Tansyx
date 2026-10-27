@@ -1,7 +1,7 @@
 // Botões do topo da janela de terminal: "Assumir daqui" (sessão aberta noutro terminal: encerra lá e continua a
 // mesma conversa aqui, interativa) e "Encerrar". Os dois pedem um segundo clique.
 // Só para agentes principais reais (os do demo não têm processo) e com o terminal interativo ligado.
-import type { AgentInfo } from '../../../shared/types';
+import type { AgentInfo, RecentSession } from '../../../shared/types';
 import type { UiContext } from './context';
 import { h, setHidden, setText, setTitle } from './dom';
 import type { PtyControl } from './pty';
@@ -12,10 +12,15 @@ const CONFIRM_MS = 4000;
 
 type Kind = 'stop' | 'takeover';
 
+/** O que basta para retomar: a pasta do projeto, a conta e o id da sessão. */
+export type ResumableSession = Pick<RecentSession, 'account' | 'sessionId' | 'project'>;
+
 export class TermActions {
   readonly el: HTMLElement;
   private agent: AgentInfo | null = null;
   private takeBtn: HTMLButtonElement;
+  private resumeBtn: HTMLButtonElement;
+  private session: ResumableSession | null = null;
   private stopBtn: HTMLButtonElement;
   private msg: HTMLElement;
   private confirm: Kind | null = null;
@@ -34,27 +39,59 @@ export class TermActions {
     setTitle(this.takeBtn, tr('Encerra a sessão no terminal onde ela está e continua a mesma conversa aqui, podendo digitar'));
     this.stopBtn = h('button', { class: 'ui-btn ui-btn--sm ui-btn--danger', type: 'button', on: { click: () => this.run('stop') } });
     setTitle(this.stopBtn, tr('Encerra esta sessão do Claude Code (a conversa fica salva)'));
+    this.resumeBtn = h('button', { class: 'ui-btn ui-btn--sm ui-btn--accent', type: 'button', on: { click: () => this.runResume() } });
+    setTitle(this.resumeBtn, tr('Abre esta conversa de novo num terminal daqui, de onde ela parou'));
     this.msg = h('span', { class: 'ui-termact__msg', role: 'status', hidden: true });
-    this.el = h('span', { class: 'ui-termact', hidden: true }, this.msg, this.takeBtn, this.stopBtn);
+    this.el = h('span', { class: 'ui-termact', hidden: true }, this.msg, this.resumeBtn, this.takeBtn, this.stopBtn);
   }
 
-  /** `agent` = agente presente na janela (null = sessão do histórico, saiu ou nenhum). */
-  render(agent: AgentInfo | null): void {
+  /**
+   * `agent` = agente presente na janela (null = sessão do histórico, saiu ou nenhum). `session` = sessão encerrada
+   * aberta no histórico: sem agente vivo, mas com pasta e conta para retomar a conversa.
+   */
+  render(agent: AgentInfo | null, session: ResumableSession | null = null): void {
     if (agent?.id !== this.agent?.id) {
       this.resetConfirm();
       this.showMsg('');
     }
     this.agent = agent;
     const usable = ptyControllable(agent) && this.pty.enabled;
-    setHidden(this.el, !usable);
+    // Retomar só faz sentido sem agente vivo e com a pasta do projeto conhecida (o transcript nem sempre a traz).
+    this.session = !agent && session?.project ? session : null;
+    const canResume = !!this.session && this.pty.enabled;
+    setHidden(this.el, !usable && !canResume);
+    setHidden(this.resumeBtn, !canResume);
+    if (canResume) {
+      setText(this.resumeBtn, tr('Retomar'));
+      this.resumeBtn.disabled = this.busy;
+    }
+    setHidden(this.takeBtn, !usable || !this.withTakeover);
+    setHidden(this.stopBtn, !usable);
     if (!usable) return;
-    setHidden(this.takeBtn, !this.withTakeover);
     setText(this.takeBtn, this.confirm === 'takeover' ? tr('Confirmar?') : tr('Assumir daqui'));
     setText(this.stopBtn, this.confirm === 'stop' ? tr('Confirmar?') : tr('Encerrar'));
     this.takeBtn.classList.toggle('is-confirm', this.confirm === 'takeover');
     this.stopBtn.classList.toggle('is-confirm', this.confirm === 'stop');
     this.takeBtn.disabled = this.busy;
     this.stopBtn.disabled = this.busy;
+  }
+
+  /** Retomar não pede confirmação: não encerra nada nem perde conversa, só abre a mesma de novo. */
+  private runResume(): void {
+    const s = this.session;
+    if (!s?.project || this.busy) return;
+    this.resetConfirm();
+    this.busy = true;
+    this.showMsg(tr('Retomando…'));
+    this.ctx.invalidate();
+    this.pty
+      .newSession(s.project, s.account, s.sessionId)
+      .then(() => this.showMsg(''))
+      .catch((err: Error) => this.showMsg(tr('Não deu: {0}', [err.message]), true))
+      .finally(() => {
+        this.busy = false;
+        this.ctx.invalidate();
+      });
   }
 
   private run(kind: Kind): void {

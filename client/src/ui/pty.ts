@@ -32,7 +32,7 @@ export interface PtyControl {
   openAgent(agentId: string): void;
   close(): void;
   takeover(agentId: string): Promise<void>;
-  newSession(cwd: string, account?: string): Promise<void>;
+  newSession(cwd: string, account?: string, resume?: string): Promise<void>;
   stop(agentId: string): Promise<void>;
 }
 
@@ -144,8 +144,8 @@ export class PtyPanel implements UiComponent, PtyControl {
     if (p) this.show(p, true);
   }
 
-  async newSession(cwd: string, account?: string): Promise<void> {
-    const p = await createPty(cwd, account);
+  async newSession(cwd: string, account?: string, resume?: string): Promise<void> {
+    const p = await createPty(cwd, account, resume);
     if (p) this.show(p, true);
   }
 

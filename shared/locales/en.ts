@@ -3278,4 +3278,7 @@ export const EN: Readonly<Record<string, string>> = {
   "conta inválida": "invalid account",
   "escolher a conta só funciona fora do Docker": "choosing the account only works outside Docker",
   "o app do Claude abre na conta padrão: a conta escolhida só vale quando a sessão roda sozinha": "the Claude app opens on the default account: the chosen account only applies when the session starts on its own",
+  "Retomando…": "Resuming…",
+  "Abre esta conversa de novo num terminal daqui, de onde ela parou": "Opens this conversation again in a terminal here, from where it left off",
+  "retomar sessão encerrada está desligado": "resuming an ended session is off",
 };

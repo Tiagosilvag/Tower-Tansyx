@@ -311,6 +311,8 @@ const ptys = spawnPty
       spawn: spawnPty,
       claudeBin: claudeBin ?? 'claude',
       accounts: () => accounts.entries().map((a) => ({ id: a.id, dir: a.dir, isDefault: isDefaultDir(a.dir, config.home) })),
+      // Retomar uma sessão encerrada: quem diz se ela existe naquela conta é o histórico (ele resolve links).
+      ...(history ? { sessionExists: (acc: string, sid: string) => !('status' in history.resolve(acc, sid)) } : {}),
       agent: (id) => {
         const a = office.get(id);
         return a && { id: a.id, kind: a.kind, account: a.account, sessionId: a.sessionId, cwd: office.roomPath(a.roomId) };

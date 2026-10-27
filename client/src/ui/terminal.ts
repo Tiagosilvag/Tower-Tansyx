@@ -818,7 +818,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     if (this.session) this.renderSessionHead(this.session);
     else this.renderAgentHead();
     const live = this.session ? null : (this.ctx.agent(this.id) ?? null);
-    this.actions?.render(live);
+    this.actions?.render(live, this.session && !this.session.open ? this.session : null);
     this.tabs.render(live ? live.id : null);
     this.renderFooter();
     this.renderState();

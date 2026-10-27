@@ -364,3 +364,47 @@ describe('carregar o node-pty e achar o claude', () => {
     }),
   );
 });
+
+
+describe('retomar sessão encerrada', () => {
+  const CWD = tmpdir();
+
+  function make(sessionExists?: (account: string, sessionId: string) => boolean) {
+    const spawned: Array<{ args: readonly string[]; cwd: string }> = [];
+    const m = new PtyManager({
+      spawn: (_file, args, o) => {
+        spawned.push({ args, cwd: o.cwd });
+        return new FakeProc(900 + spawned.length);
+      },
+      claudeBin: process.execPath,
+      accounts: () => [{ id: '.claude', dir: '/home/eu/.claude', isDefault: true }],
+      agent: () => undefined,
+      onChange: () => {},
+      ...(sessionExists ? { sessionExists } : {}),
+    });
+    return { m, spawned };
+  }
+
+  it('retoma quando o histórico confirma a sessão naquela conta', () => {
+    const { m, spawned } = make(() => true);
+    m.create({ cwd: CWD, resume: SESSION });
+    expect(spawned[0].args).toContain('--resume');
+    expect(spawned[0].args).toContain(SESSION);
+  });
+
+  it('sem resume, abre sessão nova', () => {
+    const { m, spawned } = make(() => true);
+    m.create({ cwd: CWD });
+    expect(spawned[0].args).not.toContain('--resume');
+  });
+
+  it('recusa sessão que não é daquela conta', () => {
+    const { m } = make(() => false);
+    expect(() => m.create({ cwd: CWD, resume: SESSION })).toThrow();
+  });
+
+  it('sem histórico, retomar fica desligado', () => {
+    const { m } = make();
+    expect(() => m.create({ cwd: CWD, resume: SESSION })).toThrow();
+  });
+});

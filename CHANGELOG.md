@@ -12,6 +12,12 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Retomar uma sessão encerrada pelo escritório.** No histórico, uma sessão encerrada ganha o botão **Retomar**, que
+  abre a mesma conversa num terminal daqui (`claude --resume`), de onde ela parou — antes só dava pelo terminal do
+  computador. O `POST /api/pty` aceita `resume` e só retoma quando o transcript daquela sessão está mesmo na pasta
+  daquela conta, conferido pelo histórico; sem essa conferência a rota viraria um `claude --resume <qualquer id>`.
+  O botão não aparece quando o transcript não traz a pasta do projeto.
+
 - **Novo agente: escolher em qual conta do Claude Code a sessão começa.** Com mais de uma conta, o painel mostra
   **Conta** acima de **Projeto** e a sessão em segundo plano roda naquela conta (`CLAUDE_CONFIG_DIR`, a mesma regra do
   terminal interativo); com uma conta só, nada muda na tela. O servidor aceita `account` no `POST /api/spawn` e recusa

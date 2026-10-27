@@ -72,6 +72,8 @@ export interface PtyManagerOptions {
   disabledReason?: string;
   claudeBin: string;
   accounts: () => PtyAccount[];
+  /** Confere se a sessão encerrada existe naquela conta; ausente = retomar fica desligado. */
+  sessionExists?: (account: string, sessionId: string) => boolean;
   agent: (id: string) => PtyAgentRef | undefined;
   onChange: () => void;
   env?: NodeJS.ProcessEnv;
@@ -221,9 +223,26 @@ export class PtyManager {
     return [...this.ptys.values()].map((t) => ({ ...t.info }));
   }
 
-  /** Abre uma sessão nova do Claude Code na pasta (`cwd` absoluto), na conta pedida (ou na padrão). */
-  create(p: { cwd: unknown; account?: unknown; cols?: unknown; rows?: unknown }): PtyInfo {
-    return this.spawn(this.plan(p, this.takeovers.size));
+  /**
+   * Abre uma sessão do Claude Code na pasta (`cwd` absoluto), na conta pedida (ou na padrão). Com `resume`, retoma
+   * uma sessão encerrada daquela conta (`claude --resume`), mantendo a conversa.
+   */
+  create(p: { cwd: unknown; account?: unknown; resume?: unknown; cols?: unknown; rows?: unknown }): PtyInfo {
+    const plan = this.plan(p, this.takeovers.size);
+    const resume = this.resumeOf(p.resume, plan.account.id);
+    return this.spawn(plan, resume ? { resume } : {});
+  }
+
+  /**
+   * Retomar só vale com o transcript da sessão na pasta daquela conta: sem a conferência, a rota viraria um
+   * `claude --resume <qualquer id>`. Quem confere é o histórico (sources/history.ts), que já resolve links.
+   */
+  private resumeOf(raw: unknown, account: string): string | undefined {
+    if (raw === undefined || raw === null || raw === '') return undefined;
+    if (typeof raw !== 'string') throw new PtyError(400, tr('id de sessão inválido'));
+    if (!this.opts.sessionExists) throw new PtyError(503, tr('retomar sessão encerrada está desligado'));
+    if (!this.opts.sessionExists(account, raw)) throw new PtyError(404, tr('sessão não encontrada'));
+    return raw;
   }
 
   /**

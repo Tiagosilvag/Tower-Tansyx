@@ -27,9 +27,9 @@ export async function postPty<T = unknown>(url: string, body: unknown): Promise<
 
 const SIZE = { cols: 120, rows: 32 };
 
-/** Sessão nova do Claude Code na pasta (e conta) indicada. */
-export function createPty(cwd: string, account?: string): Promise<PtyInfo | undefined> {
-  return postPty<PtyInfo>('/api/pty', { cwd, account, ...SIZE });
+/** Sessão do Claude Code na pasta (e conta) indicada; com `resume`, retoma a conversa daquela sessão encerrada. */
+export function createPty(cwd: string, account?: string, resume?: string): Promise<PtyInfo | undefined> {
+  return postPty<PtyInfo>('/api/pty', { cwd, account, ...(resume ? { resume } : {}), ...SIZE });
 }
 
 /** Encerra a sessão noutro terminal e continua a mesma conversa aqui. */
