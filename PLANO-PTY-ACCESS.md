@@ -19,9 +19,9 @@ só `package.json` e `dist/`) nem o executável `claude`. Por isso o Habblaud sa
 | Hoje | Depois |
 | --- | --- |
 | Container no Coolify | `npm start` nativo, em serviço systemd |
-| Túnel → `coolify-proxy:80` | Túnel → `http://localhost:4747` |
+| Túnel → `coolify-proxy:80` | Túnel → Caddy (`:8080`) → `http://localhost:4747` |
 | `cloudflared` em container | `cloudflared` no host (um container não alcança o loopback do host) |
-| Sem autenticação | Cloudflare Access na frente |
+| Basic Auth pelo Traefik | Basic Auth pelo Caddy |
 
 ### As duas travas, e como são satisfeitas
 
@@ -37,19 +37,23 @@ O POST não quebra por CSRF: `originAllowed()` aceita a Origin cujo nome esteja 
 
 > **Isto desliga de propósito uma proteção dos autores.** Com `Host: localhost`, o servidor passa a
 > tratar todo visitante como local: a conversa inteira das sessões fica legível e, com PTY, quem
-> abrir a URL digita no Claude Code do servidor. **O Cloudflare Access não é opcional neste plano.**
+> abrir a URL digita no Claude Code do servidor. **A autenticação na frente não é opcional neste plano.**
 
-## Fase 0 — Proteger primeiro (fazer agora)
+## Fase 0 — Proteger primeiro (feito)
 
-Hoje o link está aberto a quem o descobrir. Faça isto antes de qualquer outra fase.
+Hoje o link está aberto a quem o descobrir. Esta fase vem antes de todas as outras.
 
-1. **Zero Trust → Access → Applications → Add an application → Self-hosted**
-2. Nome `Habblaud`; defina a *Session Duration*
-3. **Public hostname:** `towertansyx.coffetech.com.br`
-4. **Add policy:** Action `Allow` · Include → **Emails** → os e-mails de vocês dois
-5. Salvar e testar numa janela anônima: deve aparecer a tela de login da Cloudflare
+**Escolha feita: Basic Auth**, porque o Cloudflare Access exige assinar um plano do Zero Trust
+(gratuito até 50 usuários, mas com cadastro de plano). O Basic Auth é adequado para dois sócios.
 
-A política fica presa ao hostname, então continua valendo depois da migração.
+Enquanto a aplicação está no Coolify, é o Traefik que pede a senha
+(`is_http_basic_auth_enabled`, hash bcrypt). **Isso some na migração para nativo**, por isso a
+Fase 3 coloca um Caddy no lugar.
+
+> Se preferirem trocar pelo Cloudflare Access depois, ele é melhor: bloqueia antes de chegar ao
+> servidor, tem tela de login com código por e-mail e independe de onde o Habblaud roda.
+> Zero Trust → Access → Applications → Add an application → Self-hosted, hostname
+> `towertansyx.coffetech.com.br`, política Allow com os e-mails de vocês.
 
 ## Fase 1 — Preparar o servidor
 
@@ -128,22 +132,54 @@ Os logs do arranque dizem, linha a linha, o que ficou ligado. O alvo é ver o te
 curl -s -H 'Host: localhost' http://127.0.0.1:4747/api/health
 ```
 
-## Fase 3 — `cloudflared` no host
+## Fase 3 — Caddy + `cloudflared` no host
 
 O conector precisa rodar **no host**, não em container: o Habblaud escuta no loopback, que um
 container não enxerga.
 
+### 3a. Caddy na frente do Habblaud
+
+O Caddy repõe o Basic Auth que o Traefik fazia e, de quebra, resolve o Host header — o que dispensa
+configurar o **HTTP Host Header** no painel do túnel.
+
+```bash
+apt-get install -y caddy
+caddy hash-password        # digite a senha; guarde o hash bcrypt
+```
+
+`/etc/caddy/Caddyfile`:
+
+```
+:8080 {
+    basicauth {
+        Tiago <cole-aqui-o-hash-bcrypt>
+    }
+    reverse_proxy 127.0.0.1:4747 {
+        header_up Host localhost
+    }
+}
+```
+
+```bash
+systemctl enable --now caddy && systemctl restart caddy
+curl -u Tiago:<senha> -s http://127.0.0.1:8080/api/health    # deve responder
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/   # deve ser 401
+```
+
+O `header_up Host localhost` é a peça central: sem ele, terminal, PTY, mensagens e permissões ficam
+desligados e a resposta é 403.
+
+### 3b. `cloudflared`
+
 Vocês já criaram o túnel `towertansyx` (ID `ee07ef56-…`), que está inativo. Use esse.
 
-1. Zero Trust → Networks → Tunnels → `towertansyx` → instruções de instalação, **Debian/64-bit**
-2. Rode no servidor o comando `cloudflared service install <token>`
-3. Confirme que o túnel aparece **Healthy**
+1. Zero Trust → Networks → Tunnels → `towertansyx` → instruções, **Debian/64-bit**
+2. Rode no servidor o `cloudflared service install <token>`
+3. Confirme o túnel **Healthy**
 4. **Public Hostname:**
    - Subdomain `towertansyx` · Domain `coffetech.com.br` · Path vazio
-   - **Service:** `http://localhost:4747`
-   - **Additional application settings → HTTP Settings → HTTP Host Header:** `localhost`
-
-O Host Header é a peça central: sem ele, terminal, PTY, mensagens e permissões ficam desligados.
+   - **Service:** `http://localhost:8080` (o Caddy, não o Habblaud)
+   - Não precisa de HTTP Host Header: o Caddy já cuida disso
 
 ## Fase 4 — Trocar a rota
 
@@ -157,7 +193,7 @@ Dois túneis não podem reivindicar o mesmo hostname.
 
 Em janela anônima, abra `https://towertansyx.coffetech.com.br`:
 
-- [ ] Cai na tela de login da Cloudflare
+- [ ] Pede usuário e senha (Basic Auth do Caddy)
 - [ ] Depois de autenticar, o escritório abre
 - [ ] As contas do Claude Code aparecem no topo (não "Demonstração")
 - [ ] Uma sessão aberta no servidor vira personagem
@@ -176,7 +212,7 @@ sessão sobreviver ao fechar o SSH).
 
 ## Rollback
 
-1. Reative a rota `towertansyx` no `coolifyprod-tunnel` (Service `http://coolify-proxy:80`, sem Host Header)
+1. Reative a rota `towertansyx` no `coolifyprod-tunnel` (Service `http://coolify-proxy:80`)
 2. Remova a rota do túnel `towertansyx` e pare o conector
 3. `systemctl stop habblaud`
 4. Inicie a aplicação no Coolify
@@ -187,7 +223,7 @@ sessão sobreviver ao fechar o SSH).
 | --- | --- |
 | PTY desligado nos logs | `HABBLAUD_CLAUDE_BIN` errado, ou `node-pty` não compilou |
 | Terminal desligado | `HABBLAUD_HOST` não é loopback, ou `HABBLAUD_TERMINAL=0` ficou para trás |
-| 403 "Host não permitido" | Falta o **HTTP Host Header = localhost** na rota do túnel |
+| 403 "Host não permitido" | Falta o `header_up Host localhost` no Caddyfile |
 | 403 "Origem não permitida" | O domínio saiu do `HABBLAUD_ALLOWED_HOSTS` |
 | 404 do `cloudflared` | A rota ficou em dois túneis, ou em nenhum |
 | Escritório vazio | Nenhuma sessão **aberta** no servidor |
