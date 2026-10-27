@@ -1,0 +1,64 @@
+# Habblaud no Coolify (build pack "Docker Compose").
+#
+# Diferenças em relação ao docker-compose.yml da raiz, que é feito para a máquina local:
+#   - não publica porta no host: quem expõe é o proxy do Coolify (Traefik), pelo FQDN mágico;
+#   - não usa o docker-compose.override.yml gerado pelo `npm run docker:up` (ele monta as pastas
+#     do Claude Code / Codex do SEU computador, que não existem no servidor);
+#   - HABBLAUD_ALLOWED_HOSTS é obrigatório: sem o domínio nessa lista o servidor responde 403
+#     a qualquer Host que não seja localhost (proteção contra DNS rebinding).
+#
+# As montagens somente-leitura de transcripts (./claude, ./codex) estão comentadas: só servem se
+# for o próprio servidor a rodar as sessões do Claude Code / Codex. Veja DEPLOY-COOLIFY.md.
+services:
+  habblaud:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # FQDN mágico do Coolify: gera o domínio e as labels do Traefik para a porta 4747.
+      - SERVICE_FQDN_HABBLAUD_4747
+      # Obrigatório: o mesmo domínio que o Coolify atribuir (ex.: habblaud.exemplo.com).
+      - HABBLAUD_ALLOWED_HOSTS=${HABBLAUD_ALLOWED_HOSTS}
+      # Idioma da interface: pt-BR, en, es ou fr.
+      - HABBLAUD_LANG=${HABBLAUD_LANG:-pt-BR}
+      # 1 = modo demonstração (escritório fictício), útil para validar o deploy sem transcripts.
+      - HABBLAUD_DEMO=${HABBLAUD_DEMO:-}
+      # Atrás de proxy o terminal e o histórico ficam desligados de qualquer forma (só local).
+      - HABBLAUD_TERMINAL=${HABBLAUD_TERMINAL:-0}
+      # 0 desliga a consulta de versão nova à API do GitHub (a cada 6 h).
+      - HABBLAUD_UPDATE_CHECK=${HABBLAUD_UPDATE_CHECK:-0}
+      # 0 desliga o Habblaud World (nada sai antes de criar conta, mas num servidor é melhor explícito).
+      - HABBLAUD_WORLD=${HABBLAUD_WORLD:-0}
+      # Pastas de transcripts dentro do container (só com as montagens abaixo ligadas).
+      - HABBLAUD_CLAUDE_DIRS=${HABBLAUD_CLAUDE_DIRS:-}
+      - HABBLAUD_CODEX_DIRS=${HABBLAUD_CODEX_DIRS:-}
+    volumes:
+      # Estado do próprio Habblaud: nomes dos personagens, timelapse, Meu dia.
+      - habblaud-data:/data
+      # Transcripts do Claude Code do servidor (opcional, somente leitura):
+      # - /root/.claude/projects:/claude/root/projects:ro
+      # - /root/.claude/sessions:/claude/root/sessions:ro
+      # Uso de 5 h / semanal capturado pelo mod (opcional, somente leitura):
+      # - /root/.habblaud/usage:/usage:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:4747/api/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  habblaud-data:
