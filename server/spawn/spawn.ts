@@ -21,6 +21,7 @@ import { attachmentsRoot, promptWithAttachments, writeAttachments, type Attachme
 /** Tamanho máximo do pedido (o link inteiro vai pela linha de comando do `open`). */
 export const PROMPT_MAX = 8_000;
 export const FOLDER_MAX = 1_024;
+export const ACCOUNT_MAX = 128;
 /** Prazo do `open`. */
 export const OPEN_TIMEOUT_MS = 10_000;
 /** Prazo do `claude --bg` (ele sobe o serviço de segundo plano na primeira vez e volta). */
@@ -43,6 +44,16 @@ const ERROR_MAX = 300;
 export interface SpawnRequest {
   folder: string;
   prompt: string;
+  /** Conta do Claude Code onde a sessão começa (id = basename do config dir); ausente = a conta padrão. */
+  account?: string;
+}
+
+/** Conta que o Novo agente pode escolher (mesmo formato do terminal interativo, pty/manager.ts). */
+export interface SpawnAccount {
+  id: string;
+  /** Pasta de configuração da conta (vira CLAUDE_CONFIG_DIR, exceto a padrão). */
+  dir: string;
+  isDefault: boolean;
 }
 
 export type SpawnStatus = 'queued' | 'sent' | 'opened' | 'failed';
@@ -72,11 +83,13 @@ export function parseSpawn(raw: unknown): SpawnRequest | { error: string } {
   const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const folder = typeof r.folder === 'string' ? r.folder.trim() : '';
   const prompt = typeof r.prompt === 'string' ? r.prompt.replace(/\s+$/, '') : '';
+  const account = typeof r.account === 'string' ? r.account.trim() : '';
   if (!folder || folder.length > FOLDER_MAX || folder.includes('\0') || !(isAbsolute(folder) || /^[A-Za-z]:[\\/]/.test(folder))) {
     return { error: tr('escolha uma pasta (caminho absoluto, ex.: /Users/voce/projeto)') };
   }
   if (prompt.length > PROMPT_MAX || prompt.includes('\0')) return { error: tr('o pedido passa de {0} caracteres', [PROMPT_MAX]) };
-  return { folder, prompt };
+  if (account.length > ACCOUNT_MAX || account.includes('\0')) return { error: tr('conta inválida') };
+  return { folder, prompt, ...(account ? { account } : {}) };
 }
 
 /** O link que o app do Claude entende (claude://code/new; `q` = pedido já escrito). */
@@ -101,11 +114,26 @@ export function cliArgs(req: SpawnRequest): string[] {
   return req.prompt.trim() ? [...args, '--', req.prompt] : args;
 }
 
+/**
+ * O ambiente do `claude`: CLAUDE_CONFIG_DIR da conta escolhida, apagado na conta padrão (a mesma regra do terminal
+ * interativo, pty/manager.ts). Sem conta no pedido, ou conta desconhecida: undefined, e o processo herda o ambiente.
+ */
+export function spawnEnv(req: SpawnRequest, accounts: readonly SpawnAccount[], base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv | undefined {
+  if (!req.account) return undefined;
+  const account = accounts.find((a) => a.id === req.account);
+  if (!account) return undefined;
+  const env = { ...base };
+  if (account.isDefault) delete env.CLAUDE_CONFIG_DIR;
+  else env.CLAUDE_CONFIG_DIR = account.dir;
+  return env;
+}
+
 /** `claude --bg` na pasta do pedido; devolve o id curto que ele imprime ("backgrounded · 7eacc670 · nome"). */
-export function createCliRunner(bin: string, timeoutMs = CLI_TIMEOUT_MS): CliRunner {
+export function createCliRunner(bin: string, timeoutMs = CLI_TIMEOUT_MS, accounts: () => readonly SpawnAccount[] = () => []): CliRunner {
   return (req) =>
     new Promise((ok) => {
-      const child = execFile(bin, cliArgs(req), { cwd: req.folder, timeout: timeoutMs, windowsHide: true, encoding: 'utf8' }, (err, out, stderr) => {
+      const env = spawnEnv(req, accounts());
+      const child = execFile(bin, cliArgs(req), { cwd: req.folder, ...(env ? { env } : {}), timeout: timeoutMs, windowsHide: true, encoding: 'utf8' }, (err, out, stderr) => {
         const id = /backgrounded\s*·\s*([\w-]+)/.exec(out ?? '')?.[1];
         if (!err && id) return ok({ ok: true, id });
         const line = [stderr, out, err?.message].map((t) => (t ?? '').split('\n').map((l) => l.trim()).find(Boolean)).find(Boolean);
@@ -179,6 +207,8 @@ export interface SpawnServiceOptions {
   folderProblem?: (folder: string) => string | undefined;
   /** Anexos enviados antes do pedido (POST /api/spawn/attachments); ausente = pedidos sem anexos. */
   attachments?: AttachmentStore;
+  /** Contas que o pedido pode escolher; ausente = só a padrão (escolher a conta é recusado). */
+  accounts?: () => readonly SpawnAccount[];
   /** Modo direto: grava os anexos e devolve os caminhos (padrão: ~/.habblaud/attachments/). */
   writeFiles?: (spawnId: string, files: readonly Attachment[]) => string[];
   now?: () => number;
@@ -209,6 +239,11 @@ export class SpawnService {
     this.prune();
     const req = parseSpawn(raw);
     if ('error' in req) return { error: 'invalid', reason: req.error };
+    if (req.account) {
+      const list = this.accounts();
+      if (!list.length) return { error: 'invalid', reason: tr('escolher a conta só funciona fora do Docker') };
+      if (!list.some((a) => a.id === req.account)) return { error: 'invalid', reason: tr('conta desconhecida') };
+    }
     if (!this.available()) {
       return { error: 'unavailable', reason: tr('o auxiliar do computador não está rodando: deixe npm run codex:bridge no ar (o Habblaud está no Docker)') };
     }
@@ -280,8 +315,25 @@ export class SpawnService {
     } finally {
       this.dropFiles(e);
     }
-    const req = { folder: e.req.folder, prompt: promptWithAttachments(e.req.prompt, paths) };
-    this.resolve(e, await launch(req, opener, this.opts.cli));
+    const req: SpawnRequest = {
+      folder: e.req.folder,
+      prompt: promptWithAttachments(e.req.prompt, paths),
+      ...(e.req.account ? { account: e.req.account } : {}),
+    };
+    this.resolve(e, this.withAccountNote(req, await launch(req, opener, this.opts.cli)));
+  }
+
+  private accounts(): readonly SpawnAccount[] {
+    return this.opts.accounts?.() ?? [];
+  }
+
+  /** O link `claude://` não leva a conta: avisa quando o pedido caiu no app com uma conta que não é a padrão. */
+  private withAccountNote(req: SpawnRequest, r: LaunchResult): LaunchResult {
+    if (!r.ok || r.how !== 'app' || !req.account) return r;
+    const account = this.accounts().find((a) => a.id === req.account);
+    if (!account || account.isDefault) return r;
+    const note = tr('o app do Claude abre na conta padrão: a conta escolhida só vale quando a sessão roda sozinha');
+    return { ...r, note: (r.note ? `${r.note}; ${note}` : note).slice(0, ERROR_MAX) };
   }
 
   /** Os anexos do pedido saem da memória (e do teto do AttachmentStore). */

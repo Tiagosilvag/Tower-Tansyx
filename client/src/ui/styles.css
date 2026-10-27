@@ -7742,6 +7742,18 @@ html.is-replay #world {
   justify-content: center;
 }
 
+.ui-spawn__accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* A lista de contas é curta: sem rolagem nem teto de altura. */
+.ui-spawn__accounts .ui-spawn__folders {
+  max-height: none;
+  overflow: visible;
+}
+
 .ui-spawn__folders {
   display: flex;
   flex-direction: column;

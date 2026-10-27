@@ -116,6 +116,8 @@ interface PendingFile {
 
 export class SpawnPanel {
   readonly el: HTMLElement;
+  private readonly accountBox: HTMLElement;
+  private readonly accountList: HTMLElement;
   private readonly folderList: HTMLElement;
   private readonly otherBtn: HTMLButtonElement;
   private readonly folder: HTMLInputElement;
@@ -129,10 +131,14 @@ export class SpawnPanel {
   private busy = false;
   private folders: FolderOption[] = [];
   private selected = '';
+  private account = '';
   private typing = false;
   private files: PendingFile[] = [];
 
   constructor(private readonly ctx: UiContext) {
+    this.accountList = h('div', { class: 'ui-spawn__folders', role: 'radiogroup', attrs: { 'aria-label': tr('Contas') } });
+    this.accountBox = h('div', { class: 'ui-spawn__accounts' }, h('p', { class: 'ui-spawn__label', text: tr('Conta') }), this.accountList);
+    setHidden(this.accountBox, true);
     this.folderList = h('div', { class: 'ui-spawn__folders', role: 'radiogroup', attrs: { 'aria-label': tr('Projetos recentes') } });
     this.otherBtn = h('button', { class: 'ui-spawn__other', type: 'button', on: { click: () => this.showOther(true) } }, tr('+ Outra pasta'));
     this.folder = h('input', {
@@ -188,6 +194,7 @@ export class SpawnPanel {
       h(
         'div',
         { class: 'ui-set-group ui-spawn__body' },
+        this.accountBox,
         h('p', { class: 'ui-spawn__label', attrs: { id: 'ui-spawn-folders-label' }, text: tr('Projeto') }),
         this.folderList,
         this.otherBtn,
@@ -220,6 +227,7 @@ export class SpawnPanel {
     if (this.isOpen) return this.hide();
     // Primeiro com o que o escritório já sabe; a lista do servidor (histórico) chega logo depois.
     if (!this.folders.length) this.setFolders(spawnFolders(this.ctx.store.snapshot).map((path) => ({ path, name: path.split(/[\\/]/).pop() || path, lastAt: 0 })));
+    this.renderAccounts();
     void this.loadFolders();
     void this.checkDictation();
     if (!this.busy) setText(this.status, '');
@@ -260,6 +268,40 @@ export class SpawnPanel {
       this.selected = list.some((f) => f.path === pref) ? pref : (list[0]?.path ?? '');
     }
     this.renderFolders();
+  }
+
+  /** Só aparece com mais de uma conta do Claude Code: com uma só, não há o que escolher. */
+  private renderAccounts(): void {
+    const list = (this.ctx.store.snapshot?.accounts ?? []).filter((a) => (a.provider ?? 'claude') === 'claude');
+    setHidden(this.accountBox, list.length < 2);
+    if (list.length < 2) {
+      this.account = '';
+      this.accountList.replaceChildren();
+      return;
+    }
+    if (!list.some((a) => a.id === this.account)) this.account = list[0].id;
+    this.accountList.replaceChildren(
+      ...list.map((a) => {
+        const on = a.id === this.account;
+        return h(
+          'button',
+          {
+            class: `ui-spawn__folder${on ? ' is-on' : ''}`,
+            type: 'button',
+            role: 'radio',
+            attrs: { 'aria-checked': String(on), title: a.configDir },
+            on: {
+              click: () => {
+                this.account = a.id;
+                this.renderAccounts();
+              },
+            },
+          },
+          h('span', { class: 'ui-spawn__folder-name', text: a.name }),
+          a.email ? h('span', { class: 'ui-spawn__folder-path', text: a.email }) : null,
+        );
+      }),
+    );
   }
 
   private renderFolders(): void {
@@ -369,7 +411,12 @@ export class SpawnPanel {
       let info = await api<SpawnInfo>('/api/spawn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folder, prompt: this.prompt.value, ...(ids.length ? { attachments: ids } : {}) }),
+        body: JSON.stringify({
+          folder,
+          prompt: this.prompt.value,
+          ...(this.account ? { account: this.account } : {}),
+          ...(ids.length ? { attachments: ids } : {}),
+        }),
       });
       const end = Date.now() + WAIT_MS;
       while ((info.status === 'queued' || info.status === 'sent') && Date.now() < end) {

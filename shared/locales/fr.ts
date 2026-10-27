@@ -3290,4 +3290,9 @@ export const FR: Readonly<Record<string, string>> = {
   "Carimbo deixado na portaria: {0}": "Tampon laissé à l'accueil : {0}",
   "Entre no prédio ou chegue mais perto da porta para carimbar.": "Entrez dans l'immeuble ou approchez-vous de la porte pour tamponner.",
   "O carimbo não foi deixado. Tente de novo.": "Le tampon n'a pas été laissé. Réessayez.",
+  "Contas": "Comptes",
+  "Conta": "Compte",
+  "conta inválida": "compte invalide",
+  "escolher a conta só funciona fora do Docker": "choisir le compte ne fonctionne qu'en dehors de Docker",
+  "o app do Claude abre na conta padrão: a conta escolhida só vale quando a sessão roda sozinha": "l'app Claude s'ouvre sur le compte par défaut : le compte choisi ne vaut que si la session démarre seule",
 };

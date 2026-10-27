@@ -10,6 +10,14 @@ do meio (0.**3**.0).
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Novo agente: escolher em qual conta do Claude Code a sessão começa.** Com mais de uma conta, o painel mostra
+  **Conta** acima de **Projeto** e a sessão em segundo plano roda naquela conta (`CLAUDE_CONFIG_DIR`, a mesma regra do
+  terminal interativo); com uma conta só, nada muda na tela. O servidor aceita `account` no `POST /api/spawn` e recusa
+  uma conta desconhecida. Vale no modo Node: quando o pedido cai na tela do app do Claude, o link `claude://` não leva
+  a conta e o painel avisa; no Docker, escolher a conta é recusado, porque quem roda é o auxiliar do host.
+
 ## [1.0.3] - 2026-10-16
 
 ### Corrigido

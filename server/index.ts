@@ -41,7 +41,7 @@ import { createBuildReader, readBuildInfo } from './build';
 import { UpdateChecker } from './updates/checker';
 import { getLocale, tr } from '../shared/i18n';
 import type { WorldLocale } from '../shared/world/protocol';
-import { createCliRunner, createOpener, SpawnService } from './spawn/spawn';
+import { createCliRunner, createOpener, SpawnService, type SpawnAccount } from './spawn/spawn';
 import { runnableClaudeBin } from './claude-bin';
 import { AttachmentStore } from './spawn/attachments';
 import { recentFolders } from './spawn/folders';
@@ -257,8 +257,14 @@ const ptyOptIn = isTruthy(ptyFlag);
 const spawnOn = config.messages && ptyOptIn;
 const attachments = spawnOn ? new AttachmentStore() : undefined;
 const spawnBin = config.inDocker ? undefined : runnableClaudeBin(process.env);
+// As contas que o Novo agente pode escolher: as mesmas do terminal interativo (a padrão não leva CLAUDE_CONFIG_DIR).
+const spawnAccounts = (): SpawnAccount[] => accounts.entries().map((a) => ({ id: a.id, dir: a.dir, isDefault: isDefaultDir(a.dir, config.home) }));
 const spawn = spawnOn
-  ? new SpawnService(config.inDocker ? { attachments } : { opener: createOpener(), cli: spawnBin ? createCliRunner(spawnBin) : undefined, attachments })
+  ? new SpawnService(
+      config.inDocker
+        ? { attachments }
+        : { opener: createOpener(), cli: spawnBin ? createCliRunner(spawnBin, undefined, spawnAccounts) : undefined, attachments, accounts: spawnAccounts },
+    )
   : undefined;
 // Ditado: no Docker quem transcreve é o auxiliar do host; no Node, o servidor, se achar o Whisper local.
 const whisper = config.messages && !config.inDocker ? findWhisper() : undefined;

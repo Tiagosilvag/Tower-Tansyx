@@ -13,8 +13,10 @@ import {
   SENT_TIMEOUT_MS,
   sessionName,
   SpawnService,
+  spawnEnv,
   spawnUrl,
   type Opener,
+  type SpawnAccount,
 } from './spawn';
 import { runnableClaudeBin } from '../claude-bin';
 
@@ -212,5 +214,47 @@ describe('novo agente em segundo plano (claude --bg)', () => {
     expect(d.get('d1')).toMatchObject({ status: 'opened', how: 'cli' });
     expect(d.get('d2')).toMatchObject({ status: 'opened', how: 'app', note: 'pasta nova' });
     expect(d.get('d3')).toMatchObject({ status: 'opened', how: 'app' });
+  });
+});
+
+
+describe('novo agente: conta escolhida', () => {
+  const ACCOUNTS: SpawnAccount[] = [
+    { id: '.claude', dir: '/home/eu/.claude', isDefault: true },
+    { id: '.claude-socio', dir: '/home/eu/.claude-socio', isDefault: false },
+  ];
+  const accounts = () => ACCOUNTS;
+  const opener: Opener = async () => ({ ok: true });
+
+  it('parseSpawn lê a conta e aceita o pedido sem ela', () => {
+    expect(parseSpawn({ folder: '/tmp', prompt: 'oi', account: '.claude-socio' })).toEqual({ folder: '/tmp', prompt: 'oi', account: '.claude-socio' });
+    expect(parseSpawn({ folder: '/tmp', prompt: 'oi' })).toEqual({ folder: '/tmp', prompt: 'oi' });
+    expect(parseSpawn({ folder: '/tmp', prompt: 'oi', account: '   ' })).toEqual({ folder: '/tmp', prompt: 'oi' });
+  });
+
+  it('parseSpawn recusa conta com \\0 ou longa demais', () => {
+    expect(parseSpawn({ folder: '/tmp', prompt: '', account: 'a\0b' })).toHaveProperty('error');
+    expect(parseSpawn({ folder: '/tmp', prompt: '', account: 'a'.repeat(200) })).toHaveProperty('error');
+  });
+
+  it('spawnEnv: a padrão apaga CLAUDE_CONFIG_DIR e a outra o define', () => {
+    const base = { CLAUDE_CONFIG_DIR: '/herdado', PATH: '/bin' };
+    expect(spawnEnv({ folder: '/tmp', prompt: '' }, ACCOUNTS, base)).toBeUndefined();
+    expect(spawnEnv({ folder: '/tmp', prompt: '', account: '.claude' }, ACCOUNTS, base)).toEqual({ PATH: '/bin' });
+    expect(spawnEnv({ folder: '/tmp', prompt: '', account: '.claude-socio' }, ACCOUNTS, base)).toEqual({
+      PATH: '/bin',
+      CLAUDE_CONFIG_DIR: '/home/eu/.claude-socio',
+    });
+    expect(spawnEnv({ folder: '/tmp', prompt: '', account: 'nao-existe' }, ACCOUNTS, base)).toBeUndefined();
+  });
+
+  it('submit recusa conta desconhecida e, sem a lista, recusa escolher', () => {
+    const com = new SpawnService({ opener, accounts, folderProblem: () => undefined });
+    expect(com.submit({ folder: '/tmp', prompt: '', account: 'nao-existe' })).toHaveProperty('error', 'invalid');
+    expect(com.submit({ folder: '/tmp', prompt: '', account: '.claude-socio' })).toHaveProperty('spawn');
+
+    const sem = new SpawnService({ opener, folderProblem: () => undefined });
+    expect(sem.submit({ folder: '/tmp', prompt: '', account: '.claude-socio' })).toHaveProperty('error', 'invalid');
+    expect(sem.submit({ folder: '/tmp', prompt: '' })).toHaveProperty('spawn');
   });
 });
