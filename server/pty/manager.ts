@@ -358,6 +358,11 @@ export class PtyManager {
     });
   }
 
+  /** O terminal existe e segue rodando (404/409 do contrário): quem grava arquivo para ele confere antes. */
+  assertRunning(id: string): void {
+    this.running(id);
+  }
+
   input(id: string, data: unknown): void {
     if (typeof data !== 'string' || data.length > 64 * 1024) throw new PtyError(400, tr('entrada inválida'));
     this.running(id).proc.write(data);

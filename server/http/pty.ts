@@ -3,6 +3,7 @@
 //   POST /api/pty                      {cwd, account?, resume?, cols?, rows?}: sessão nova (ou retomada) do Claude Code
 //   GET  /api/pty/:id/stream           SSE: reset (tela guardada) | data | exit
 //   POST /api/pty/:id/input|resize|close
+//   POST /api/pty/:id/attach           {name, type?, data (base64)}: grava o arquivo em ~/.habblaud/attachments e devolve {path}
 //   POST /api/agents/:id/stop          encerra o agente (aqui ou noutro terminal)
 //   POST /api/agents/:id/takeover      assume a sessão: encerra lá e retoma aqui
 // Quem controla um terminal destes executa comandos na máquina: só conexões do próprio computador, com Host
@@ -10,6 +11,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { PtyError, type PtyManager } from '../pty/manager';
 import { HttpError, readJson, sendJson } from './app';
+import { ATTACHMENT_BODY_MAX, attachmentsRoot, parseAttachment, writeAttachments } from '../spawn/attachments';
 import { isLoopbackHost } from './guard';
 import { tr } from '../../shared/i18n';
 
@@ -93,6 +95,14 @@ export function createPtyRoutes(ptys: PtyManager): (req: IncomingMessage, res: S
       return ptys.attach(id, req, res);
     }
     if (method !== 'POST') return notAllowed(res, 'POST');
+    if (act === 'attach') {
+      // Arquivo colado ou solto no terminal: vai para o disco e o cliente digita o caminho no pty (o agente lê por ele).
+      ptys.assertRunning(id);
+      const a = parseAttachment(await readJson(req, ATTACHMENT_BODY_MAX));
+      if ('error' in a) throw new HttpError(400, a.error);
+      const [path] = writeAttachments(attachmentsRoot(), id, [a]);
+      return sendJson(res, 201, { path, name: a.name, size: a.data.length });
+    }
     const body = (await readJson(req)) as Record<string, unknown>;
     if (act === 'input') ptys.input(id, body?.data);
     else if (act === 'resize') ptys.resize(id, body?.cols, body?.rows);

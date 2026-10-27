@@ -45,3 +45,23 @@ export async function stopAgent(agentId: string): Promise<void> {
 export async function closePty(id: string): Promise<void> {
   await postPty(`/api/pty/${encodeURIComponent(id)}/close`, {});
 }
+
+function fileToBase64(file: Blob): Promise<string> {
+  return new Promise((ok, fail) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).replace(/^data:[^,]*,/, ''));
+    r.onerror = () => fail(new Error(tr('não deu para ler o arquivo')));
+    r.readAsDataURL(file);
+  });
+}
+
+/** Envia um arquivo ao computador (~/.habblaud/attachments) e devolve o caminho onde ficou. */
+export async function attachToPty(id: string, file: File): Promise<string> {
+  const r = await postPty<{ path: string }>(`/api/pty/${encodeURIComponent(id)}/attach`, {
+    name: file.name || 'imagem.png',
+    type: file.type,
+    data: await fileToBase64(file),
+  });
+  if (!r?.path) throw new Error(tr('erro {0}', [500]));
+  return r.path;
+}

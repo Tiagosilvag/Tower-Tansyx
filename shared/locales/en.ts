@@ -3281,4 +3281,6 @@ export const EN: Readonly<Record<string, string>> = {
   "Retomando…": "Resuming…",
   "Abre esta conversa de novo num terminal daqui, de onde ela parou": "Opens this conversation again in a terminal here, from where it left off",
   "retomar sessão encerrada está desligado": "resuming an ended session is off",
+  "Anexo não enviado": "Attachment not sent",
+  "arquivo": "file",
 };

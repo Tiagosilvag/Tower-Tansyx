@@ -4,7 +4,7 @@
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
-import { postPty } from './ptyapi';
+import { attachToPty, postPty } from './ptyapi';
 import { tr } from '../../../shared/i18n';
 
 const RESIZE_DEBOUNCE_MS = 120;
@@ -39,6 +39,36 @@ export class PtyPane {
     this.term.onResize(({ cols, rows }) => this.scheduleResize(cols, rows));
     this.ro = new ResizeObserver(() => this.refit());
     this.ro.observe(this.el);
+    // Colar (Ctrl+V de imagem/arquivo) ou soltar arquivos: sobem para o computador e o caminho é digitado no prompt.
+    // Texto colado segue o caminho normal do xterm; o capture evita que ele trate o evento antes.
+    this.el.addEventListener('paste', (e) => this.onFiles(e, e.clipboardData), true);
+    this.el.addEventListener('dragover', (e) => {
+      if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+    });
+    this.el.addEventListener('drop', (e) => this.onFiles(e, e.dataTransfer));
+  }
+
+  private onFiles(e: Event, dt: DataTransfer | null): void {
+    const files = [...(dt?.files ?? [])];
+    if (!files.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    void this.upload(files);
+  }
+
+  private async upload(files: File[]): Promise<void> {
+    const id = this.id;
+    if (!id || this.exited) return;
+    const paths: string[] = [];
+    for (const f of files) {
+      try {
+        paths.push(await attachToPty(id, f));
+      } catch (err) {
+        this.term.write(`\r\n\x1b[31m[${tr('Anexo não enviado')}: ${f.name || tr('arquivo')} — ${err instanceof Error ? err.message : ''}]\x1b[0m\r\n`);
+      }
+    }
+    // Caminhos entre aspas quando têm espaço; o espaço final deixa continuar a digitar.
+    if (paths.length) this.send(`${paths.map((p) => (/\s/.test(p) ? `"${p}"` : p)).join(' ')} `);
   }
 
   get ptyId(): string | null {

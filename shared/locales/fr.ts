@@ -3298,4 +3298,6 @@ export const FR: Readonly<Record<string, string>> = {
   "Retomando…": "Reprise…",
   "Abre esta conversa de novo num terminal daqui, de onde ela parou": "Rouvre cette conversation dans un terminal ici, là où elle s'était arrêtée",
   "retomar sessão encerrada está desligado": "reprendre une session terminée est désactivé",
+  "Anexo não enviado": "Pièce jointe non envoyée",
+  "arquivo": "fichier",
 };

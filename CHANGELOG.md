@@ -12,6 +12,10 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Anexar imagens e arquivos numa sessão em andamento.** No terminal interativo, colar (Ctrl+V) uma imagem ou
+  arquivo, ou soltá-lo sobre a janela, grava o arquivo em `~/.habblaud/attachments` pelo novo
+  `POST /api/pty/:id/attach` (mesmas regras de nome e tamanho dos anexos do Novo agente, 15 MB) e digita o caminho no
+  prompt, de onde o agente lê. Vale a mesma trava do terminal (só pelo próprio computador).
 - **Retomar uma sessão encerrada pelo escritório.** No histórico, uma sessão encerrada ganha o botão **Retomar**, que
   abre a mesma conversa num terminal daqui (`claude --resume`), de onde ela parou — antes só dava pelo terminal do
   computador. O `POST /api/pty` aceita `resume` e só retoma quando o transcript daquela sessão está mesmo na pasta
