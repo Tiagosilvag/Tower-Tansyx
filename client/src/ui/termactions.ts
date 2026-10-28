@@ -20,6 +20,7 @@ export class TermActions {
   private agent: AgentInfo | null = null;
   private takeBtn: HTMLButtonElement;
   private resumeBtn: HTMLButtonElement;
+  private viewBtn: HTMLButtonElement;
   private session: ResumableSession | null = null;
   private stopBtn: HTMLButtonElement;
   private msg: HTMLElement;
@@ -41,8 +42,9 @@ export class TermActions {
     setTitle(this.stopBtn, tr('Encerra esta sessão do Claude Code (a conversa fica salva)'));
     this.resumeBtn = h('button', { class: 'ui-btn ui-btn--sm ui-btn--accent', type: 'button', on: { click: () => this.runResume() } });
     setTitle(this.resumeBtn, tr('Abre esta conversa de novo num terminal daqui, de onde ela parou'));
+    this.viewBtn = h('button', { class: 'ui-btn ui-btn--sm', type: 'button', on: { click: () => this.switchView() } });
     this.msg = h('span', { class: 'ui-termact__msg', role: 'status', hidden: true });
-    this.el = h('span', { class: 'ui-termact', hidden: true }, this.msg, this.resumeBtn, this.takeBtn, this.stopBtn);
+    this.el = h('span', { class: 'ui-termact', hidden: true }, this.msg, this.resumeBtn, this.viewBtn, this.takeBtn, this.stopBtn);
   }
 
   /**
@@ -65,6 +67,21 @@ export class TermActions {
       setText(this.resumeBtn, tr('Retomar'));
       this.resumeBtn.disabled = this.busy;
     }
+    // Alterna entre o chat e o terminal interativo do mesmo agente, sem encerrar nada. No chat só aparece quando o
+    // agente já tem pty (senão o caminho é "Assumir daqui"); no interativo, quando o chat está disponível.
+    const router = this.ctx.terminals;
+    const toTerminal = this.withTakeover;
+    const canSwitch = usable && !!agent && !!router && (toTerminal ? router.interactive(agent.id) : router.chatAvailable);
+    setHidden(this.viewBtn, !canSwitch);
+    if (canSwitch) {
+      setText(this.viewBtn, toTerminal ? tr('Terminal') : tr('Chat'));
+      setTitle(
+        this.viewBtn,
+        toTerminal
+          ? tr('Mostra o terminal interativo desta sessão (nada é encerrado)')
+          : tr('Mostra a conversa em formato de chat, com a caixa de mensagem (o terminal continua rodando)'),
+      );
+    }
     setHidden(this.takeBtn, !usable || !this.withTakeover);
     setHidden(this.stopBtn, !usable);
     if (!usable) return;
@@ -74,6 +91,10 @@ export class TermActions {
     this.stopBtn.classList.toggle('is-confirm', this.confirm === 'stop');
     this.takeBtn.disabled = this.busy;
     this.stopBtn.disabled = this.busy;
+  }
+
+  private switchView(): void {
+    if (this.agent) this.ctx.terminals?.switchView(this.agent.id);
   }
 
   /** Retomar não pede confirmação: não encerra nada nem perde conversa, só abre a mesma de novo. */

@@ -26,6 +26,13 @@ export interface TerminalRouter {
   readonly available: boolean;
   /** Terminal interativo ligado (abrir sessões novas, assumir, encerrar). */
   readonly interactiveEnabled: boolean;
+  /** A janela de chat (leitura da conversa + caixa de mensagem) está disponível. */
+  readonly chatAvailable: boolean;
+  /**
+   * Troca a janela do agente entre o terminal interativo e o chat, sem encerrar nada: o pty continua rodando e a
+   * conversa é a mesma. Só vale quando o agente já tem pty (se não tem, o caminho é "Assumir daqui").
+   */
+  switchView(agentId: string): void;
   /** Sessão nova do Claude Code na pasta, aberta no terminal interativo. */
   newSession(cwd: string, account?: string): Promise<void>;
 }

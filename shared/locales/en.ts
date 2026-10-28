@@ -3288,4 +3288,7 @@ export const EN: Readonly<Record<string, string>> = {
   "Anexar imagens ou arquivos": "Attach images or files",
   "{0} anexos adicionados à mensagem": "{0} attachments added to the message",
   "Anexo adicionado à mensagem": "Attachment added to the message",
+  "Chat": "Chat",
+  "Mostra o terminal interativo desta sessão (nada é encerrado)": "Shows this session's interactive terminal (nothing is ended)",
+  "Mostra a conversa em formato de chat, com a caixa de mensagem (o terminal continua rodando)": "Shows the conversation as a chat, with the message box (the terminal keeps running)",
 };

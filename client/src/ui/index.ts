@@ -194,6 +194,16 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
     get interactiveEnabled() {
       return pty.enabled;
     },
+    get chatAvailable() {
+      return !!store.snapshot?.meta.terminal && !store.replaying;
+    },
+    switchView(id) {
+      if (pty.isOpen && pty.agentId === id) {
+        // Interativo → chat: fechar a janela não encerra o pty.
+        pty.close();
+        terminal.open(id);
+      } else if (pty.ptyOf(id)) pty.openAgent(id);
+    },
     newSession: (cwd, account) => pty.newSession(cwd, account),
     open(id, opener) {
       const readOnly = !!store.snapshot?.meta.terminal && !store.replaying;

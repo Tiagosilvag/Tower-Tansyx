@@ -26,6 +26,10 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Botão para alternar entre o chat e o terminal interativo.** Na janela do terminal interativo aparece **Chat**
+  (mostra a conversa em formato de chat, com a caixa de mensagem) e, no chat de um agente que já roda num terminal
+  interativo, **Terminal**. A troca não encerra nada: fechar a janela interativa só a esconde. Sessões que ainda
+  não são interativas continuam passando por **Assumir daqui**.
 - **Anexar arquivos na caixa de mensagem.** Agentes sem terminal interativo (sessões em segundo plano, Codex)
   ganham um clipe ao lado do **Enviar**, e a caixa aceita colar (Ctrl+V) e soltar imagens e arquivos. Eles são
   gravados em `~/.habblaud/attachments` pelo novo `POST /api/messages/attachments` (mesmos limites do Novo agente) e o
