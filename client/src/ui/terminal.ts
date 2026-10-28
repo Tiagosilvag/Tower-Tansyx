@@ -36,6 +36,7 @@ import {
   TERMINAL_FILTERS,
   type TerminalFilter,
 } from './termtools';
+import { chosenLabels, parseAskAnswers, parseAskInput, type AskQuestion } from './termask';
 import { createAccountChip, createProviderTag, updateAccountChip, updateProviderTag } from './widgets';
 import { intlLocale, tr } from '../../../shared/i18n';
 
@@ -513,9 +514,52 @@ function toolInput(t: ToolEntry): HTMLElement | null {
 interface ToolRefs {
   row: HTMLElement;
   slot: HTMLElement;
+  /** Cartão de pergunta: quem desenha a resposta no lugar do bloco de resultado. */
+  fill?: (r: ResultEntry) => void;
+}
+
+/**
+ * A pergunta do agente (AskUserQuestion) como um cartão: a pergunta, as opções e, quando você responde, a sua resposta
+ * (com a opção escolhida em destaque). Sem isso saía o bloco bruto da ferramenta, com o texto repetido e o formato
+ * interno do Claude Code. Devolve undefined se a entrada não traz as perguntas (cai no desenho padrão).
+ */
+function askRow(t: ToolEntry, now: number): ToolRefs | undefined {
+  const questions: AskQuestion[] = parseAskInput(t.input);
+  if (!questions.length) return undefined;
+  const cards = questions.map((q) => {
+    const opts = q.options.map((o) => h('li', { class: 'ui-term__q-opt' }, h('strong', { text: o.label }), o.desc ? h('span', { class: 'ui-term__q-desc', text: o.desc }) : null));
+    const card = h('div', { class: 'ui-term__q' }, h('p', { class: 'ui-term__q-text', text: q.question }), opts.length ? h('ul', { class: 'ui-term__q-opts' }, ...opts) : null);
+    return { q, opts, card };
+  });
+  const slot = h('div', { class: 'ui-term__q-reply-slot' }, h('span', { class: 'ui-term__q-wait', text: tr('Aguardando a sua resposta…'), attrs: { 'data-chrome': '' } }));
+  const col = h('div', { class: 'ui-term__col ui-term__q-col' }, h('div', { class: 'ui-term__q-tag', text: tr('Pergunta do agente'), attrs: { 'data-chrome': '' } }), ...cards.map((c) => c.card), slot);
+  const el = row('ask', t.at, now, mark('?', 'ui-term__qmark'), col);
+  el.classList.add('is-pending');
+  const fill = (r: ResultEntry) => {
+    const parsed = parseAskAnswers(r.text);
+    const replies = cards.map((c, i) => {
+      // Cada pergunta pelo texto dela; com uma só, o texto inteiro serve quando o formato não bate.
+      const answer = parsed.byQuestion.get(c.q.question) ?? (cards.length === 1 ? parsed.text : '');
+      const chosen = chosenLabels(answer, c.q.options);
+      c.opts.forEach((li, k) => li.classList.toggle('is-chosen', chosen.has(c.q.options[k].label)));
+      if (!answer) return null;
+      return h(
+        'div',
+        { class: 'ui-term__q-reply' },
+        h('span', { class: 'ui-term__q-reply-tag', text: r.error ? tr('Sem resposta') : cards.length > 1 ? `${tr('Você respondeu')} (${i + 1})` : tr('Você respondeu'), attrs: { 'data-chrome': '' } }),
+        h('span', { class: 'ui-term__q-reply-text', text: answer }),
+      );
+    });
+    slot.replaceChildren(...replies.filter((n): n is HTMLDivElement => !!n));
+  };
+  return { row: el, slot, fill };
 }
 
 function toolRow(t: ToolEntry, now: number, copy: Copier): ToolRefs {
+  if (t.tool === 'AskUserQuestion') {
+    const ask = askRow(t, now);
+    if (ask) return ask;
+  }
   const { name, args } = splitToolTitle(t.title);
   const title = h('div', { class: 'ui-term__title' }, h('strong', { text: name }), args ? document.createTextNode(args) : null);
   const input = toolInput(t);
@@ -532,7 +576,8 @@ function attachResult(refs: ToolRefs, r: ResultEntry, copy: Copier): void {
   refs.row.classList.remove('is-pending');
   refs.row.classList.toggle('is-error', !!r.error);
   refs.row.classList.toggle('is-ok', !r.error);
-  refs.slot.replaceChildren(resultBlock(r, copy));
+  if (refs.fill) refs.fill(r);
+  else refs.slot.replaceChildren(resultBlock(r, copy));
 }
 
 function entryRow(e: PlainEntry, now: number, copy: Copier): HTMLElement {

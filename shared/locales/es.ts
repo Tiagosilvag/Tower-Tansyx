@@ -3319,4 +3319,7 @@ export const ES: Readonly<Record<string, string>> = {
   "Sugestão do Claude Code para o próximo prompt (Tab aceita)": "Sugerencia de Claude Code para el siguiente prompt (Tab acepta)",
   "Pesquisar projeto": "Buscar proyecto",
   "Nenhum projeto encontrado.": "Ningún proyecto encontrado.",
+  "Você respondeu": "Respondiste",
+  "Aguardando a sua resposta…": "Esperando tu respuesta…",
+  "Sem resposta": "Sin respuesta",
 };

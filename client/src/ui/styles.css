@@ -11371,3 +11371,87 @@ html.is-replay #world {
 .ui-spawn__search[hidden] {
   display: none;
 }
+
+/* Pergunta do agente (AskUserQuestion) e a sua resposta no chat: um cartão em vez do bloco bruto da ferramenta. */
+.ui-term__qmark {
+  color: var(--ui-accent, #7cc8ff);
+  font-weight: 700;
+}
+
+.ui-term__q-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--ui-line-strong);
+  border-left: 3px solid var(--ui-accent, #7cc8ff);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ui-term__q-tag,
+.ui-term__q-reply-tag {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+
+.ui-term__q-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ui-term__q-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-term__q-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 8px;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 5px;
+  color: var(--ui-muted);
+}
+
+.ui-term__q-opt.is-chosen {
+  color: var(--ui-text);
+  border-color: var(--ui-accent, #7cc8ff);
+  background: rgba(124, 200, 255, 0.1);
+}
+
+.ui-term__q-opt.is-chosen strong::before {
+  content: '✓ ';
+}
+
+.ui-term__q-desc {
+  font-size: 12px;
+  color: var(--ui-muted);
+  overflow-wrap: anywhere;
+}
+
+.ui-term__q-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--ui-line-strong);
+}
+
+.ui-term__q-reply-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ui-term__q-wait {
+  color: var(--ui-muted);
+  font-style: italic;
+}
