@@ -26,6 +26,9 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **O chat mostra a pergunta do agente e a sua resposta em todos os filtros.** Com "Sem ferramentas" ou "Só prompts", o
+  `AskUserQuestion` (a pergunta com a resposta que você deu) sumia junto com as outras ferramentas e parecia que a
+  resposta tinha sido ignorada; agora ele fica visível, como uma conversa com você.
 - **Pesquisa de projetos no "Novo agente".** Com cinco ou mais pastas, uma caixa acima da lista filtra por nome ou
   caminho (sem diferenciar maiúsculas nem acentos); Enter escolhe o primeiro resultado e Esc limpa a pesquisa.
 - **"Nova sessão" não lista mais pastas apagadas.** A lista de projetos vem do histórico de sessões e mantinha uma pasta

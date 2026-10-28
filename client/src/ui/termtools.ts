@@ -40,9 +40,17 @@ export function finalAnswerKeys(items: Iterable<TerminalItem>): Set<string> {
   return finals;
 }
 
-/** O item aparece com o filtro? (`finals` = finalAnswerKeys, usado só por "Só prompts".) */
+/** A pergunta do agente (AskUserQuestion) com a sua resposta: é conversa com você, não uma ferramenta qualquer. */
+function isQuestion(item: TerminalItem): boolean {
+  return item.type === 'tool' && /^AskUserQuestion\b/.test(item.tool.title);
+}
+
+/**
+ * O item aparece com o filtro? (`finals` = finalAnswerKeys, usado só por "Só prompts".) As perguntas do agente e as
+ * respostas que você deu ficam em todos os filtros: sem elas, o chat parecia ignorar o que você respondeu.
+ */
 export function itemVisible(item: TerminalItem, filter: TerminalFilter, finals: ReadonlySet<string>): boolean {
-  if (filter === 'all') return true;
+  if (filter === 'all' || isQuestion(item)) return true;
   if (item.type !== 'entry') return false;
   if (filter === 'noTools') return true;
   return item.entry.kind === 'user' || (item.entry.kind === 'assistant' && finals.has(item.key));

@@ -121,6 +121,16 @@ describe('filtro', () => {
   });
 });
 
+describe('filtro e perguntas do agente', () => {
+  it('a pergunta (AskUserQuestion) com a resposta aparece mesmo em Só prompts e Sem ferramentas', () => {
+    const list = items(user('u1'), tool('q1', { title: 'AskUserQuestion(Como seguimos?)' }), result('r1', 'q1', 'The user answered: ...'), tool('t1'), result('r2', 't1'), say('a1', 'Feito.'));
+    const finals = finalAnswerKeys(list);
+    const visible = (f: TerminalFilter) => list.filter((i) => itemVisible(i, f, finals)).map((i) => i.key);
+    expect(visible('prompts')).toEqual(['user:u1', 'tool:q1', 'assistant:a1']);
+    expect(visible('noTools')).toEqual(['user:u1', 'tool:q1', 'assistant:a1']);
+  });
+});
+
 describe('copiar', () => {
   it('prompt, resposta, comando (ou o título, sem argumentos), resultado e eventos', () => {
     expect(copyTextOf(user('u1', 'Arruma o carrinho\n\n'))).toBe('Arruma o carrinho');
