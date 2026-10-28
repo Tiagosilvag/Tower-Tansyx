@@ -26,6 +26,12 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Botão para atualizar o uso das contas.** Ao lado dos cartões de uso, na barra do topo, o botão de atualizar roda
+  `claude -p /usage` em cada conta do Claude Code (sem abrir sessão, sem gastar tokens, uns 2 s por conta, em
+  paralelo) e relê o cache que o Claude Code grava no `.claude.json`. Resolve a conta sem sessão aberta, cujo uso
+  ficava "desatualizado" porque só o statusline (enquanto uma sessão roda) o renovava. Mostra ao lado se deu certo ou
+  qual conta falhou (ex.: conta com chave de API, sem plano). Só pelo próprio computador, fora do Docker
+  (`POST /api/usage/refresh`; o Codex não tem como buscar o uso daqui).
 - **Perguntas e pedidos de permissão aparecem no chat.** Na janela de conversa (a que não é o terminal interativo),
   quando o agente faz uma pergunta (`AskUserQuestion`) ou pede permissão, o mesmo cartão da gaveta aparece entre a
   conversa e a caixa de mensagem, com as opções, o campo "Outro" e os botões de responder, aprovar e recusar. Sem o

@@ -11211,3 +11211,54 @@ html.is-replay #world {
 .ui-world-chip__visitors[hidden] {
   display: none;
 }
+
+/* Botão que atualiza o uso das contas, ao lado dos cartões de uso. */
+.ui-usage-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ui-usage-refresh[hidden] {
+  display: none;
+}
+
+.ui-usage-refresh__btn:disabled {
+  cursor: progress;
+}
+
+.ui-usage-refresh.is-busy .ui-usage-refresh__btn svg {
+  animation: ui-usage-refresh-spin 0.9s linear infinite;
+}
+
+@keyframes ui-usage-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ui-usage-refresh__msg {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--ui-muted);
+}
+
+.ui-usage-refresh__msg.is-error {
+  color: var(--ui-danger, #ff8a8a);
+}
+
+@media (max-width: 600px) {
+  .ui-usage-refresh__msg {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-usage-refresh.is-busy .ui-usage-refresh__btn svg {
+    animation: none;
+  }
+}

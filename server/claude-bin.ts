@@ -44,3 +44,22 @@ export function runnableClaudeBin(env: NodeJS.ProcessEnv = process.env, platform
   const bin = claudeBinFrom(env, platform);
   return bin && isExecutableFile(bin, platform) ? bin : undefined;
 }
+
+/**
+ * Variáveis que o Claude Code põe no ambiente das próprias ferramentas. Se o Habblaud foi iniciado de dentro de uma
+ * sessão, um `claude` aberto por ele (terminal interativo, `claude -p /usage`) se acharia uma sessão-filha.
+ */
+export const SESSION_ENV_VARS = [
+  'CLAUDECODE',
+  'AI_AGENT',
+  'CLAUDE_PID',
+  'CLAUDE_EFFORT',
+  'CLAUDE_CODE_CHILD_SESSION',
+  'CLAUDE_CODE_SESSION_ID',
+  'CLAUDE_CODE_SESSION_ATTENDED',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CLAUDE_CODE_EXECPATH',
+  'CLAUDE_CODE_MESSAGING_SOCKET',
+  'CLAUDE_CODE_MESSAGING_TOKEN',
+  'CLAUDE_CODE_SSE_PORT',
+];

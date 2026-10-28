@@ -25,7 +25,7 @@ import { readProcInfo, sameProcess, type ProcInfo, type RegisteredProc } from '.
 import { SESSION_PREFIX, type TmuxDriver } from './tmux';
 import { killWithConsoleReset } from './winkill';
 import { tr } from '../../shared/i18n';
-import { isExecutableFile } from '../claude-bin';
+import { isExecutableFile, SESSION_ENV_VARS } from '../claude-bin';
 
 export { claudeBinFrom, findExecutable, isExecutableFile } from '../claude-bin';
 
@@ -120,24 +120,7 @@ const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 /** Id de agente principal: "<conta>:<pid>". */
 const MAIN_ID = /^(.+):(\d+)$/;
 
-/**
- * Variáveis que o Claude Code põe no ambiente das próprias ferramentas. Se o Habblaud foi iniciado de dentro
- * de uma sessão, o Claude aberto aqui se acharia uma sessão-filha (e desligaria o transcript).
- */
-const INHERITED_SESSION_VARS = [
-  'CLAUDECODE',
-  'AI_AGENT',
-  'CLAUDE_PID',
-  'CLAUDE_EFFORT',
-  'CLAUDE_CODE_CHILD_SESSION',
-  'CLAUDE_CODE_SESSION_ID',
-  'CLAUDE_CODE_SESSION_ATTENDED',
-  'CLAUDE_CODE_ENTRYPOINT',
-  'CLAUDE_CODE_EXECPATH',
-  'CLAUDE_CODE_MESSAGING_SOCKET',
-  'CLAUDE_CODE_MESSAGING_TOKEN',
-  'CLAUDE_CODE_SSE_PORT',
-];
+const INHERITED_SESSION_VARS = SESSION_ENV_VARS;
 
 /**
  * Sem o @xterm/headless: guarda a saída bruta, cortada no começo de uma linha (nunca no meio de uma sequência

@@ -16,7 +16,8 @@ describe('access', () => {
   it('com resposta: vale o que o servidor disse (celular logado aprovando)', async () => {
     const body = { remote: true, local: false, permissions: true, messages: false, terminal: false, spawn: false };
     const ok = (() => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))) as unknown as typeof fetch;
-    expect(await loadAccess(ok)).toEqual(body);
+    // O que o servidor não disse (servidor antigo) vale como desligado.
+    expect(await loadAccess(ok)).toEqual({ ...body, usageRefresh: false });
     expect(access().permissions).toBe(true);
   });
   it('reler o acesso avisa só quando muda (terminal liberado com a página do celular aberta)', async () => {

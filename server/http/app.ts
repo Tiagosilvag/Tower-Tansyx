@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { NAME_MAX, parseAppearanceParts, parseCharacterName, parseSeed } from '../../shared/appearance';
 import type { AccessInfo, AgentInfo, ModSummary, OfficeSnapshot, SourceInfo, UpdateStatus } from '../../shared/types';
 import type { AccountsService } from '../accounts/service';
+import type { UsageRefresher } from '../accounts/usage-refresh';
 import { handleCodexEvent } from '../codex/http';
 import type { DayStatsService } from '../history/daystats';
 import type { Office } from '../model/office';
@@ -71,6 +72,8 @@ export interface ApiDeps {
   attachments?: AttachmentStore;
   /** Ditado (/api/dictation e, para o auxiliar do host, /api/host/dictation/*; dictation/dictation.ts). */
   dictation?: DictationService;
+  /** Atualizar o uso das contas sob demanda (POST /api/usage/refresh; accounts/usage-refresh.ts). */
+  usageRefresh?: UsageRefresher;
   /** Entregas (GET /api/deliveries e os anexos em /api/deliveries/file/:id; deliveries/deliveries.ts). */
   deliveries?: DeliveryIndex;
   /** Quem lê os arquivos das entregas (e, para o auxiliar do host, /api/host/files/*; deliveries/fetcher.ts). */
@@ -399,9 +402,24 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
           terminal: !!terminals && trusted(req, 'terminal'),
           spawn: !!deps.spawn && trusted(req, 'spawn'),
           world: !!deps.world && !!deps.terminal && !remote && isLoopbackHost(req.headers.host),
+          usageRefresh: !!deps.usageRefresh && !remote && isLoopbackHost(req.headers.host),
         };
         sendJson(res, 200, access);
       }
+      return true;
+    }
+    if (path === '/api/usage/refresh') {
+      // Roda `claude -p /usage` em cada conta (sem prompt, sem sessão): só pelo próprio computador, como o resto que
+      // executa o claude. O corpo (JSON vazio, exigido pelo guard) é descartado.
+      const refresher = deps.usageRefresh;
+      if (method !== 'POST') methodNotAllowed(res, 'POST');
+      else if (!refresher) sendJson(res, 403, { error: tr('atualizar o uso pelo escritório está desligado') });
+      else if (!trusted(req)) sendJson(res, 403, { error: denied(req, tr('o uso só é atualizado pelo próprio computador (http://localhost)')) });
+      else
+        readJson(req)
+          .then(() => refresher.run())
+          .then((results) => sendJson(res, 200, { results }))
+          .catch((err) => fail(res, err));
       return true;
     }
     if (path === '/api/mod/summary') {

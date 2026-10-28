@@ -396,6 +396,8 @@ export interface AccessInfo {
    * com Host local. Ausente em servidores antigos.
    */
   world?: boolean;
+  /** Pode atualizar o uso das contas (POST /api/usage/refresh): só pelo próprio computador. Ausente em servidores antigos. */
+  usageRefresh?: boolean;
 }
 
 export interface FeedItem {

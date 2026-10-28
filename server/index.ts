@@ -25,6 +25,7 @@ import { createPtyRoutes } from './http/pty';
 import { claudeBinFrom, isExecutableFile, loadPty, PtyManager, type ScreenFactory, type SpawnPty } from './pty/manager';
 import { loadHeadlessScreen } from './pty/screen';
 import { createTmuxDriver } from './pty/tmux';
+import { UsageRefresher } from './accounts/usage-refresh';
 import { currentCwdOf, openMainAgent, SessionHistory } from './sources/history';
 import { HistorySet, SourceSet } from './sources/source';
 import { createPermissionRoutes } from './permissions/http';
@@ -310,6 +311,7 @@ else {
 // Terminais dentro do tmux: sobrevivem a reiniciar o Habblaud (HABBLAUD_PTY_TMUX=0 desliga; só Linux/macOS).
 const tmuxBin = process.platform !== 'win32' && process.env.HABBLAUD_PTY_TMUX?.trim() !== '0' ? findExecutable('tmux') : undefined;
 const ptyTmux = spawnPty && tmuxBin ? createTmuxDriver(tmuxBin, { mouse: process.env.HABBLAUD_TMUX_MOUSE?.trim() !== '0' }) : null;
+const usageRefreshBin = config.inDocker ? undefined : runnableClaudeBin(process.env);
 const ptys = spawnPty
   ? new PtyManager({
       spawn: spawnPty,
@@ -380,6 +382,14 @@ const api = createApiHandler({
   permissions: permissions ? createPermissionRoutes(permissions) : undefined,
   messages: messages ? createMessageRoutes(messages) : undefined,
   pty: ptys ? createPtyRoutes(ptys) : undefined,
+  // Botão "atualizar o uso": roda `claude -p /usage` em cada conta (fora do Docker, onde o claude existe).
+  usageRefresh: usageRefreshBin
+    ? new UsageRefresher({
+        bin: usageRefreshBin,
+        accounts: () => accounts.entriesOf('claude').map((a) => ({ id: a.id, name: a.detected.name, dir: a.dir, isDefault: isDefaultDir(a.dir, config.home) })),
+        reload: () => accounts.refresh(),
+      })
+    : undefined,
   spawn,
   attachments,
   dictation,
