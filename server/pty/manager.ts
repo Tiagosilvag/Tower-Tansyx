@@ -22,6 +22,7 @@ import { frame } from '../http/sse';
 import { errMsg, log } from '../log';
 import { pidAlive } from '../sources/registry';
 import { readProcInfo, sameProcess, type ProcInfo, type RegisteredProc } from './procinfo';
+import { parsePromptSuggestion } from './suggestion';
 import { SESSION_PREFIX, type TmuxDriver } from './tmux';
 import { killWithConsoleReset } from './winkill';
 import { tr } from '../../shared/i18n';
@@ -357,6 +358,16 @@ export class PtyManager {
   /** O terminal existe e segue rodando (404/409 do contrário): quem grava arquivo para ele confere antes. */
   assertRunning(id: string): void {
     this.running(id);
+  }
+
+  /**
+   * A sugestão de próximo prompt que o Claude Code mostra na tela deste terminal (o texto cinza que o Tab aceita), se
+   * houver. Só para terminais no tmux (a tela é lida de lá); sem tmux, não há como: undefined.
+   */
+  suggestion(id: string): string | undefined {
+    const pty = this.running(id);
+    if (!pty.tmux || !this.opts.tmux) return undefined;
+    return parsePromptSuggestion(this.opts.tmux.capture(pty.tmux));
   }
 
   input(id: string, data: unknown): void {

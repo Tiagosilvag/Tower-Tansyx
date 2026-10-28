@@ -19,6 +19,11 @@ describe('POST /api/pty/:id/attach', () => {
       assertRunning: (id: string) => {
         if (id !== 'ok') throw new PtyError(404, 'terminal não encontrado');
       },
+      suggestion: (id: string) => {
+        if (id === 'nada') return undefined;
+        if (id !== 'ok') throw new PtyError(404, 'terminal não encontrado');
+        return 'faça o deploy';
+      },
     } as unknown as PtyManager;
     const route = createPtyRoutes(ptys);
     server = createServer((req, res) => route(req, res, new URL(req.url ?? '/', 'http://x').pathname));
@@ -48,5 +53,14 @@ describe('POST /api/pty/:id/attach', () => {
   it('recusa terminal desconhecido e arquivo vazio', async () => {
     expect((await post('nao', { name: 'a', data: 'AAAA' })).status).toBe(404);
     expect((await post('ok', { name: 'a', data: '' })).status).toBe(400);
+  });
+
+  it('GET /suggestion devolve a sugestão (ou null); só GET; terminal desconhecido é 404', async () => {
+    const ok = await fetch(`${base}/api/pty/ok/suggestion`);
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toEqual({ suggestion: 'faça o deploy' });
+    expect(await (await fetch(`${base}/api/pty/nada/suggestion`)).json()).toEqual({ suggestion: null });
+    expect((await fetch(`${base}/api/pty/x/suggestion`)).status).toBe(404);
+    expect((await post('ok/suggestion', {})).status).toBe(405);
   });
 });

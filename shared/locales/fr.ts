@@ -3332,4 +3332,5 @@ export const FR: Readonly<Record<string, string>> = {
   "já na sala": "déjà dans la salle",
   "Escolha a conta da nova sessão": "Choisissez le compte de la nouvelle session",
   "Abre um Claude Code novo nesta pasta, na conta que você escolher": "Ouvre un nouveau Claude Code dans ce dossier, dans le compte de votre choix",
+  "Sugestão do Claude Code para o próximo prompt (Tab aceita)": "Suggestion de Claude Code pour le prochain prompt (Tab accepte)",
 };

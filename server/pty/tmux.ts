@@ -42,6 +42,8 @@ export interface TmuxDriver {
   attach(name: string): { file: string; args: string[] };
   /** Encerra a sessão (e o `claude` dentro dela). Não lança se ela já não existe. */
   kill(name: string): void;
+  /** A tela visível da sessão, com os atributos (cores, dim) como escapes; vazio se a sessão não existe. */
+  capture(name: string): string;
 }
 
 export interface TmuxOptions {
@@ -124,6 +126,13 @@ export function createTmuxDriver(bin: string, opts: TmuxOptions = {}): TmuxDrive
       return sessions;
     },
     attach: (name) => ({ file: bin, args: [...base, 'attach-session', '-t', `=${name}`] }),
+    capture(name) {
+      try {
+        return run(['capture-pane', '-p', '-e', '-t', `=${name}:`]);
+      } catch {
+        return '';
+      }
+    },
     kill(name) {
       try {
         run(['kill-session', '-t', `=${name}`]);

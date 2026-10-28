@@ -33,6 +33,9 @@ import { tr } from '../../../shared/i18n';
 
 export type ComposerVariant = 'drawer' | 'terminal';
 
+/** De quanto em quanto tempo a sugestão de prompt do Claude Code é consultada enquanto o agente está ocioso. */
+const SUGGEST_POLL_MS = 4_000;
+
 export interface ComposerOptions {
   /** Esc dentro da caixa: para onde vai o foco (padrão: só sai da caixa). */
   onEscape?: () => void;
@@ -68,6 +71,17 @@ export class MessageComposer {
   private dictKey = '';
   private attachBtn: HTMLButtonElement;
   private fileInput: HTMLInputElement;
+  /**
+   * A sugestão de próximo prompt do Claude Code (o texto cinza do campo de entrada dele, que o Tab aceita), lida da tela
+   * do terminal interativo do agente (GET /api/pty/:id/suggestion; só no tmux). Aparece acima da caixa enquanto ela
+   * está vazia e o agente ocioso; Tab ou clique a põe na caixa para você ajustar e mandar.
+   */
+  private suggestBtn: HTMLButtonElement;
+  private suggestText: HTMLElement;
+  private suggestions = new Map<string, string>();
+  /** "<rascunho>|<terminal>" consultado agora ('' = ninguém): mudar para outro encerra a consulta anterior. */
+  private suggestKey = '';
+  private suggestTimer: ReturnType<typeof setTimeout> | null = null;
   private canDictate = false;
 
   constructor(
@@ -84,6 +98,7 @@ export class MessageComposer {
       this.drafts.set(this.agentId, this.box.value);
       this.resize();
       this.syncButton();
+      this.paintSuggestion();
     });
     this.box.addEventListener('focus', () => this.resize());
     this.box.addEventListener('keydown', (e) => this.onKey(e));
@@ -137,6 +152,19 @@ export class MessageComposer {
       e.preventDefault();
       void this.attachFiles(files);
     });
+    this.suggestText = h('span', { class: 'ui-msg__suggest-text' });
+    this.suggestBtn = h(
+      'button',
+      {
+        class: 'ui-msg__suggest',
+        type: 'button',
+        hidden: true,
+        title: tr('Sugestão do Claude Code para o próximo prompt (Tab aceita)'),
+        on: { click: () => this.acceptSuggestion() },
+      },
+      h('span', { class: 'ui-msg__suggest-key', text: 'Tab', attrs: { 'aria-hidden': 'true' } }),
+      this.suggestText,
+    );
     this.row = h('div', { class: `ui-msg__row${term ? ' ui-term__prompt ui-term__prompt--mic' : ''}` });
     if (term) this.row.append(h('span', { class: 'ui-term__caret', text: '>', attrs: { 'aria-hidden': 'true' } }));
     this.row.append(this.box, this.attachBtn, this.fileInput, this.dictate.el, this.sendBtn);
@@ -150,7 +178,7 @@ export class MessageComposer {
     this.hint = h('p', { class: 'ui-msg__hint', hidden: true });
     this.status = h('p', { class: 'ui-msg__status', role: 'status', hidden: true, attrs: { 'aria-live': 'polite' } });
     this.tip = term ? null : h('p', { class: 'ui-msg__tip', text: composerTip() });
-    this.el = h('div', { class: `ui-msg ui-msg--${variant}` }, this.hint, this.row, this.dictStatus, this.status, this.tip);
+    this.el = h('div', { class: `ui-msg ui-msg--${variant}` }, this.hint, this.suggestBtn, this.row, this.dictStatus, this.status, this.tip);
   }
 
   /**
@@ -206,6 +234,7 @@ export class MessageComposer {
     setHidden(this.hint, term || mode.kind !== 'hint');
     setText(this.hint, mode.kind === 'hint' ? mode.text : '');
     this.syncButton();
+    this.syncSuggestion(agent, ready);
 
     const state = this.states.get(key);
     const text = sendStatusText(state, Date.now(), this.providers.get(key) ?? this.provider);
@@ -222,6 +251,12 @@ export class MessageComposer {
     // Os atalhos globais (F, T, P, /, setas...) não valem dentro da caixa. Com Ctrl/⌘ a tecla segue adiante
     // (Ctrl/⌘+F busca na conversa do terminal; os atalhos globais ignoram essas combinações).
     if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
+    // Tab com a caixa vazia e uma sugestão à mostra: aceita (como no terminal do Claude Code).
+    if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && this.box.value === '' && this.suggestions.has(this.agentId)) {
+      e.preventDefault();
+      this.acceptSuggestion();
+      return;
+    }
     if (e.key === 'Escape') {
       // Esc só sai da caixa (o próximo fecha o terminal ou a gaveta).
       e.preventDefault();
@@ -252,6 +287,70 @@ export class MessageComposer {
       const cur = this.drafts.get(key) ?? '';
       this.drafts.set(key, insertDictation(cur, cur.length, cur.length, text).value.slice(0, MESSAGE_MAX));
     }
+  }
+
+  /** Liga ou desliga a consulta da sugestão e pinta o botão (só no chat, com o terminal interativo do agente ocioso). */
+  private syncSuggestion(agent: AgentInfo | undefined, ready: boolean): void {
+    const ptyId =
+      ready && this.variant === 'terminal' && agent && agent.status === 'idle'
+        ? this.ctx.store.snapshot?.ptys?.find((p) => p.agentId === agent.id && p.exitedAt === undefined)?.id
+        : undefined;
+    const key = ptyId ? `${this.agentId}|${ptyId}` : '';
+    if (key !== this.suggestKey) {
+      if (this.suggestTimer) clearTimeout(this.suggestTimer);
+      this.suggestTimer = null;
+      // Parou de valer (agente trabalhando, terminal fechado, outro agente): a sugestão antiga não serve mais.
+      if (!ptyId) this.suggestions.delete(this.agentId);
+      this.suggestKey = key;
+      if (ptyId) this.pollSuggestion(key, this.agentId, ptyId);
+    }
+    this.paintSuggestion();
+  }
+
+  private pollSuggestion(key: string, agentKey: string, ptyId: string): void {
+    const step = async () => {
+      if (this.suggestKey !== key) return;
+      try {
+        const res = await fetch(`/api/pty/${encodeURIComponent(ptyId)}/suggestion`, { credentials: 'same-origin', cache: 'no-store' });
+        // Terminal que não existe mais (404) ou já encerrado (409): para de consultar.
+        if (res.status === 404 || res.status === 409) return;
+        if (res.ok) {
+          const body = (await res.json()) as { suggestion?: unknown };
+          const text = typeof body.suggestion === 'string' && body.suggestion ? body.suggestion.slice(0, MESSAGE_MAX) : undefined;
+          if (this.suggestKey === key && this.suggestions.get(agentKey) !== text) {
+            if (text) this.suggestions.set(agentKey, text);
+            else this.suggestions.delete(agentKey);
+            this.ctx.invalidate();
+          }
+        }
+      } catch {
+        // sem conexão agora: tenta de novo na próxima volta
+      }
+      if (this.suggestKey === key) this.suggestTimer = setTimeout(() => void step(), SUGGEST_POLL_MS);
+    };
+    void step();
+  }
+
+  private paintSuggestion(): void {
+    const text = this.suggestKey ? this.suggestions.get(this.agentId) : undefined;
+    const show = !!text && this.box.value === '' && this.mode.kind === 'ready';
+    setHidden(this.suggestBtn, !show);
+    if (show) setText(this.suggestText, text!);
+  }
+
+  /** Põe a sugestão na caixa (para ajustar e mandar com Enter). */
+  private acceptSuggestion(): void {
+    const text = this.suggestions.get(this.agentId);
+    if (!text || this.mode.kind !== 'ready') return;
+    this.suggestions.delete(this.agentId);
+    const box = this.box;
+    box.value = text.slice(0, MESSAGE_MAX);
+    this.drafts.set(this.agentId, box.value);
+    this.resize();
+    this.syncButton();
+    this.paintSuggestion();
+    box.focus({ preventScroll: true });
+    box.setSelectionRange(box.value.length, box.value.length);
   }
 
   /** Sobe os arquivos e põe os caminhos no texto, depois do que já estava escrito. */
@@ -335,6 +434,9 @@ export class MessageComposer {
         this.resize();
       }
     }
+    // A sugestão era do turno anterior: o terminal a troca assim que a mensagem entra.
+    this.suggestions.delete(agentId);
+    this.paintSuggestion();
     const m = r.message;
     this.setState(agentId, { phase: m.status, id: m.id, error: m.error, at: Date.now() });
     if (!isSettled(m.status)) this.poll(agentId, m.id, Date.now());

@@ -3,6 +3,7 @@
 //   POST /api/pty                      {cwd, account?, resume?, cols?, rows?}: sessão nova (ou retomada) do Claude Code
 //   GET  /api/pty/:id/stream           SSE: reset (tela guardada) | data | exit
 //   POST /api/pty/:id/input|resize|close
+//   GET  /api/pty/:id/suggestion       {suggestion: string | null}: a sugestão de prompt do Claude Code na tela (só no tmux)
 //   POST /api/pty/:id/attach           {name, type?, data (base64)}: grava o arquivo em ~/.habblaud/attachments e devolve {path}
 //   POST /api/agents/:id/stop          encerra o agente (aqui ou noutro terminal)
 //   POST /api/agents/:id/takeover      assume a sessão: encerra lá e retoma aqui
@@ -93,6 +94,10 @@ export function createPtyRoutes(ptys: PtyManager): (req: IncomingMessage, res: S
     if (act === 'stream') {
       if (method !== 'GET') return notAllowed(res, 'GET');
       return ptys.attach(id, req, res);
+    }
+    if (act === 'suggestion') {
+      if (method !== 'GET') return notAllowed(res, 'GET');
+      return sendJson(res, 200, { suggestion: ptys.suggestion(id) ?? null });
     }
     if (method !== 'POST') return notAllowed(res, 'POST');
     if (act === 'attach') {

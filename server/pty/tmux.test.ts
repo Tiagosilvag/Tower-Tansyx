@@ -26,6 +26,10 @@ class FakeTmux implements TmuxDriver {
     this.killed.push(name);
     this.sessions.delete(name);
   }
+  screens = new Map<string, string>();
+  capture(name: string): string {
+    return this.screens.get(name) ?? '';
+  }
 }
 
 class FakeClient implements PtyProcess {
@@ -186,6 +190,22 @@ describe('PtyManager com tmux', () => {
     expect(m.list().find((p) => p.id === info.id)?.exitedAt).toBeDefined();
   });
 
+  it('suggestion: lê da tela do tmux o texto em dim do prompt; sem tmux ou sem sugestão, undefined', () => {
+    const tmux = new FakeTmux();
+    const m = manager(tmux);
+    const info = m.create({ cwd: tmpdir() });
+    expect(m.suggestion(info.id)).toBeUndefined();
+    tmux.screens.set(SESSION_PREFIX + info.id, '─'.repeat(30) + '\n\x1b[39m❯\u00a0\x1b[2mfaça o deploy\x1b[0m\n' + '─'.repeat(30));
+    expect(m.suggestion(info.id)).toBe('faça o deploy');
+    // Sem tmux a tela não é lida.
+    const plain = manager(null);
+    const direct = plain.create({ cwd: tmpdir() });
+    expect(plain.suggestion(direct.id)).toBeUndefined();
+    // Terminal encerrado: 409, como o resto.
+    m.close(info.id);
+    expect(() => m.suggestion(info.id)).toThrow();
+  });
+
   it('sem tmux (null), o claude continua sendo filho direto do pty', () => {
     const calls: { file: string; args: string[] }[] = [];
     const m = manager(null, [], calls);
@@ -239,6 +259,15 @@ describe('driver do tmux (comandos)', () => {
         },
       }).list(),
     ).toEqual([]);
+  });
+
+  it('capture: capture-pane com os atributos, na sessão exata; erro vira vazio', () => {
+    const log: string[][] = [];
+    const d = createTmuxDriver('tmux', { run: (a) => (log.push(a), 'tela') });
+    expect(d.capture('habblaud-t1')).toBe('tela');
+    expect(log[0]).toEqual(['capture-pane', '-p', '-e', '-t', '=habblaud-t1:']);
+    const broken = createTmuxDriver('tmux', { run: () => { throw new Error('no session'); } });
+    expect(broken.capture('x')).toBe('');
   });
 
   it('attach usa o socket próprio e o nome exato da sessão', () => {

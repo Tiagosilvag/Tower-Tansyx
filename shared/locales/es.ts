@@ -3316,4 +3316,5 @@ export const ES: Readonly<Record<string, string>> = {
   "já na sala": "ya en la sala",
   "Escolha a conta da nova sessão": "Elige la cuenta de la nueva sesión",
   "Abre um Claude Code novo nesta pasta, na conta que você escolher": "Abre un Claude Code nuevo en esta carpeta, en la cuenta que elijas",
+  "Sugestão do Claude Code para o próximo prompt (Tab aceita)": "Sugerencia de Claude Code para el siguiente prompt (Tab acepta)",
 };

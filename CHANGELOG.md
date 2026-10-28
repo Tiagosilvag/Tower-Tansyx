@@ -26,6 +26,12 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **A sugestão de próximo prompt do Claude Code aparece no chat.** Quando o agente roda num terminal interativo daqui
+  (no tmux) e está ocioso, a sugestão cinza que o Claude Code mostra no campo de entrada dele aparece acima da caixa de
+  mensagem do chat; **Tab** (ou o clique) a põe na caixa para você ajustar e mandar. O Claude Code não grava essa
+  sugestão em arquivo nenhum, então o servidor a lê da tela do tmux sob demanda (`GET /api/pty/:id/suggestion`): o texto
+  em dim depois do `❯`. Não existe para sessões que não rodam no terminal interativo do Habblaud (em segundo plano,
+  noutro terminal) nem sem o tmux.
 - **Escolher a conta em "Nova sessão" da sala.** Com mais de uma conta do Claude Code, o botão **Nova sessão** da
   gaveta da sala abre um menu com as contas (marcando as que já têm agente na sala) e abre o Claude Code novo na conta
   escolhida, na mesma pasta: dois agentes na mesma sala, em contas diferentes. Com uma conta só, abre direto, como
