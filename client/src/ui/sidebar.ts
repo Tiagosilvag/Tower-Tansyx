@@ -394,7 +394,7 @@ export class Sidebar implements UiComponent {
     const canTerm = !!router?.available && a.status !== 'offline';
     setHidden(r.term, !canTerm);
     if (canTerm && router) {
-      const open = router.openAgentId === a.id;
+      const open = router.showing(a.id);
       const live = router.interactive(a.id);
       r.term.classList.toggle('is-on', open);
       r.term.classList.toggle('is-live', live);
@@ -418,9 +418,9 @@ export class Sidebar implements UiComponent {
 
   private pick(id: string): void {
     this.ctx.select({ type: 'agent', id }, { focus: true });
-    // Com um terminal aberto, clicar noutro agente troca o terminal para o dele.
+    // Com um terminal aberto, clicar noutro agente abre a janela dele (ou traz para a frente a que já existe).
     const t = this.ctx.terminals;
-    if (t && t.openAgentId !== null && t.openAgentId !== id && this.ctx.agent(id)) t.open(id);
+    if (t && t.openAgentId !== null && this.ctx.agent(id)) t.open(id);
     if (this.ctx.isNarrow()) this.ctx.togglePanel('sidebar', false);
   }
 }

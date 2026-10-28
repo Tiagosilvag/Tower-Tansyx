@@ -6,7 +6,7 @@
 // As teclas não vazam para os atalhos do escritório (T, P, M, Esc...): Esc, por exemplo, interrompe o Claude.
 // Fechar a janela não encerra a sessão; "Encerrar" encerra.
 import type { AgentInfo, PtyInfo } from '../../../shared/types';
-import type { UiComponent, UiContext } from './context';
+import type { UiComponent, UiContext, WindowOptions } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
 import { maximizeButton, Movable } from './movable';
@@ -58,7 +58,10 @@ export class PtyPanel implements UiComponent, PtyControl {
   /** Agente a selecionar quando aparecer no snapshot (sessão recém-aberta ou assumida). */
   private pendingSelect: string | null = null;
 
-  constructor(private ctx: UiContext) {
+  constructor(
+    private ctx: UiContext,
+    opts: WindowOptions = {},
+  ) {
     const icon = h('span', { class: 'ui-term__icon', attrs: { 'aria-hidden': 'true' } });
     icon.innerHTML = ICONS.terminal;
     this.accEl = createAccountChip('sm');
@@ -68,7 +71,7 @@ export class PtyPanel implements UiComponent, PtyControl {
     this.actions = new TermActions(ctx, this, false, async () => {
       if (this.info) await closePty(this.info.id);
     });
-    this.tabs = new TermTabs(ctx);
+    this.tabs = new TermTabs(ctx, opts.openAgent);
     const close = iconButton(ICONS.close, tr('Fechar a janela (a sessão continua rodando)'), () => this.close(), 'ui-icon-btn--sm ui-term__close');
     const bar = h(
       'div',
@@ -92,9 +95,10 @@ export class PtyPanel implements UiComponent, PtyControl {
       h('p', { class: 'ui-muted', text: tr('Use "Assumir daqui" (no topo) para encerrar lá e continuar a mesma conversa nesta janela, podendo digitar.') }),
     );
     this.el = h('section', { class: 'ui-term ui-pty', role: 'dialog', hidden: true, attrs: { 'aria-label': tr('Terminal') } }, bar, this.tabs.el, this.screen, this.away);
+    if (opts.offset) this.el.style.setProperty('--slot-off', `${opts.offset}px`);
     // Teclas digitadas no terminal são do Claude Code, não dos atalhos do escritório.
     this.el.addEventListener('keydown', (e) => e.stopPropagation());
-    this.movable = new Movable(this.el, bar, { key: 'habblaud.move.term', enabled: () => !ctx.isNarrow(), onMove: () => this.pane?.refit(true) });
+    this.movable = new Movable(this.el, bar, { key: opts.moveKey ?? 'habblaud.move.term', enabled: () => !ctx.isNarrow(), onMove: () => this.pane?.refit(true) });
     this.el.addEventListener('keyup', (e) => e.stopPropagation());
   }
 

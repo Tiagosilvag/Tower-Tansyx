@@ -19,6 +19,13 @@ vi.mock('./settings');
 vi.mock('./sidebar');
 vi.mock('./sound');
 vi.mock('./terminal');
+vi.mock('./termwindows', () => ({ TerminalWindows: class {
+  els = [];
+  isOpen = false;
+  render() {}
+  closeAll() {}
+  closeChats() {}
+} }));
 vi.mock('./toasts');
 vi.mock('./version');
 vi.mock('./update');

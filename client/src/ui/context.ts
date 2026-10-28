@@ -11,13 +11,25 @@ export interface UiComponent {
 
 export type PanelName = 'sidebar' | 'feed';
 
+/** Opções de uma janela de terminal (várias podem estar abertas ao mesmo tempo: ui/termwindows.ts). */
+export interface WindowOptions {
+  /** Chave da posição guardada no navegador; o chat e o interativo do mesmo slot dividem a chave. */
+  moveKey?: string;
+  /** Deslocamento (px) do lugar padrão: cada slot nasce um pouco abaixo e à direita do anterior. */
+  offset?: number;
+  /** Trocar o agente desta janela (clique numa aba). Padrão: o roteador escolhe a janela. */
+  openAgent?: (agentId: string) => void;
+}
+
 /**
- * Uma janela de terminal só, por agente: o interativo quando a sessão roda dentro do Habblaud (pty); senão o
- * de leitura (com "Assumir daqui" para passar a ser interativo). Montado em ui/index.ts.
+ * Uma janela de terminal por agente (várias abertas ao mesmo tempo): o interativo quando a sessão roda dentro do
+ * Habblaud (pty); senão o de leitura (com "Assumir daqui" para passar a ser interativo). Montado em ui/termwindows.ts.
  */
 export interface TerminalRouter {
-  /** Agente com o terminal aberto (qualquer um dos dois), ou null. */
+  /** Agente da janela de terminal que está na frente (qualquer um dos dois tipos), ou null. */
   readonly openAgentId: string | null;
+  /** Este agente tem uma janela de terminal aberta (em qualquer posição)? */
+  showing(agentId: string): boolean;
   open(agentId: string, opener?: HTMLElement | null): void;
   toggle(agentId: string, opener?: HTMLElement | null): void;
   /** O terminal deste agente seria o interativo. */

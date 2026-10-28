@@ -4517,9 +4517,10 @@
   --term-fg: #d5dceb;
   --term-dim: #8a93a8;
   position: fixed;
-  z-index: 30;
-  top: calc(var(--top-h) + var(--gap) + (100vh - var(--top-h) - var(--gap) * 2 - var(--term-h)) / 2);
-  left: clamp(var(--gap), calc((var(--free-left) + 100vw - var(--free-right) - var(--term-w)) / 2), calc(100vw - var(--term-w) - var(--gap)));
+  /* Várias janelas de terminal: a que ganhou o foco sobe (--term-z) e cada slot nasce deslocado (--slot-off). */
+  z-index: var(--term-z, 30);
+  top: calc(var(--top-h) + var(--gap) + (100vh - var(--top-h) - var(--gap) * 2 - var(--term-h)) / 2 + var(--slot-off, 0px));
+  left: calc(clamp(var(--gap), calc((var(--free-left) + 100vw - var(--free-right) - var(--term-w)) / 2), calc(100vw - var(--term-w) - var(--gap))) + var(--slot-off, 0px));
   width: var(--term-w);
   height: var(--term-h);
   display: flex;
@@ -8204,7 +8205,7 @@ html.is-replay #world {
 }
 
 .ui-pty {
-  z-index: 31;
+  z-index: var(--term-z, 31);
 }
 
 .ui-pty__live {

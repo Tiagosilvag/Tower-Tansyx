@@ -26,6 +26,12 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Várias janelas de terminal ao mesmo tempo.** Clicar noutro agente (na lista, na gaveta ou no botão do terminal)
+  abre outra janela em vez de trocar a que estava aberta; clicar num agente que já tem janela só a traz para a
+  frente, e o botão do terminal dele fecha apenas aquela. Cada janela tem a própria posição (guardada no navegador),
+  nasce deslocada da anterior e sobe ao receber o clique. São até 4 janelas (depois, a menos recente é
+  reaproveitada); em tela estreita continua uma só. As abas de agentes do projeto trocam o agente da janela em que
+  foram clicadas.
 - **Botão para alternar entre o chat e o terminal interativo.** Na janela do terminal interativo aparece **Chat**
   (mostra a conversa em formato de chat, com a caixa de mensagem) e, no chat de um agente que já roda num terminal
   interativo, **Terminal**. A troca não encerra nada: fechar a janela interativa só a esconde. Sessões que ainda

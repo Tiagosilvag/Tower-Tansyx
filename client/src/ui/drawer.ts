@@ -693,7 +693,7 @@ class AgentView {
   private renderTerminalButton(live: boolean, provider = providerOf(this.last)): void {
     const router = this.ctx.terminals;
     const available = (router ? router.available : !!this.ctx.store.snapshot?.meta.terminal) && access().terminal;
-    const open = (router ? router.openAgentId : this.terminal.agentId) === this.id;
+    const open = this.id !== null && (router ? router.showing(this.id) : this.terminal.agentId === this.id);
     // Interativo: o Claude Code roda aqui (pty) ou roda noutro terminal e dá para assumir pela janela.
     const readOnly = !!this.ctx.store.snapshot?.meta.terminal;
     const kind = !this.id ? '' : router?.interactive(this.id) ? 'interativo' : !readOnly && this.pty.enabled && ptyControllable(this.last) ? 'em outro terminal' : 'ao vivo';

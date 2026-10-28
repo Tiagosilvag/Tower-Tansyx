@@ -10,7 +10,7 @@
 // Sessão do Codex: selo "Codex" no cabeçalho e um spinner neutro no rodapé (o ✻ é do Claude Code).
 import type { AgentInfo, Provider, RecentSession, TerminalEntry, TerminalInit } from '../../../shared/types';
 import { MessageComposer } from './composer';
-import type { UiComponent, UiContext } from './context';
+import type { UiComponent, UiContext, WindowOptions } from './context';
 import { copyText, h, iconButton, prefersReducedMotion, setAttr, setHidden, setText, setTitle, setVariant } from './dom';
 import { calendarDayDiff, formatClock, formatDateTime, formatDuration, formatElapsed, relativeTime } from './format';
 import { ICONS } from './icons';
@@ -660,9 +660,10 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   constructor(
     private ctx: UiContext,
     pty?: PtyControl,
+    opts: WindowOptions = {},
   ) {
     this.actions = pty ? new TermActions(ctx, pty, true) : null;
-    this.tabs = new TermTabs(ctx);
+    this.tabs = new TermTabs(ctx, opts.openAgent);
     const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
     const findKey = mac ? '⌘F' : 'Ctrl+F';
     const icon = h('span', { class: 'ui-term__icon', attrs: { 'aria-hidden': 'true' } });
@@ -759,7 +760,8 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     );
     this.el.addEventListener('keydown', (e) => this.onKey(e));
     // Arrastar pela barra solta a janela (ui/movable.ts).
-    this.movable = new Movable(this.el, bar, { key: 'habblaud.move.term', enabled: () => !ctx.isNarrow() });
+    this.movable = new Movable(this.el, bar, { key: opts.moveKey ?? 'habblaud.move.term', enabled: () => !ctx.isNarrow() });
+    if (opts.offset) this.el.style.setProperty('--slot-off', `${opts.offset}px`);
     this.renderFilter();
     // Janela redimensionada: quem está no fim continua vendo o fim.
     if (typeof ResizeObserver === 'function') new ResizeObserver(() => this.follow && this.scrollToEnd()).observe(this.scroll);

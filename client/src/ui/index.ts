@@ -30,8 +30,8 @@ import { loadPrefs, safeLocalStorage, savePrefs, worldOptionsFrom, type UiPrefs 
 import { SettingsPopover } from './settings';
 import { Sidebar } from './sidebar';
 import { SoundControl } from './sound';
-import { TERMINAL_UNAVAILABLE_HINT, TerminalPanel } from './terminal';
-import { PtyPanel } from './pty';
+import { TERMINAL_UNAVAILABLE_HINT } from './terminal';
+import { TerminalWindows } from './termwindows';
 import { TimelapsePlayer } from './timelapse';
 import { Toasts } from './toasts';
 import { UpdateToaster } from './version';
@@ -163,7 +163,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
     openAbout: () => settings.showAbout(topbar.settingsBtn),
     toggleTimelapse() {
       // O terminal mostra a conversa de agora: não combina com o dia reproduzido.
-      if (!timelapse.isOpen && terminal.isOpen) terminal.close();
+      if (!timelapse.isOpen) wins.closeChats();
       timelapse.toggle();
     },
     isTimelapseOpen: () => timelapse.isOpen,
@@ -174,55 +174,17 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   const notifier = new Notifier(ctx, sound.board);
   topbar = new TopBar(ctx);
   sidebar = new Sidebar(ctx);
-  // Terminal interativo (Claude Code de verdade, dentro do navegador): abrir, assumir e encerrar sessões.
-  const pty = new PtyPanel(ctx);
-  const terminal = new TerminalPanel(ctx, pty);
+  // Terminais: várias janelas ao mesmo tempo (ui/termwindows.ts). Cada uma é o interativo (Claude Code de verdade,
+  // dentro do navegador) se a sessão roda aqui, ou o chat de leitura, com "Assumir daqui" para passar a interativo.
+  // Clicar noutro agente abre outra janela em vez de trocar a que está aberta.
+  const wins = new TerminalWindows(ctx, (els) => root.append(...els));
   // Histórico de sessões (terminal): botão no grupo dos painéis da barra superior.
-  const history = new HistoryPopover(ctx, terminal);
+  const history = new HistoryPopover(ctx, wins);
   topbar.panelGroup.prepend(history.button);
-  // Terminal do agente: o interativo se a sessão roda aqui; senão o de leitura, com "Assumir daqui" para
-  // continuar nesta janela (sem o de leitura, o interativo mostra o aviso de "em outro terminal").
-  pty.onShow = () => terminal.close();
-  const router: TerminalRouter = {
-    get openAgentId() {
-      return pty.isOpen ? pty.agentId : terminal.agentId;
-    },
-    get available() {
-      return pty.enabled || (!!store.snapshot?.meta.terminal && !store.replaying);
-    },
-    interactive: (id) => !!pty.ptyOf(id),
-    get interactiveEnabled() {
-      return pty.enabled;
-    },
-    get chatAvailable() {
-      return !!store.snapshot?.meta.terminal && !store.replaying;
-    },
-    switchView(id) {
-      if (pty.isOpen && pty.agentId === id) {
-        // Interativo → chat: fechar a janela não encerra o pty.
-        pty.close();
-        terminal.open(id);
-      } else if (pty.ptyOf(id)) pty.openAgent(id);
-    },
-    newSession: (cwd, account) => pty.newSession(cwd, account),
-    open(id, opener) {
-      const readOnly = !!store.snapshot?.meta.terminal && !store.replaying;
-      if (pty.ptyOf(id) || (pty.enabled && !readOnly && ctx.agent(id)?.kind === 'main')) pty.openAgent(id);
-      else {
-        pty.close();
-        terminal.open(id, opener);
-      }
-    },
-    toggle(id, opener) {
-      if (router.openAgentId === id) {
-        pty.close();
-        terminal.close();
-      } else router.open(id, opener);
-    },
-  };
-  ctx.terminals = router;
+  const router = wins;
+  ctx.terminals = wins;
   // Entregas: o que os agentes terminaram (primeiro botão do grupo: é o que mais se usa pelo celular).
-  const deliveries = new Deliveries(ctx, terminal);
+  const deliveries = new Deliveries(ctx, wins);
   topbar.panelGroup.prepend(deliveries.button);
   // Links com ?agent= / ?delivery= (abrem o agente ou a entrega ao carregar).
   const openLink = (url: URL) => {
@@ -243,7 +205,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
     if (url.search && location.search === url.search) window.history.replaceState(null, '', location.pathname);
   };
   if (typeof location !== 'undefined') openLink(new URL(location.href));
-  drawer = new Drawer(ctx, terminal, pty);
+  drawer = new Drawer(ctx, wins, wins);
   const feed = new FeedPanel(ctx);
   const toasts = new Toasts(ctx);
   const updateToaster = new UpdateToaster(ctx, (n) => toasts.push(n));
@@ -268,8 +230,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
       const on = inCity();
       root.classList.toggle('is-city', on);
       if (on) {
-        if (terminal.isOpen) terminal.close();
-        if (pty.isOpen) pty.close();
+        wins.closeAll();
         if (ctx.isNarrow() && panels.sidebar) ctx.togglePanel('sidebar', false);
       }
       invalidate();
@@ -298,7 +259,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   const scrim = h('div', { class: 'ui-scrim', attrs: { 'aria-hidden': 'true' }, on: { click: () => ctx.togglePanel('sidebar', false) } });
 
   root.classList.add('ui-root');
-  root.append(timelapse.vignette, topbar.el, sidebar.el, scrim, feed.el, drawer.el, terminal.el, pty.el, timelapse.el, timelapse.badge, toasts.el, banner.el, update.el, empty.el, popups.el, tip.el, settings.el, worldDialog.el, history.el, deliveries.el, help.el, renamer.el, live, splash.el);
+  root.append(timelapse.vignette, topbar.el, sidebar.el, scrim, feed.el, drawer.el, ...wins.els, timelapse.el, timelapse.badge, toasts.el, banner.el, update.el, empty.el, popups.el, tip.el, settings.el, worldDialog.el, history.el, deliveries.el, help.el, renamer.el, live, splash.el);
   area = new FreeArea(world, { root, topbar: topbar.el, sidebar: sidebar.el, drawer: drawer.el, feed: feed.el }, () => ({
     sidebar: panels.sidebar,
     feed: panels.feed,
@@ -307,7 +268,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   }));
   drawer.onLayoutChange = () => applyLayout();
 
-  const components: UiComponent[] = [topbar, sidebar, drawer, terminal, pty, history, deliveries, feed, toasts, settings, empty, banner, tip, notifier, splash, timelapse, sound, day, updateToaster, worldDialog, popups, worldChip];
+  const components: UiComponent[] = [topbar, sidebar, drawer, wins, history, deliveries, feed, toasts, settings, empty, banner, tip, notifier, splash, timelapse, sound, day, updateToaster, worldDialog, popups, worldChip];
   if (scene) components.push(scene);
   root.append(worldSocial.el);
   components.push(worldSocial);
@@ -407,8 +368,8 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
     if (e.key === 'Escape') {
       if (help.isOpen || settings.isOpen || worldDialog.isOpen || history.isOpen) return; // diálogo/popover tratam o próprio Esc
       // O terminal flutua sobre tudo: fecha primeiro (a busca dele, depois ele; a gaveta continua aberta).
-      if (terminal.isOpen) {
-        terminal.escape();
+      if (wins.chatOpen) {
+        wins.escape();
         e.preventDefault();
       } else if (ctx.isNarrow() && panels.sidebar) {
         ctx.togglePanel('sidebar', false);
@@ -481,13 +442,13 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
    */
   function toggleTerminal(): void {
     const id = selection?.type === 'agent' ? selection.id : null;
-    if (id !== null && pty.enabled && ctx.agent(id)?.kind === 'main') return router.toggle(id);
-    if (id === null && pty.isOpen) return pty.close();
-    if (terminal.isOpen && (id === null || terminal.agentId === id)) terminal.close();
+    if (id !== null && wins.enabled && ctx.agent(id)?.kind === 'main') return router.toggle(id);
+    if (id === null && wins.isOpen) return wins.close();
+    if (id !== null && wins.showing(id)) router.toggle(id);
     else if (id === null) ctx.announce(tr('Selecione um agente para abrir o terminal.'));
     else if (!store.snapshot?.meta.terminal || !access().terminal) ctx.announce(`${TERMINAL_UNAVAILABLE_HINT}.`);
     else if (!ctx.agent(id)) ctx.announce(tr('O agente já saiu do escritório.'));
-    else terminal.open(id);
+    else wins.open(id);
   }
 
   // ---------------------------------------------------------------- início

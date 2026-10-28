@@ -32,7 +32,11 @@ export class TermTabs {
   /** Aba sendo arrastada (id do agente). */
   private dragging: string | null = null;
 
-  constructor(private ctx: UiContext) {
+  constructor(
+    private ctx: UiContext,
+    /** Abre o agente nesta janela (padrão: o roteador escolhe). */
+    private openAgent: (id: string) => void = (id) => ctx.terminals?.open(id),
+  ) {
     this.el = h('div', { class: 'ui-ttabs', role: 'tablist', hidden: true, attrs: { 'aria-label': tr('Agentes do projeto (arraste para reordenar)') } });
     this.list = new KeyedList<AgentInfo>(this.el, {
       animate: false,
@@ -63,7 +67,7 @@ export class TermTabs {
         b.dataset.id = a.id;
         b.addEventListener('click', () => {
           const id = b.dataset.id!;
-          if (id !== this.current) ctx.terminals?.open(id);
+          if (id !== this.current) this.openAgent(id);
         });
         this.wireDrag(b);
         return b;
@@ -131,7 +135,7 @@ ${doing}` : ''}${live ? tr(' (interativo)') : ''}`);
     if (id === this.current) {
       const i = this.peers.findIndex((a) => a.id === id);
       const next = this.peers[i + 1] ?? this.peers[i - 1];
-      if (next) this.ctx.terminals?.open(next.id);
+      if (next) this.openAgent(next.id);
     }
   }
 
