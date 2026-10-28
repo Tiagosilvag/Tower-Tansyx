@@ -128,13 +128,18 @@ export class TerminalWindows implements UiComponent, TerminalRouter, TerminalCon
     s.chat.close();
   }
 
-  /** Mostra `id` no slot `s` (o interativo se a sessão roda aqui ou pode rodar; senão o chat). */
-  private openIn(s: TerminalSlot, id: string, opener?: HTMLElement | null): void {
+  /**
+   * Mostra `id` no slot `s`. Por padrão abre o chat (a conversa lida do transcript, com a caixa de mensagem), que é o que
+   * se quer ao clicar para abrir o terminal; o interativo (Claude Code de verdade, para digitar) vem pelo botão
+   * "Terminal" da janela, por Retomar e por Assumir daqui. Sem o chat disponível (terminal de leitura desligado), o
+   * interativo é o que resta. `view: 'interactive'` força o interativo.
+   */
+  private openIn(s: TerminalSlot, id: string, opener?: HTMLElement | null, view?: 'interactive'): void {
     // Já tem janela própria: só traz para a frente, em vez de duplicar (dois terminais na mesma sessão).
     const other = this.slotOf(id);
     if (other && other !== s) return this.raise(other);
-    const readOnly = !!this.ctx.store.snapshot?.meta.terminal && !this.ctx.store.replaying;
-    if (s.pty.ptyOf(id) || (s.pty.enabled && !readOnly && this.ctx.agent(id)?.kind === 'main')) {
+    const interactive = !!s.pty.ptyOf(id) || (s.pty.enabled && this.ctx.agent(id)?.kind === 'main');
+    if (interactive && (view === 'interactive' || !this.chatAvailable)) {
       s.chat.close();
       s.pty.openAgent(id);
     } else {
@@ -205,7 +210,7 @@ export class TerminalWindows implements UiComponent, TerminalRouter, TerminalCon
 
   showInteractive(agentId: string): void {
     const s = this.slotOf(agentId);
-    if (!s) return this.open(agentId);
+    if (!s) return this.openIn(this.pick(), agentId, null, 'interactive');
     if (s.pty.isOpen && s.pty.agentId === agentId) return this.raise(s);
     if (s.pty.ptyOf(agentId)) s.pty.openAgent(agentId);
     this.raise(s);

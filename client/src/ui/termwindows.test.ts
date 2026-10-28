@@ -9,14 +9,14 @@ interface FakeSlot extends TerminalSlot {
   focus: () => void;
 }
 
-function setup(opts: { narrow?: boolean; ptys?: string[] } = {}) {
+function setup(opts: { narrow?: boolean; ptys?: string[]; chat?: boolean } = {}) {
   const ptys = new Set(opts.ptys ?? []);
   const slots: FakeSlot[] = [];
   const mounted: HTMLElement[][] = [];
   const ctx = {
     isNarrow: () => !!opts.narrow,
     agent: (id: string) => ({ id, kind: 'main' }),
-    store: { snapshot: { meta: { terminal: true } }, replaying: false },
+    store: { snapshot: { meta: { terminal: opts.chat !== false } }, replaying: false },
   } as unknown as UiContext;
   const make = (o: WindowOptions, onFocus: () => void): TerminalSlot => {
     const chat = {
@@ -137,17 +137,25 @@ describe('TerminalWindows', () => {
     expect(wins.showing('b')).toBe(true);
   });
 
-  it('agente com pty abre no interativo; alternar vai e volta no mesmo slot sem encerrar nada', () => {
+  it('agente com pty abre no chat por padrão; alternar vai ao interativo e volta no mesmo slot sem encerrar nada', () => {
     const { wins, slots } = setup({ ptys: ['a'] });
     wins.open('a');
-    expect(slots[0].pty.agentId).toBe('a');
-    wins.switchView('a');
-    expect(slots[0].pty.isOpen).toBe(false);
     expect(slots[0].chat.agentId).toBe('a');
+    expect(slots[0].pty.isOpen).toBe(false);
     wins.switchView('a');
     expect(slots[0].pty.agentId).toBe('a');
     expect(slots[0].chat.isOpen).toBe(false);
+    wins.switchView('a');
+    expect(slots[0].chat.agentId).toBe('a');
+    expect(slots[0].pty.isOpen).toBe(false);
     expect(slots).toHaveLength(1);
+  });
+
+  it('sem o chat disponível (terminal de leitura desligado), o interativo é o que abre', () => {
+    const { wins, slots } = setup({ ptys: ['a'], chat: false });
+    wins.open('a');
+    expect(slots[0].pty.agentId).toBe('a');
+    expect(slots[0].chat.isOpen).toBe(false);
   });
 
   it('a aba de uma janela que aponta para um agente já aberto noutra janela só traz essa para a frente', () => {
@@ -166,7 +174,6 @@ describe('TerminalWindows', () => {
   it('showInteractive leva o chat do agente com pty ao interativo e nunca volta ao chat', () => {
     const { wins, slots } = setup({ ptys: ['a'] });
     wins.open('a');
-    wins.switchView('a');
     expect(slots[0].chat.agentId).toBe('a');
     wins.showInteractive('a');
     expect(slots[0].pty.agentId).toBe('a');
@@ -177,12 +184,12 @@ describe('TerminalWindows', () => {
     expect(slots).toHaveLength(1);
   });
 
-  it('showInteractive de um agente sem janela abre a que o roteador abriria', () => {
+  it('showInteractive de um agente sem janela abre o interativo dele (ou a oferta de assumir)', () => {
     const { wins, slots } = setup({ ptys: ['a'] });
     wins.showInteractive('a');
     expect(slots[0].pty.agentId).toBe('a');
     wins.showInteractive('sem-pty');
-    expect(slots[1].chat.agentId).toBe('sem-pty');
+    expect(slots[1].pty.agentId).toBe('sem-pty');
   });
 
   it('Esc fecha o chat que está na frente, um de cada vez', () => {
@@ -199,7 +206,7 @@ describe('TerminalWindows', () => {
   it('fechar tudo e fechar só os chats', () => {
     const { wins } = setup({ ptys: ['p'] });
     wins.open('a');
-    wins.open('p');
+    wins.showInteractive('p');
     wins.closeChats();
     expect(wins.showing('a')).toBe(false);
     expect(wins.showing('p')).toBe(true);

@@ -398,7 +398,8 @@ export class Sidebar implements UiComponent {
       const live = router.interactive(a.id);
       r.term.classList.toggle('is-on', open);
       r.term.classList.toggle('is-live', live);
-      const what = live ? tr('interativo') : tr('ao vivo');
+      // O clique abre o chat (o interativo só quando o chat não está disponível); "live" só marca quem tem terminal interativo.
+      const what = live && !router.chatAvailable ? tr('interativo') : tr('ao vivo');
       setTitle(r.term, open ? tr('Fechar o terminal') : tr('Abrir o terminal de {0} ({1})', [a.name, what]));
       setAttr(r.term, 'aria-label', open ? tr('Fechar o terminal de {0}', [a.name]) : tr('Abrir o terminal de {0}', [a.name]));
     }

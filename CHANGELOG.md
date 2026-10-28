@@ -26,6 +26,10 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **O terminal abre no chat por padrão.** Clicar para abrir o terminal de um agente (na lista, na gaveta, no atalho T ou
+  num link) abre a conversa em formato de chat, com a caixa de mensagem, mesmo quando o agente roda num terminal
+  interativo daqui. O interativo continua a um clique: botão **Terminal** da janela, **Retomar** e **Assumir daqui**.
+  Se o terminal de leitura estiver desligado, o interativo segue sendo o que abre.
 - **Botão para atualizar o uso das contas.** Ao lado dos cartões de uso, na barra do topo, o botão de atualizar roda
   `claude -p /usage` em cada conta do Claude Code (sem abrir sessão, sem gastar tokens, uns 2 s por conta, em
   paralelo) e relê o cache que o Claude Code grava no `.claude.json`. Resolve a conta sem sessão aberta, cujo uso
