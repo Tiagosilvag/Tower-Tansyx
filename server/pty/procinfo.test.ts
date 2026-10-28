@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { looksLikeClaude, parsePs, parseWindows, sameProcess } from './procinfo';
+import { looksLikeClaude, parseProcStat, parsePs, parseWindows, sameProcess } from './procinfo';
 
 const STARTED = 1_791_557_339_236;
 
@@ -34,5 +34,21 @@ describe('procinfo', () => {
     const reg = { startedAt: STARTED, procStart: '134360309381229341' };
     expect(sameProcess(reg, { startMs: STARTED - 1_114, name: 'claude', fileTime: '134360309381229341' })).toBe(true);
     expect(sameProcess(reg, { startMs: STARTED - 1_114, name: 'claude', fileTime: '134360309381229999' })).toBe(false);
+  });
+
+  it('Linux: lê o início em ticks do /proc/<pid>/stat, mesmo com espaços e parênteses no nome', () => {
+    const rest = 'S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 72784812 21';
+    expect(parseProcStat(`2560599 (claude) ${rest}`)).toBe('72784812');
+    expect(parseProcStat(`2560599 (my (odd) name) ${rest}`)).toBe('72784812');
+    expect(parseProcStat('lixo')).toBeUndefined();
+  });
+
+  it('ticks iguais provam o mesmo processo mesmo com o registro minutos depois do início (bg-spare)', () => {
+    const reg = { startedAt: STARTED, procStart: '72784812' };
+    expect(sameProcess(reg, { startMs: STARTED - 7 * 60_000, name: 'claude', startTicks: '72784812' })).toBe(true);
+    // Ticks diferentes: cai na comparação de horário, que aqui falha.
+    expect(sameProcess(reg, { startMs: STARTED - 7 * 60_000, name: 'claude', startTicks: '1' })).toBe(false);
+    // Nome que não é do Claude Code continua recusado.
+    expect(sameProcess(reg, { startMs: STARTED, name: 'bash', startTicks: '72784812' })).toBe(false);
   });
 });

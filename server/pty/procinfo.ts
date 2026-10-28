@@ -3,6 +3,7 @@
 // pode ter sido reaproveitado por outro processo do usuário: aí "Encerrar" mandaria o sinal para ele.
 // Compara o início real do processo (sistema operacional) com o do registro e o nome do executável.
 import { execFile } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 
 export interface ProcInfo {
@@ -12,6 +13,8 @@ export interface ProcInfo {
   name: string;
   /** Início exato como o Windows informa (FILETIME), o mesmo formato do `procStart` do registro no Windows. */
   fileTime?: string;
+  /** Linux: início em ticks do kernel (campo 22 de /proc/<pid>/stat), o mesmo formato do `procStart` do registro. */
+  startTicks?: string;
 }
 
 /** O que o registro de sessões do Claude Code guarda sobre o processo. */
@@ -37,6 +40,10 @@ export function sameProcess(reg: RegisteredProc, info: ProcInfo): boolean {
   if (!looksLikeClaude(info.name)) return false;
   // Windows: o registro guarda o FILETIME exato do início; quando os dois existem, têm de ser iguais.
   if (reg.procStart && info.fileTime && /^\d+$/.test(reg.procStart)) return reg.procStart === info.fileTime;
+  // Linux: o registro guarda os ticks exatos do início. Serve para processos que o registro descreve bem depois de
+  // nascerem (o worker `bg-spare` do daemon sobe antes e só é designado à sessão minutos depois). Igual prova que é o
+  // mesmo processo; diferente não prova nada (cai na comparação de horário abaixo).
+  if (reg.procStart && info.startTicks && /^\d+$/.test(reg.procStart) && reg.procStart === info.startTicks) return true;
   if (typeof reg.startedAt !== 'number' || !Number.isFinite(reg.startedAt)) return false;
   return info.startMs >= reg.startedAt - START_BEFORE_MS && info.startMs <= reg.startedAt + START_AFTER_MS;
 }
@@ -62,7 +69,20 @@ export async function readProcInfo(pid: number, platform: NodeJS.Platform = proc
   }
   // macOS e Linux: lstart em inglês (LC_ALL=C) e o nome do executável.
   const out = await run('ps', ['-o', 'lstart=', '-o', 'comm=', '-p', String(pid)], { ...process.env, LC_ALL: 'C', LANG: 'C' });
-  return out === undefined ? undefined : parsePs(out);
+  const info = out === undefined ? undefined : parsePs(out);
+  if (info && platform === 'linux') {
+    const ticks = parseProcStat(await readFile(`/proc/${pid}/stat`, 'utf8').catch(() => ''));
+    if (ticks) info.startTicks = ticks;
+  }
+  return info;
+}
+
+/** Campo 22 (início, em ticks) de /proc/<pid>/stat. O nome (campo 2) vem entre parênteses e pode ter espaços. */
+export function parseProcStat(raw: string): string | undefined {
+  const end = raw.lastIndexOf(')');
+  if (end < 0) return undefined;
+  const ticks = raw.slice(end + 2).split(' ')[19];
+  return ticks && /^\d+$/.test(ticks) ? ticks : undefined;
 }
 
 /** Saída do PowerShell: FILETIME na primeira linha, nome na segunda. */

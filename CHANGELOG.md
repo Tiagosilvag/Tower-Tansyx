@@ -19,6 +19,10 @@ do meio (0.**3**.0).
   antigo, que já não existia, e nada mais chegava à tela. Agora, quando o arquivo some, ele procura o
   transcript de novo pelo id da sessão e segue de onde ele estiver — a sala também passa a mostrar a pasta
   certa. Só um restart do Habblaud contornava isso antes.
+- **"Assumir daqui" e "Encerrar" em sessões em segundo plano no Linux.** O servidor recusava com "o processo N não é
+  mais esta sessão do Claude Code (registro antigo?)" porque o worker `claude bg-spare` do daemon sobe minutos antes de
+  o registro da sessão ser gravado, e a conferência só aceitava até 2 min de diferença. No Linux, o `procStart` do
+  registro é o início do processo em ticks (`/proc/<pid>/stat`, campo 22); quando ele bate, é o mesmo processo.
 
 ### Adicionado
 
