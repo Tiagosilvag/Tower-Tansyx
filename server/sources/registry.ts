@@ -123,7 +123,12 @@ export class RegistryReader {
 
   constructor(
     readonly configDir: string,
-    private readonly opts: { checkPid: boolean; isAlive?: (pid: number) => boolean },
+    private readonly opts: {
+      checkPid: boolean;
+      isAlive?: (pid: number) => boolean;
+      /** PIDs que não são sessões do usuário (ex.: o `claude -p /usage` do botão de atualizar o uso). */
+      ignore?: (pid: number) => boolean;
+    },
   ) {
     this.sessionsDir = join(configDir, 'sessions');
     this.isAlive = opts.isAlive ?? pidAlive;
@@ -166,6 +171,7 @@ export class RegistryReader {
       const e = cached.entry;
       if (!e) continue;
       if (this.opts.checkPid && !this.isAlive(e.pid)) continue;
+      if (this.opts.ignore?.(e.pid)) continue;
       entries.push(e);
     }
     for (const file of [...this.cache.keys()]) if (!seen.has(file)) this.cache.delete(file);

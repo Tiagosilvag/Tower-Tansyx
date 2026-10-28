@@ -135,7 +135,17 @@ const office = new Office({
 // Fontes de agentes, uma por ferramenta (sources/source.ts): a do Claude Code e, depois dela, a do Codex (quando há
 // pastas do Codex; HABBLAUD_CODEX=0 desliga), com o histórico dela no HistorySet abaixo e as contas registradas por
 // ela mesma (accounts.setProviderAccounts). `codex` também recebe os eventos dos hooks do Codex (CodexLive).
-const claude = new ClaudeWatcher({ accounts, office, inDocker: config.inDocker });
+// Botão "atualizar o uso": roda `claude -p /usage` em cada conta (fora do Docker, onde o claude existe). Os registros de
+// sessão desses processos não viram agentes no escritório (ignorePid).
+const usageRefreshBin = config.inDocker ? undefined : runnableClaudeBin(process.env);
+const usageRefresher = usageRefreshBin
+  ? new UsageRefresher({
+      bin: usageRefreshBin,
+      accounts: () => accounts.entriesOf('claude').map((a) => ({ id: a.id, name: a.detected.name, dir: a.dir, isDefault: isDefaultDir(a.dir, config.home) })),
+      reload: () => accounts.refresh(),
+    })
+  : undefined;
+const claude = new ClaudeWatcher({ accounts, office, inDocker: config.inDocker, ignorePid: (pid) => usageRefresher?.owns(pid) ?? false });
 const agents = new SourceSet([claude]);
 const codexDirs = config.codex ? discoverCodexDirs(process.env, config.home) : [];
 const codex = codexDirs.length ? new CodexSource({ accounts, office, dirs: codexDirs, env: process.env, home: config.home }) : undefined;
@@ -311,7 +321,6 @@ else {
 // Terminais dentro do tmux: sobrevivem a reiniciar o Habblaud (HABBLAUD_PTY_TMUX=0 desliga; só Linux/macOS).
 const tmuxBin = process.platform !== 'win32' && process.env.HABBLAUD_PTY_TMUX?.trim() !== '0' ? findExecutable('tmux') : undefined;
 const ptyTmux = spawnPty && tmuxBin ? createTmuxDriver(tmuxBin, { mouse: process.env.HABBLAUD_TMUX_MOUSE?.trim() !== '0' }) : null;
-const usageRefreshBin = config.inDocker ? undefined : runnableClaudeBin(process.env);
 const ptys = spawnPty
   ? new PtyManager({
       spawn: spawnPty,
@@ -382,14 +391,7 @@ const api = createApiHandler({
   permissions: permissions ? createPermissionRoutes(permissions) : undefined,
   messages: messages ? createMessageRoutes(messages) : undefined,
   pty: ptys ? createPtyRoutes(ptys) : undefined,
-  // Botão "atualizar o uso": roda `claude -p /usage` em cada conta (fora do Docker, onde o claude existe).
-  usageRefresh: usageRefreshBin
-    ? new UsageRefresher({
-        bin: usageRefreshBin,
-        accounts: () => accounts.entriesOf('claude').map((a) => ({ id: a.id, name: a.detected.name, dir: a.dir, isDefault: isDefaultDir(a.dir, config.home) })),
-        reload: () => accounts.refresh(),
-      })
-    : undefined,
+  usageRefresh: usageRefresher,
   spawn,
   attachments,
   dictation,

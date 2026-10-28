@@ -91,6 +91,23 @@ describe('UsageRefresher', () => {
     expect((await thrower.run())[0]).toMatchObject({ ok: false, error: 'spawn ENOENT' });
   });
 
+  it('os PIDs dos claude -p que ele abre não são sessões de ninguém (owns)', async () => {
+    const pids = [4001, 4002];
+    let i = 0;
+    let during: boolean[] = [];
+    const { refresher } = make(async (_b, _a, o) => {
+      o.onPid?.(pids[i++]);
+      during = pids.map((p) => refresher.owns(p));
+      return OK;
+    });
+    await refresher.run();
+    // Enquanto a rodada anda, os dois estão marcados; um PID qualquer não.
+    expect(during[0]).toBe(true);
+    expect(refresher.owns(4001)).toBe(true);
+    expect(refresher.owns(4002)).toBe(true);
+    expect(refresher.owns(9999)).toBe(false);
+  });
+
   it('pedidos durante uma rodada recebem a mesma rodada (não roda duas vezes)', async () => {
     let release!: () => void;
     const gate = new Promise<void>((ok) => (release = ok));

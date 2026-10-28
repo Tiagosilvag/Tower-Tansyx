@@ -57,6 +57,13 @@ describe('registro de sessões', () => {
     expect(docker.poll().entries.map((e) => e.pid).sort()).toEqual([10, 11]);
   });
 
+  it('ignora os PIDs que o servidor mesmo abriu (o claude -p /usage do botão de uso), sem esconder os outros', () => {
+    writeFileSync(join(sessions, '30.json'), entry(30));
+    writeFileSync(join(sessions, '31.json'), entry(31));
+    const reader = new RegistryReader(tmp.dir, { checkPid: false, ignore: (pid) => pid === 31 });
+    expect(reader.poll().entries.map((e) => e.pid)).toEqual([30]);
+  });
+
   it('JSON inválido (gravação em andamento) mantém a última versão boa', () => {
     const file = join(sessions, '20.json');
     writeFileSync(file, entry(20, { status: 'busy' }));

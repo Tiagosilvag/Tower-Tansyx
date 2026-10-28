@@ -9,6 +9,9 @@ import { tr } from '../../shared/i18n';
 import { SESSION_ENV_VARS } from '../claude-bin';
 import { errMsg } from '../log';
 
+/** Quanto tempo o PID continua ignorado depois de o processo começar (o comando leva segundos; folga para a saída). */
+const OWN_PID_KEEP_MS = 60_000;
+
 export interface RefreshAccount {
   id: string;
   name?: string;
@@ -31,7 +34,7 @@ export interface RunOutput {
   timedOut?: boolean;
 }
 
-export type Runner = (bin: string, args: string[], o: { cwd: string; env: NodeJS.ProcessEnv; timeoutMs: number }) => Promise<RunOutput>;
+export type Runner = (bin: string, args: string[], o: { cwd: string; env: NodeJS.ProcessEnv; timeoutMs: number; onPid?: (pid: number) => void }) => Promise<RunOutput>;
 
 export interface UsageRefresherOptions {
   bin: string;
@@ -50,7 +53,7 @@ export interface UsageRefresherOptions {
 
 const defaultRun: Runner = (bin, args, o) =>
   new Promise((ok) => {
-    execFile(bin, args, { cwd: o.cwd, env: o.env, timeout: o.timeoutMs, maxBuffer: 256 * 1024, windowsHide: true }, (err, stdout, stderr) => {
+    const child = execFile(bin, args, { cwd: o.cwd, env: o.env, timeout: o.timeoutMs, maxBuffer: 256 * 1024, windowsHide: true }, (err, stdout, stderr) => {
       const e = err as (NodeJS.ErrnoException & { killed?: boolean; code?: number | string }) | null;
       ok({
         code: e ? (typeof e.code === 'number' ? e.code : null) : 0,
@@ -59,6 +62,7 @@ const defaultRun: Runner = (bin, args, o) =>
         timedOut: !!e?.killed,
       });
     });
+    if (child.pid) o.onPid?.(child.pid);
   });
 
 /** Primeira linha com texto, cortada (a mensagem do Claude Code quando não há uso a mostrar). */
@@ -71,11 +75,21 @@ export class UsageRefresher {
   private running: Promise<RefreshResult[]> | null = null;
   private last: { at: number; results: RefreshResult[] } | null = null;
   private readonly run_: Runner;
+  /** PIDs dos `claude -p /usage` em andamento (e os últimos segundos): não são sessões de ninguém. */
+  private readonly own = new Set<number>();
   private readonly now: () => number;
 
   constructor(private readonly opts: UsageRefresherOptions) {
     this.run_ = opts.run ?? defaultRun;
     this.now = opts.now ?? Date.now;
+  }
+
+  /**
+   * O processo foi aberto por esta atualização? Cada `claude -p` grava um registro de sessão enquanto roda e o
+   * Habblaud o mostraria como um agente (um personagem aparecendo e sumindo na sala da pasta de trabalho).
+   */
+  owns(pid: number): boolean {
+    return this.own.has(pid);
   }
 
   get busy(): boolean {
@@ -119,6 +133,11 @@ export class UsageRefresher {
         cwd: this.opts.cwd ?? homedir(),
         env,
         timeoutMs: this.opts.timeoutMs ?? 45_000,
+        onPid: (pid) => {
+          this.own.add(pid);
+          // O registro some quando o processo sai; um pouco de folga cobre a leitura que já estava em andamento.
+          setTimeout(() => this.own.delete(pid), OWN_PID_KEEP_MS).unref?.();
+        },
       });
     } catch (err) {
       return { ...base, ok: false, error: errMsg(err) };

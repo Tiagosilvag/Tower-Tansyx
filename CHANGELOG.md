@@ -31,7 +31,9 @@ do meio (0.**3**.0).
   paralelo) e relê o cache que o Claude Code grava no `.claude.json`. Resolve a conta sem sessão aberta, cujo uso
   ficava "desatualizado" porque só o statusline (enquanto uma sessão roda) o renovava. Mostra ao lado se deu certo ou
   qual conta falhou (ex.: conta com chave de API, sem plano). Só pelo próprio computador, fora do Docker
-  (`POST /api/usage/refresh`; o Codex não tem como buscar o uso daqui).
+  (`POST /api/usage/refresh`; o Codex não tem como buscar o uso daqui). Os registros de sessão desses processos não
+  viram agentes no escritório (o servidor ignora os PIDs que ele mesmo abriu), senão apareceria um personagem por
+  conta, na sala da pasta de trabalho, a cada clique.
 - **Perguntas e pedidos de permissão aparecem no chat.** Na janela de conversa (a que não é o terminal interativo),
   quando o agente faz uma pergunta (`AskUserQuestion`) ou pede permissão, o mesmo cartão da gaveta aparece entre a
   conversa e a caixa de mensagem, com as opções, o campo "Outro" e os botões de responder, aprovar e recusar. Sem o

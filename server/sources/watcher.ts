@@ -54,6 +54,8 @@ export interface WatcherOptions {
   /** Quanto do fim de cada transcript é lido ao abrir a sessão (padrão 1 MB). */
   tailBytes?: number;
   isAlive?: (pid: number) => boolean;
+  /** Registros de sessão que o servidor ignora: os processos que ele mesmo abriu e que não são sessões de ninguém. */
+  ignorePid?: (pid: number) => boolean;
   /** Desliga o fs.watch (testes). */
   watch?: boolean;
 }
@@ -268,7 +270,7 @@ export class ClaudeWatcher implements AgentSource {
     for (const acc of this.opts.accounts.entries()) {
       let reader = this.readers.get(acc.dir);
       if (!reader) {
-        reader = new RegistryReader(acc.dir, { checkPid: !this.opts.inDocker, isAlive: this.opts.isAlive });
+        reader = new RegistryReader(acc.dir, { checkPid: !this.opts.inDocker, isAlive: this.opts.isAlive, ignore: this.opts.ignorePid });
         this.readers.set(acc.dir, reader);
         this.watchDir(join(acc.dir, 'sessions'));
       }
