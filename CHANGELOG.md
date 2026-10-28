@@ -26,6 +26,8 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Pesquisa de projetos no "Novo agente".** Com cinco ou mais pastas, uma caixa acima da lista filtra por nome ou
+  caminho (sem diferenciar maiúsculas nem acentos); Enter escolhe o primeiro resultado e Esc limpa a pesquisa.
 - **"Nova sessão" não lista mais pastas apagadas.** A lista de projetos vem do histórico de sessões e mantinha uma pasta
   mesmo depois de removida do disco; agora o servidor só a mostra se ela ainda existe, e a pasta pessoal do usuário (`~`)
   deixa de ser sugerida como projeto (fora do Docker, onde os caminhos são os do próprio computador). Para esconder

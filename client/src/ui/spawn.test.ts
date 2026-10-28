@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ago, formatBytes, shortPath, spawnFolders } from './spawn';
+import { ago, filterFolders, formatBytes, shortPath, spawnFolders } from './spawn';
 import { insertDictation, pickMimeType } from './dictation';
 
 describe('spawnFolders', () => {
@@ -30,6 +30,26 @@ describe('Novo agente: lista de projetos e anexos', () => {
     const now = 10_000_000;
     expect([ago(0, now), ago(now - 10_000, now), ago(now - 5 * 60_000, now), ago(now - 3 * 3_600_000, now), ago(now - 72 * 3_600_000, now)]).toEqual(['', 'agora', '5 min', '3 h', '3 d']);
     expect([formatBytes(900), formatBytes(2_048), formatBytes(3_500_000)]).toEqual(['900 B', '2 KB', '3,3 MB']);
+  });
+});
+
+describe('pesquisa de projetos', () => {
+  const list = [
+    { name: 'resenha05', path: '/root/projetos/resenha05' },
+    { name: 'DATAPULSE', path: '/root/projetos/DATAPULSE' },
+    { name: 'Açaí-PDV', path: '/home/ana/loja' },
+  ];
+
+  it('acha por nome ou caminho, sem diferenciar maiúsculas nem acentos', () => {
+    expect(filterFolders(list, 'DATA').map((f) => f.name)).toEqual(['DATAPULSE']);
+    expect(filterFolders(list, 'acai').map((f) => f.name)).toEqual(['Açaí-PDV']);
+    expect(filterFolders(list, 'ANA/loja').map((f) => f.name)).toEqual(['Açaí-PDV']);
+    expect(filterFolders(list, 'projetos').map((f) => f.name)).toEqual(['resenha05', 'DATAPULSE']);
+  });
+
+  it('pesquisa vazia ou só espaços devolve tudo; sem resultado, nada', () => {
+    expect(filterFolders(list, '  ')).toHaveLength(3);
+    expect(filterFolders(list, 'zzz')).toEqual([]);
   });
 });
 

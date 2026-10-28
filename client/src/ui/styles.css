@@ -11361,3 +11361,13 @@ html.is-replay #world {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Pesquisa de projetos no "Novo agente". */
+.ui-spawn__search {
+  width: 100%;
+  margin: 0 0 6px;
+}
+
+.ui-spawn__search[hidden] {
+  display: none;
+}

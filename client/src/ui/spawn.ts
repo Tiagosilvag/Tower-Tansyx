@@ -37,6 +37,20 @@ export interface FolderOption {
   sessions?: number;
 }
 
+/** A partir de quantas pastas a caixa de pesquisa aparece. */
+const SEARCH_MIN = 5;
+
+/** Minúsculas e sem acento, para a pesquisa achar "Resenha" digitando "resenha" ou "RESÉNHA". */
+function fold(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/** As pastas que batem com a pesquisa (nome ou caminho, sem diferenciar maiúsculas nem acentos); vazia = todas. */
+export function filterFolders<T extends { name: string; path: string }>(folders: readonly T[], query: string): T[] {
+  const q = fold(query.trim());
+  return q ? folders.filter((f) => fold(f.name).includes(q) || fold(f.path).includes(q)) : [...folders];
+}
+
 /** Pastas das salas, da mais recente para a mais antiga (reserva quando o servidor não manda a lista). */
 export function spawnFolders(snap: Pick<OfficeSnapshot, 'rooms' | 'agents'> | null | undefined): string[] {
   if (!snap) return [];
@@ -133,12 +147,41 @@ export class SpawnPanel {
   private selected = '';
   private account = '';
   private typing = false;
+  /** O que está digitado na pesquisa de projetos (só filtra a lista; a pasta escolhida não muda). */
+  private query = '';
+  private readonly search: HTMLInputElement;
   private files: PendingFile[] = [];
 
   constructor(private readonly ctx: UiContext) {
     this.accountList = h('div', { class: 'ui-spawn__folders', role: 'radiogroup', attrs: { 'aria-label': tr('Contas') } });
     this.accountBox = h('div', { class: 'ui-spawn__accounts' }, h('p', { class: 'ui-spawn__label', text: tr('Conta') }), this.accountList);
     setHidden(this.accountBox, true);
+    this.search = h('input', {
+      class: 'ui-rename__input ui-spawn__search',
+      type: 'search',
+      hidden: true,
+      attrs: { placeholder: tr('Pesquisar projeto'), spellcheck: 'false', autocomplete: 'off', autocapitalize: 'none', 'aria-label': tr('Pesquisar projeto') },
+      on: {
+        input: () => {
+          this.query = this.search.value;
+          this.renderFolders();
+        },
+        keydown: (e: KeyboardEvent) => {
+          e.stopPropagation();
+          // Enter escolhe o primeiro resultado; Esc limpa a pesquisa (e só fecha o painel se ela já estava vazia).
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const first = this.visibleFolders()[0];
+            if (first) this.pick(first.path);
+          } else if (e.key === 'Escape' && this.search.value) {
+            e.preventDefault();
+            this.search.value = '';
+            this.query = '';
+            this.renderFolders();
+          }
+        },
+      },
+    });
     this.folderList = h('div', { class: 'ui-spawn__folders', role: 'radiogroup', attrs: { 'aria-label': tr('Projetos recentes') } });
     this.otherBtn = h('button', { class: 'ui-spawn__other', type: 'button', on: { click: () => this.showOther(true) } }, tr('+ Outra pasta'));
     this.folder = h('input', {
@@ -196,6 +239,7 @@ export class SpawnPanel {
         { class: 'ui-set-group ui-spawn__body' },
         this.accountBox,
         h('p', { class: 'ui-spawn__label', attrs: { id: 'ui-spawn-folders-label' }, text: tr('Projeto') }),
+        this.search,
         this.folderList,
         this.otherBtn,
         this.folder,
@@ -304,11 +348,19 @@ export class SpawnPanel {
     );
   }
 
+  private visibleFolders(): FolderOption[] {
+    return filterFolders(this.folders, this.query);
+  }
+
   private renderFolders(): void {
     const now = Date.now();
     const known = this.folders.some((f) => f.path === this.selected);
+    const shown = this.visibleFolders();
+    // Com poucas pastas, pesquisar só atrapalha; se já há uma pesquisa, a caixa fica para poder limpá-la.
+    setHidden(this.search, this.folders.length < SEARCH_MIN && !this.query);
     this.folderList.replaceChildren(
-      ...this.folders.map((f) => {
+      ...(this.query && !shown.length ? [h('p', { class: 'ui-rename__hint', text: tr('Nenhum projeto encontrado.') })] : []),
+      ...shown.map((f) => {
         const on = f.path === this.selected && !this.typing;
         const when = ago(f.lastAt, now);
         return h(
