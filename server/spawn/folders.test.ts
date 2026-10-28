@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { projectFolder, recentFolders } from './folders';
+import { hiddenFolders, projectFolder, recentFolders } from './folders';
 
 describe('pastas sugeridas no Novo agente', () => {
   it('worktree de agente vira o projeto; temporária e relativa ficam de fora', () => {
@@ -29,5 +29,19 @@ describe('pastas sugeridas no Novo agente', () => {
       { path: '/Users/a/habblaud', name: 'habblaud', lastAt: 200, sessions: 1 },
     ]);
     expect(recentFolders(sessions, rooms, 1).map((f) => f.path)).toEqual(['/Users/a/loja']);
+  });
+
+  it('descarta as pastas que não existem mais, quando recebe como conferir', () => {
+    const sessions = [
+      { project: '/root/projetos/GAPTECH', lastAt: 3 },
+      { project: '/root/projetos/TK3D', lastAt: 2 },
+    ];
+    const rooms = [{ path: '/root/projetos/GAPTECH', lastAt: 3 }];
+    expect(recentFolders(sessions, rooms, 15, (p) => p !== '/root/projetos/GAPTECH').map((f) => f.path)).toEqual(['/root/projetos/TK3D']);
+  });
+
+  it('hiddenFolders lê a lista separada por dois-pontos, sem barra final nem vazios', () => {
+    expect([...hiddenFolders('/root/habblaud/: /opt/x ::')]).toEqual(['/root/habblaud', '/opt/x']);
+    expect(hiddenFolders(undefined).size).toBe(0);
   });
 });

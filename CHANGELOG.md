@@ -26,6 +26,10 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **"Nova sessão" não lista mais pastas apagadas.** A lista de projetos vem do histórico de sessões e mantinha uma pasta
+  mesmo depois de removida do disco; agora o servidor só a mostra se ela ainda existe, e a pasta pessoal do usuário (`~`)
+  deixa de ser sugerida como projeto (fora do Docker, onde os caminhos são os do próprio computador). Para esconder
+  outras pastas, use `HABBLAUD_HIDE_FOLDERS=/caminho:/outro`.
 - **A sugestão de próximo prompt do Claude Code aparece no chat.** Quando o agente roda num terminal interativo daqui
   (no tmux) e está ocioso, a sugestão cinza que o Claude Code mostra no campo de entrada dele aparece acima da caixa de
   mensagem do chat; **Tab** (ou o clique) a põe na caixa para você ajustar e mandar. O Claude Code não grava essa

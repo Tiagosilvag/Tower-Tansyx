@@ -72,7 +72,7 @@ todos passos de host, mexem nas pastas dos agentes e no login do sistema operati
 ### Opção A — build pack **Dockerfile** (mais simples, recomendada)
 
 1. **New Resource → Application → Private/Public Repository**
-   - Repositório: `https://github.com/Tiagosilvag/Tower-Tansyx`
+   - Repositório: `https://github.com/tansyxtech/Tower-Tansyx`
    - Branch: `claude/adoring-goldberg-gnh2bj`
 2. **Build Pack: `Dockerfile`** · Dockerfile Location: `/Dockerfile` · Base Directory: `/`
 3. **Ports Exposes: `4747`**

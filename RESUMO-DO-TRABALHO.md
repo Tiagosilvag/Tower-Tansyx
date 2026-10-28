@@ -3,7 +3,7 @@
 Documento de contexto: o que foi feito, por quê, e como operar. Serve para retomar o assunto em outra
 sessão sem reconstruir o raciocínio.
 
-Repositório: `Tiagosilvag/Tower-Tansyx` · upstream: [marmottajr/habblaud](https://github.com/marmottajr/habblaud) v1.0.3
+Repositório: `tansyxtech/Tower-Tansyx` · upstream: [marmottajr/habblaud](https://github.com/marmottajr/habblaud) v1.0.3
 (`faa1a012b5fb`)
 
 ## 1. O que é o Habblaud

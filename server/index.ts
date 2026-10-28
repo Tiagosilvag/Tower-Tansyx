@@ -2,7 +2,9 @@
 // mantém o modelo do escritório e transmite via SSE. Sem dependências de runtime.
 //   npm run dev    -> tsx server/index.ts --dev (Vite em middleware mode, HMR no mesmo servidor)
 //   npm start      -> node dist/server/index.js (serve dist/client)
+import { existsSync } from 'node:fs';
 import http from 'node:http';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { codexDirsRefused, isDefaultDir } from './accounts/detect';
 import { AccountsService } from './accounts/service';
@@ -46,7 +48,7 @@ import type { WorldLocale } from '../shared/world/protocol';
 import { createCliRunner, createOpener, SpawnService, type SpawnAccount } from './spawn/spawn';
 import { findExecutable, runnableClaudeBin } from './claude-bin';
 import { AttachmentStore } from './spawn/attachments';
-import { recentFolders } from './spawn/folders';
+import { hiddenFolders, recentFolders } from './spawn/folders';
 import { isDemoId } from '../shared/timeline';
 import { DictationService } from './dictation/dictation';
 import { createWhisperTranscriber, findWhisper } from './dictation/whisper';
@@ -398,11 +400,12 @@ const api = createApiHandler({
   deliveries,
   files: deliveryFiles,
   spawnFolders: async () => {
+    const hidden = hiddenFolders(process.env.HABBLAUD_HIDE_FOLDERS);
     const snap = hub.current();
     const last = new Map<string, number>();
     for (const a of snap.agents) last.set(a.roomId, Math.max(last.get(a.roomId) ?? 0, a.lastEventAt ?? 0));
     const rooms = snap.rooms.filter((r) => !isDemoId(r.id)).map((r) => ({ path: r.path, lastAt: last.get(r.id) ?? 0 }));
-    return recentFolders(history ? await history.list().catch(() => []) : [], rooms);
+    return recentFolders(history ? await history.list().catch(() => []) : [], rooms, undefined, config.inDocker ? undefined : (path) => path !== homedir() && !hidden.has(path) && existsSync(path));
   },
   codexLive,
   stats,

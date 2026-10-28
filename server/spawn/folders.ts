@@ -34,11 +34,18 @@ export function projectFolder(raw: string | undefined): string | undefined {
   return wt ? wt[1] || undefined : p;
 }
 
+/** As pastas de HABBLAUD_HIDE_FOLDERS (separadas por `:`, como o PATH; barra final ignorada) que não devem ser sugeridas. */
+export function hiddenFolders(raw: string | undefined): Set<string> {
+  return new Set((raw ?? '').split(':').map((p) => p.trim().replace(/[\\/]+$/, '')).filter(Boolean));
+}
+
 /** Junta sessões e salas em pastas únicas, da atividade mais recente para a mais antiga. */
 export function recentFolders(
   sessions: ReadonlyArray<{ project?: string; lastAt: number }>,
   rooms: ReadonlyArray<{ path?: string; lastAt?: number }>,
   limit = FOLDERS_LIMIT,
+  /** Descarta as pastas que não existem mais (apagadas ou movidas); sem isso, o histórico as mantém na lista. */
+  exists: (path: string) => boolean = () => true,
 ): SpawnFolder[] {
   const byPath = new Map<string, SpawnFolder>();
   const add = (raw: string | undefined, lastAt: number, session: boolean) => {
@@ -52,5 +59,8 @@ export function recentFolders(
   };
   for (const s of sessions) add(s.project, s.lastAt, true);
   for (const r of rooms) add(r.path, r.lastAt ?? 0, false);
-  return [...byPath.values()].sort((a, b) => b.lastAt - a.lastAt || a.path.localeCompare(b.path)).slice(0, limit);
+  return [...byPath.values()]
+    .filter((f) => exists(f.path))
+    .sort((a, b) => b.lastAt - a.lastAt || a.path.localeCompare(b.path))
+    .slice(0, limit);
 }

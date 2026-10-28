@@ -71,7 +71,7 @@ claude --version
 which claude            # anote o caminho absoluto
 
 # Habblaud
-git clone https://github.com/Tiagosilvag/Tower-Tansyx.git ~/habblaud
+git clone https://github.com/tansyxtech/Tower-Tansyx.git ~/habblaud
 cd ~/habblaud && npm install && npm run build
 ```
 
