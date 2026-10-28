@@ -203,6 +203,14 @@ export class TerminalWindows implements UiComponent, TerminalRouter, TerminalCon
     this.raise(s);
   }
 
+  showInteractive(agentId: string): void {
+    const s = this.slotOf(agentId);
+    if (!s) return this.open(agentId);
+    if (s.pty.isOpen && s.pty.agentId === agentId) return this.raise(s);
+    if (s.pty.ptyOf(agentId)) s.pty.openAgent(agentId);
+    this.raise(s);
+  }
+
   newSession(cwd: string, account?: string, resume?: string): Promise<void> {
     const s = this.pick();
     this.raise(s);

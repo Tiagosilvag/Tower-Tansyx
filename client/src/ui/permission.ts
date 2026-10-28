@@ -263,7 +263,7 @@ export class PermissionCard {
     this.denyBtn = h('button', { class: 'ui-btn ui-perm__btn ui-perm__btn--deny', type: 'button', attrs: { 'aria-expanded': 'false' }, on: { click: () => this.toggleDeny() } }, tr('✕ Recusar…'));
     this.terminalBtn = h(
       'button',
-      { class: 'ui-btn ui-perm__btn', type: 'button', title: tr('O Habblaud deixa este pedido de lado: vale o que você responder no terminal'), on: { click: () => this.send({ behavior: 'terminal' }) } },
+      { class: 'ui-btn ui-perm__btn', type: 'button', title: tr('O Habblaud deixa este pedido de lado: vale o que você responder no terminal'), on: { click: () => this.answerInTerminal() } },
       tr('Responder no terminal'),
     );
 
@@ -497,6 +497,17 @@ export class PermissionCard {
       this.ctx.announce(`${done}: ${this.ctx.agent(this.agentId)?.name ?? tr('agente')}.`);
     }
     this.ctx.invalidate();
+  }
+
+  /**
+   * "Responder no terminal": o Habblaud solta o pedido e o diálogo segue esperando no terminal da sessão. Se esse
+   * terminal é o interativo daqui, a janela dele vem para a frente (antes o cartão só sumia).
+   */
+  private answerInTerminal(): void {
+    const agentId = this.agentId;
+    void this.send({ behavior: 'terminal' });
+    const router = this.ctx.terminals;
+    if (agentId && router?.interactive(agentId)) router.showInteractive(agentId);
   }
 
   /** Esta página pode responder (porta local, ou remota com permissions liberado; ou o modo mock). */

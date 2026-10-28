@@ -3298,4 +3298,5 @@ export const ES: Readonly<Record<string, string>> = {
   "Sessão {0} do tmux ignorada: conta ou pasta desconhecida.": "Sesión {0} de tmux ignorada: cuenta o carpeta desconocida.",
   "Não consegui reanexar a sessão {0} do tmux: {1}": "No pude reanexar la sesión {0} de tmux: {1}",
   "{0} terminal(is) continuam abertos de antes do reinício (tmux).": "{0} terminal(es) siguen abiertos de antes del reinicio (tmux).",
+  "Abrir o terminal para responder": "Abrir el terminal para responder",
 };

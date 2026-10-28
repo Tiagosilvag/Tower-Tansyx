@@ -30,7 +30,9 @@ do meio (0.**3**.0).
   quando o agente faz uma pergunta (`AskUserQuestion`) ou pede permissão, o mesmo cartão da gaveta aparece entre a
   conversa e a caixa de mensagem, com as opções, o campo "Outro" e os botões de responder, aprovar e recusar. Sem o
   plugin `habblaud-permissoes`, as perguntas aparecem só para ler, com o aviso de como ligar a resposta pelo
-  escritório. Antes a conversa não mostrava nada disso.
+  escritório. Antes a conversa não mostrava nada disso. Se o pedido segue esperando no terminal (o "Responder no
+  terminal" o soltou, ou ele não chegou ao Habblaud), o chat mantém um aviso com o botão **Abrir o terminal para
+  responder**, que traz a janela interativa da sessão; o próprio "Responder no terminal" do cartão já leva até ela.
 - **Os terminais interativos sobrevivem a reiniciar o Habblaud.** Com o `tmux` instalado, cada `claude` aberto pelo
   escritório roda numa sessão de um servidor do tmux próprio (`-L habblaud`, sem ler o `~/.tmux.conf`) e o Habblaud só
   anexa um cliente a ela. Antes, o `claude` era filho do servidor: um deploy ou um crash fechava o pseudo-terminal e

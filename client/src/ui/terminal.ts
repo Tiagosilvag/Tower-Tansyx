@@ -661,6 +661,9 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   private perm: PermissionCard;
   /** Pergunta que o escritório não consegue responder (sem o plugin): só para ler, com o aviso de como ligar. */
   private askBox: HTMLElement;
+  private askWait: HTMLElement;
+  private askOpen: HTMLButtonElement;
+  private askHint: HTMLElement;
   private askList: HTMLElement;
   private askKey = '';
 
@@ -672,13 +675,17 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.actions = pty ? new TermActions(ctx, pty, true) : null;
     this.perm = new PermissionCard(ctx);
     this.askList = h('div', { class: 'ui-ask' });
-    this.askBox = h(
-      'section',
-      { class: 'ui-term__ask', role: 'alert', hidden: true },
-      h('strong', { text: tr('Precisa de você') }),
-      this.askList,
-      h('p', { class: 'ui-ask__answer-hint', text: tr('Com o plugin habblaud-permissoes (npm run mod:install), dá para responder as perguntas por aqui.') }),
-    );
+    this.askWait = h('p', { class: 'ui-term__ask-wait' });
+    // O pedido que o Habblaud soltou (ou que não chegou) segue esperando no terminal da sessão: se esse terminal é o
+    // interativo daqui, o botão leva até ele.
+    this.askOpen = h('button', {
+      class: 'ui-btn ui-btn--sm ui-btn--accent',
+      type: 'button',
+      hidden: true,
+      on: { click: () => this.id !== null && this.ctx.terminals?.showInteractive(this.id) },
+    }, tr('Abrir o terminal para responder'));
+    this.askHint = h('p', { class: 'ui-ask__answer-hint', text: tr('Com o plugin habblaud-permissoes (npm run mod:install), dá para responder as perguntas por aqui.') });
+    this.askBox = h('section', { class: 'ui-term__ask', role: 'alert', hidden: true }, h('strong', { text: tr('Precisa de você') }), this.askWait, this.askList, this.askOpen, this.askHint);
     this.tabs = new TermTabs(ctx, opts.openAgent);
     const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
     const findKey = mac ? '⌘F' : 'Ctrl+F';
@@ -840,9 +847,21 @@ export class TerminalPanel implements UiComponent, TerminalControl {
    */
   private renderAsk(live: AgentInfo | null): void {
     this.perm.render(live ?? undefined);
-    const asking = live && live.provider !== 'codex' && live.status === 'waiting' && !this.perm.visible && live.activity?.kind === 'ask' ? live.activity : undefined;
+    // Esperando você e sem o cartão (o pedido não chegou ao Habblaud, ou "Responder no terminal" o soltou): o diálogo
+    // está no terminal da sessão. O aviso fica enquanto durar a espera e leva até esse terminal quando é o daqui.
+    const waiting = !!live && live.provider !== 'codex' && live.status === 'waiting' && !this.perm.visible;
+    setHidden(this.askBox, !waiting);
+    if (!waiting || !live) {
+      this.askKey = '';
+      return;
+    }
+    setText(this.askWait, live.waitingFor ? tr('Esperando você: {0}', [live.waitingFor]) : tr('Esperando você'));
+    const interactive = !!this.ctx.terminals?.interactive(live.id);
+    setHidden(this.askOpen, !interactive);
+    setHidden(this.askHint, interactive);
+    const asking = live.activity?.kind === 'ask' ? live.activity : undefined;
     const qs = asking?.questions ?? [];
-    setHidden(this.askBox, qs.length === 0);
+    setHidden(this.askList, qs.length === 0);
     const key = qs.length ? `${asking!.id}|${qs.length}` : '';
     if (key === this.askKey) return;
     this.askKey = key;

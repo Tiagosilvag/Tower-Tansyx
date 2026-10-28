@@ -163,6 +163,28 @@ describe('TerminalWindows', () => {
     expect(wins.showing('a')).toBe(false);
   });
 
+  it('showInteractive leva o chat do agente com pty ao interativo e nunca volta ao chat', () => {
+    const { wins, slots } = setup({ ptys: ['a'] });
+    wins.open('a');
+    wins.switchView('a');
+    expect(slots[0].chat.agentId).toBe('a');
+    wins.showInteractive('a');
+    expect(slots[0].pty.agentId).toBe('a');
+    expect(slots[0].chat.isOpen).toBe(false);
+    // Já no interativo: só traz para a frente, sem alternar de volta.
+    wins.showInteractive('a');
+    expect(slots[0].pty.agentId).toBe('a');
+    expect(slots).toHaveLength(1);
+  });
+
+  it('showInteractive de um agente sem janela abre a que o roteador abriria', () => {
+    const { wins, slots } = setup({ ptys: ['a'] });
+    wins.showInteractive('a');
+    expect(slots[0].pty.agentId).toBe('a');
+    wins.showInteractive('sem-pty');
+    expect(slots[1].chat.agentId).toBe('sem-pty');
+  });
+
   it('Esc fecha o chat que está na frente, um de cada vez', () => {
     const { wins } = setup();
     wins.open('a');

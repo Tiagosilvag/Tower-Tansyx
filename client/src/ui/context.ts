@@ -45,6 +45,11 @@ export interface TerminalRouter {
    * conversa é a mesma. Só vale quando o agente já tem pty (se não tem, o caminho é "Assumir daqui").
    */
   switchView(agentId: string): void;
+  /**
+   * Garante a janela interativa do agente à frente (chat → interativo, ou só traz para a frente). Diferente de
+   * `switchView`, nunca volta para o chat. Sem pty para o agente, abre o que o roteador abriria.
+   */
+  showInteractive(agentId: string): void;
   /** Sessão nova do Claude Code na pasta, aberta no terminal interativo. */
   newSession(cwd: string, account?: string): Promise<void>;
 }

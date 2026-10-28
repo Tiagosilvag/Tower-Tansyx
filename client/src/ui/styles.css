@@ -4667,6 +4667,10 @@
   display: none;
 }
 
+.ui-term__ask-wait {
+  margin: 4px 0 8px;
+}
+
 .ui-term__ask {
   padding: 10px 12px 11px;
   border-radius: 9px;
