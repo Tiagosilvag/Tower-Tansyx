@@ -11,6 +11,7 @@
 import type { AgentInfo, Provider, RecentSession, TerminalEntry, TerminalInit } from '../../../shared/types';
 import { MessageComposer } from './composer';
 import type { UiComponent, UiContext, WindowOptions } from './context';
+import { askQuestionNodes, PermissionCard } from './permission';
 import { copyText, h, iconButton, prefersReducedMotion, setAttr, setHidden, setText, setTitle, setVariant } from './dom';
 import { calendarDayDiff, formatClock, formatDateTime, formatDuration, formatElapsed, relativeTime } from './format';
 import { ICONS } from './icons';
@@ -656,6 +657,12 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   private movable: Movable;
   /** Caixa de mensagem do rodapé (só a sessão ao vivo de um agente principal). */
   private composer: MessageComposer;
+  /** Pergunta ou pedido de permissão do agente (o mesmo cartão da gaveta: dá para responder daqui). */
+  private perm: PermissionCard;
+  /** Pergunta que o escritório não consegue responder (sem o plugin): só para ler, com o aviso de como ligar. */
+  private askBox: HTMLElement;
+  private askList: HTMLElement;
+  private askKey = '';
 
   constructor(
     private ctx: UiContext,
@@ -663,6 +670,15 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     opts: WindowOptions = {},
   ) {
     this.actions = pty ? new TermActions(ctx, pty, true) : null;
+    this.perm = new PermissionCard(ctx);
+    this.askList = h('div', { class: 'ui-ask' });
+    this.askBox = h(
+      'section',
+      { class: 'ui-term__ask', role: 'alert', hidden: true },
+      h('strong', { text: tr('Precisa de você') }),
+      this.askList,
+      h('p', { class: 'ui-ask__answer-hint', text: tr('Com o plugin habblaud-permissoes (npm run mod:install), dá para responder as perguntas por aqui.') }),
+    );
     this.tabs = new TermTabs(ctx, opts.openAgent);
     const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
     const findKey = mac ? '⌘F' : 'Ctrl+F';
@@ -756,6 +772,8 @@ export class TerminalPanel implements UiComponent, TerminalControl {
       this.tabs.el,
       tools,
       h('div', { class: 'ui-term__body' }, this.alertEl, this.scroll, this.newBtn),
+      this.perm.el,
+      this.askBox,
       h('div', { class: 'ui-term__foot' }, this.status, this.composer.el),
     );
     this.el.addEventListener('keydown', (e) => this.onKey(e));
@@ -815,6 +833,22 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     return true;
   }
 
+  /**
+   * Pergunta (AskUserQuestion) ou pedido de permissão do agente: o cartão que responde, igual ao da gaveta; sem o
+   * pedido no escritório (plugin ausente), as perguntas aparecem só para ler. Antes, a conversa não mostrava nada
+   * disso e só dava para responder no terminal de onde a sessão roda.
+   */
+  private renderAsk(live: AgentInfo | null): void {
+    this.perm.render(live ?? undefined);
+    const asking = live && live.provider !== 'codex' && live.status === 'waiting' && !this.perm.visible && live.activity?.kind === 'ask' ? live.activity : undefined;
+    const qs = asking?.questions ?? [];
+    setHidden(this.askBox, qs.length === 0);
+    const key = qs.length ? `${asking!.id}|${qs.length}` : '';
+    if (key === this.askKey) return;
+    this.askKey = key;
+    this.askList.replaceChildren(...askQuestionNodes(qs));
+  }
+
   render(): void {
     if (this.id === null) return;
     if (this.session) this.renderSessionHead(this.session);
@@ -824,6 +858,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.tabs.render(live ? live.id : null);
     this.renderFooter();
     this.renderState();
+    this.renderAsk(live);
     // Mensagens só para a sessão ao vivo (no histórico, a caixa diz que a sessão foi encerrada).
     this.composer.render(this.session ? undefined : this.ctx.agent(this.id), this.id);
   }

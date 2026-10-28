@@ -39,7 +39,7 @@ import {
   visibleShells,
 } from './model';
 import { access } from '../net/access';
-import { PermissionCard } from './permission';
+import { askQuestionNodes, PermissionCard } from './permission';
 import { canRenameRoom } from './roomrename';
 import { accountChipLabel, accountProvider, CODEX_LIVE_HINT, codexApprovalLabel, providerOf } from './provider';
 import { ptyControllable } from './ptyapi';
@@ -670,24 +670,7 @@ class AgentView {
     const key = qs.length ? `${act!.id}|${qs.length}` : '';
     if (key === this.alertQuestionsKey) return;
     this.alertQuestionsKey = key;
-    this.alertQuestions.replaceChildren(
-      ...qs.map((q) =>
-        h(
-          'div',
-          { class: 'ui-ask__q' },
-          q.header ? h('span', { class: 'ui-ask__tag', text: q.header }) : null,
-          h('p', { class: 'ui-ask__question', text: q.question }),
-          q.multiSelect ? h('p', { class: 'ui-ask__hint', text: tr('Pode escolher mais de uma') }) : null,
-          h(
-            'ol',
-            { class: 'ui-ask__opts' },
-            ...q.options.map((o) =>
-              h('li', {}, h('strong', { text: o.label }), o.description ? h('span', { class: 'ui-ask__desc', text: o.description }) : null),
-            ),
-          ),
-        ),
-      ),
-    );
+    this.alertQuestions.replaceChildren(...askQuestionNodes(qs));
   }
 
   private renderTerminalButton(live: boolean, provider = providerOf(this.last)): void {

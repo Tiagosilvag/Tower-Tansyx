@@ -4653,6 +4653,30 @@
   flex: none;
 }
 
+/* Pergunta ou pedido de permissão do agente, entre a conversa e a caixa de mensagem. */
+.ui-term > .ui-perm,
+.ui-term__ask {
+  flex: none;
+  margin: 8px 12px 0;
+  max-height: 48%;
+  overflow-y: auto;
+}
+
+.ui-term > .ui-perm[hidden],
+.ui-term__ask[hidden] {
+  display: none;
+}
+
+.ui-term__ask {
+  padding: 10px 12px 11px;
+  border-radius: 9px;
+  background: rgba(255, 181, 71, 0.1);
+  border: 1px solid rgba(255, 181, 71, 0.5);
+  box-shadow: inset 3px 0 0 var(--st-waiting);
+  color: #ffe8c4;
+  font: 12.5px/1.5 var(--font-mono);
+}
+
 /* Conversa */
 .ui-term__body {
   position: relative;

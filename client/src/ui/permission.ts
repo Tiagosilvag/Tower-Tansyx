@@ -182,6 +182,24 @@ interface AskRefs {
 
 const DONE: Record<PermissionDecision['behavior'], string> = { allow: tr('Aprovado'), deny: tr('Recusado'), answer: tr('Respondido'), terminal: tr('Devolvido ao terminal') };
 
+/** Perguntas do AskUserQuestion só para ler (sem o cartão que responde): pergunta, opções e descrições. */
+export function askQuestionNodes(qs: readonly AskQuestion[]): HTMLElement[] {
+  return qs.map((q) =>
+    h(
+      'div',
+      { class: 'ui-ask__q' },
+      q.header ? h('span', { class: 'ui-ask__tag', text: q.header }) : null,
+      h('p', { class: 'ui-ask__question', text: q.question }),
+      q.multiSelect ? h('p', { class: 'ui-ask__hint', text: tr('Pode escolher mais de uma') }) : null,
+      h(
+        'ol',
+        { class: 'ui-ask__opts' },
+        ...q.options.map((o) => h('li', {}, h('strong', { text: o.label }), o.description ? h('span', { class: 'ui-ask__desc', text: o.description }) : null)),
+      ),
+    ),
+  );
+}
+
 /**
  * Cartão "Pede permissão" (ou "Pergunta para você", no AskUserQuestion) na gaveta do agente. Some quando o
  * pedido é respondido (por aqui ou no terminal), expira ou o agente sai.
