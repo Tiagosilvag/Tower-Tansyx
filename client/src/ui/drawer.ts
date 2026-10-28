@@ -39,6 +39,7 @@ import {
   visibleShells,
 } from './model';
 import { access } from '../net/access';
+import { newSessionChoices } from './newsession';
 import { askQuestionNodes, PermissionCard } from './permission';
 import { canRenameRoom } from './roomrename';
 import { accountChipLabel, accountProvider, CODEX_LIVE_HINT, codexApprovalLabel, providerOf } from './provider';
@@ -798,12 +799,22 @@ class RoomView {
   private feedSec: ReturnType<typeof section>;
   private newBtn: HTMLButtonElement;
   private newMsg: HTMLElement;
+  /** Menu para escolher a conta da sessão nova (só com mais de uma conta do Claude Code). */
+  private accountMenu: HTMLElement;
+  private menuOff: (() => void) | null = null;
 
   constructor(
     private ctx: UiContext,
     private pty: PtyControl,
   ) {
-    this.newBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Nova sessão'), title: tr('Abre um Claude Code novo nesta pasta, num terminal interativo'), on: { click: () => this.newSession() } });
+    this.newBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Nova sessão'), title: tr('Abre um Claude Code novo nesta pasta, num terminal interativo'), attrs: { 'aria-haspopup': 'menu', 'aria-expanded': 'false' }, on: { click: () => this.onNew() } });
+    this.accountMenu = h('div', { class: 'ui-newsess', role: 'menu', hidden: true, attrs: { 'aria-label': tr('Escolha a conta da nova sessão') } });
+    this.accountMenu.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.closeMenu(true);
+    });
     this.newMsg = h('p', { class: 'ui-actions__msg is-error', role: 'status', hidden: true });
     this.swatch = h('span', { class: 'ui-room-hero__swatch', attrs: { 'aria-hidden': 'true' } });
     this.name = h('h2', { class: 'ui-hero__name' });
@@ -865,6 +876,7 @@ class RoomView {
       ),
       this.gone,
       h('div', { class: 'ui-status' }, accsEl, h('span', { class: 'ui-status__actions' }, this.newBtn, centerBtn)),
+      this.accountMenu,
       this.newMsg,
       this.agentsSec.el,
       this.tasksSec.el,
@@ -877,11 +889,68 @@ class RoomView {
   }
 
   /** Sessão nova na pasta da sala, na conta de quem estiver nela (ou na padrão). */
-  private newSession(): void {
+  /** "Nova sessão": com mais de uma conta do Claude Code abre o menu para escolher; com uma só, abre direto. */
+  private onNew(): void {
+    if (this.choices().length < 2) return this.newSession();
+    if (this.menuOff) this.closeMenu(true);
+    else this.openMenu();
+  }
+
+  private choices() {
+    const r = this.last;
+    const agents = r ? (this.ctx.store.snapshot?.agents ?? []).filter((a) => a.roomId === r.id) : [];
+    return newSessionChoices(this.ctx.store.snapshot?.accounts ?? [], agents);
+  }
+
+  private openMenu(): void {
+    const choices = this.choices();
+    this.accountMenu.replaceChildren(
+      h('p', { class: 'ui-newsess__title', text: tr('Nova sessão na conta:') }),
+      ...choices.map(({ account, inRoom }) => {
+        const chip = createAccountChip('sm');
+        updateAccountChip(chip, account);
+        return h(
+          'button',
+          { class: 'ui-btn ui-newsess__item', type: 'button', role: 'menuitem', on: { click: () => this.startIn(account.id) } },
+          chip,
+          h('span', { class: 'ui-newsess__name', text: account.name }),
+          account.email ? h('span', { class: 'ui-newsess__mail', text: account.email }) : null,
+          inRoom ? h('span', { class: 'ui-newsess__tag', text: tr('já na sala') }) : null,
+        );
+      }),
+    );
+    setHidden(this.accountMenu, false);
+    setAttr(this.newBtn, 'aria-expanded', 'true');
+    // Clique fora fecha (o botão "Nova sessão" cuida do próprio clique).
+    const onDown = (e: Event) => {
+      const t = e.target as Node | null;
+      if (t && (this.accountMenu.contains(t) || this.newBtn.contains(t))) return;
+      this.closeMenu(false);
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    this.menuOff = () => document.removeEventListener('pointerdown', onDown, true);
+    this.accountMenu.querySelector<HTMLElement>('.ui-newsess__item')?.focus();
+  }
+
+  private closeMenu(refocus: boolean): void {
+    this.menuOff?.();
+    this.menuOff = null;
+    setHidden(this.accountMenu, true);
+    setAttr(this.newBtn, 'aria-expanded', 'false');
+    if (refocus) this.newBtn.focus();
+  }
+
+  private startIn(accountId: string): void {
+    this.closeMenu(false);
+    this.newSession(accountId);
+  }
+
+  /** Sessão nova na pasta da sala, na conta escolhida (ou na de quem estiver nela; sem ninguém, na padrão). */
+  private newSession(chosen?: string): void {
     const r = this.last;
     if (!r) return;
     // Só conta do Claude Code (nem Codex nem demo); sem nenhuma na sala, o servidor usa a padrão.
-    const account = (this.ctx.store.snapshot?.agents ?? []).find((a) => a.roomId === r.id && ptyControllable(a))?.account;
+    const account = chosen ?? (this.ctx.store.snapshot?.agents ?? []).find((a) => a.roomId === r.id && ptyControllable(a))?.account;
     setHidden(this.newMsg, true);
     this.pty.newSession(r.path, account).catch((err: Error) => {
       setText(this.newMsg, tr('Não deu: {0}', [err.message]));
@@ -891,6 +960,7 @@ class RoomView {
 
   open(id: string): void {
     if (this.id === id) return;
+    if (this.menuOff) this.closeMenu(false);
     this.id = id;
     this.last = null;
     this.agents.clear();
@@ -914,6 +984,9 @@ class RoomView {
     setHidden(this.gone, !!live);
     setHidden(this.renameBtn, !live || !canRenameRoom(this.ctx, r.id));
     setHidden(this.newBtn, !this.pty.enabled);
+    if (!this.pty.enabled && this.menuOff) this.closeMenu(false);
+    // Com mais de uma conta, o botão pergunta em qual.
+    setTitle(this.newBtn, this.choices().length > 1 ? tr('Abre um Claude Code novo nesta pasta, na conta que você escolher') : tr('Abre um Claude Code novo nesta pasta, num terminal interativo'));
 
     const snap = this.ctx.store.snapshot;
     const agents = (snap?.agents ?? []).filter((a) => a.roomId === r.id);

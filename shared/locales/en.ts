@@ -3311,4 +3311,8 @@ export const EN: Readonly<Record<string, string>> = {
   "o Claude Code saiu com o código {0}": "Claude Code exited with code {0}",
   "atualizar o uso pelo escritório está desligado": "refreshing usage from the office is off",
   "o uso só é atualizado pelo próprio computador (http://localhost)": "usage is only refreshed from the computer itself (http://localhost)",
+  "Nova sessão na conta:": "New session in account:",
+  "já na sala": "already in the room",
+  "Escolha a conta da nova sessão": "Choose the account for the new session",
+  "Abre um Claude Code novo nesta pasta, na conta que você escolher": "Opens a new Claude Code in this folder, in the account you choose",
 };

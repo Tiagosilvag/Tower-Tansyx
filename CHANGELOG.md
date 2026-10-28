@@ -26,6 +26,10 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Escolher a conta em "Nova sessão" da sala.** Com mais de uma conta do Claude Code, o botão **Nova sessão** da
+  gaveta da sala abre um menu com as contas (marcando as que já têm agente na sala) e abre o Claude Code novo na conta
+  escolhida, na mesma pasta: dois agentes na mesma sala, em contas diferentes. Com uma conta só, abre direto, como
+  antes. Antes a sessão nova ia sempre para a conta de quem já estava na sala.
 - **O terminal abre no chat por padrão.** Clicar para abrir o terminal de um agente (na lista, na gaveta, no atalho T ou
   num link) abre a conversa em formato de chat, com a caixa de mensagem, mesmo quando o agente roda num terminal
   interativo daqui. O interativo continua a um clique: botão **Terminal** da janela, **Retomar** e **Assumir daqui**.
