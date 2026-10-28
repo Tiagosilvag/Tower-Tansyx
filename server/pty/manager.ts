@@ -7,8 +7,12 @@
 // ou noutro terminal (só processos que o registro de sessões do Claude Code confirma como sessão e cujo início
 // e executável batem com o registro: pty/procinfo.ts).
 //
+// Com o tmux (pty/tmux.ts), o `claude` roda numa sessão dele e o Habblaud só anexa um cliente: reiniciar o servidor
+// não mata as conversas abertas (o `adopt` reanexa ao subir). Sem o tmux, o `claude` é filho direto do servidor.
+//
 // Segurança: quem controla um terminal destes executa comandos na máquina. O recurso é opt-in (HABBLAUD_PTY=1),
 // as rotas só aceitam conexões do próprio computador (ver http/pty.ts) e ele fica desligado no Docker.
+import { randomBytes } from 'node:crypto';
 import { chmodSync, readFileSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createRequire } from 'node:module';
@@ -18,6 +22,7 @@ import { frame } from '../http/sse';
 import { errMsg, log } from '../log';
 import { pidAlive } from '../sources/registry';
 import { readProcInfo, sameProcess, type ProcInfo, type RegisteredProc } from './procinfo';
+import { SESSION_PREFIX, type TmuxDriver } from './tmux';
 import { killWithConsoleReset } from './winkill';
 import { tr } from '../../shared/i18n';
 import { isExecutableFile } from '../claude-bin';
@@ -68,6 +73,8 @@ export type ScreenFactory = (cols: number, rows: number) => PtyScreen;
 
 export interface PtyManagerOptions {
   spawn: SpawnPty | null;
+  /** Roda cada terminal numa sessão do tmux, que sobrevive a reinícios do servidor (padrão: sem, direto no pty). */
+  tmux?: TmuxDriver | null;
   /** Por que o recurso está desligado (quando `spawn` é null). */
   disabledReason?: string;
   claudeBin: string;
@@ -103,6 +110,8 @@ const MAX_SCROLLBACK = 512 * 1024;
 /** Terminais encerrados continuam na lista por um tempo, para a tela final ainda poder ser vista. */
 const EXITED_KEEP_MS = 10 * 60_000;
 export const MAX_PTYS = 12;
+/** Um cliente do tmux que dura menos que isso e cai não é reanexado (evita um laço). */
+const REATTACH_MIN_MS = 2_000;
 /** Quanto esperar o processo de fora sair antes de retomar a sessão aqui (depois, encerra à força). */
 const TAKEOVER_WAIT_MS = 5_000;
 /** Depois de encerrar à força: quanto mais esperar. */
@@ -156,6 +165,10 @@ export function rawScreen(): PtyScreen {
 interface Pty {
   info: PtyInfo;
   proc: PtyProcess;
+  /** Nome da sessão do tmux (terminal que sobrevive ao servidor). */
+  tmux?: string;
+  /** Quando o cliente atual se anexou (um que cai logo ao anexar não é reanexado em laço). */
+  attachedAt: number;
   screen: PtyScreen;
   clients: Set<ServerResponse>;
   /** Conectando: guardam a saída nova numa fila até a tela guardada ficar pronta. */
@@ -434,33 +447,146 @@ export class PtyManager {
     if (account.isDefault) delete env.CLAUDE_CONFIG_DIR;
     else env.CLAUDE_CONFIG_DIR = account.dir;
 
+    const args = p.resume ? ['--resume', p.resume] : [];
+    const tmux = this.opts.tmux;
     let proc: PtyProcess;
+    let pid: number;
+    let id: string;
+    let tmuxName: string | undefined;
+    const startedAt = this.now();
     try {
-      const args = p.resume ? ['--resume', p.resume] : [];
-      proc = spawn(this.opts.claudeBin, args, { cwd, cols, rows, env });
+      if (tmux) {
+        id = `t${randomBytes(4).toString('hex')}`;
+        tmuxName = SESSION_PREFIX + id;
+        const meta = JSON.stringify({ cwd, account: account.id, cols, rows, startedAt, ...(p.resume ? { resumed: p.resume } : {}), ...(p.from ? { from: p.from } : {}) });
+        pid = tmux.create({ name: tmuxName, cwd, cols, rows, argv: this.sessionArgv(account, args), meta });
+        const at = tmux.attach(tmuxName);
+        proc = spawn(at.file, at.args, { cwd, cols, rows, env });
+      } else {
+        proc = spawn(this.opts.claudeBin, args, { cwd, cols, rows, env });
+        pid = proc.pid;
+        id = `p${++this.seq}-${pid}`;
+      }
     } catch (err) {
+      if (tmux && tmuxName) tmux.kill(tmuxName);
       throw new PtyError(500, tr('não consegui abrir o Claude Code: {0}', [errMsg(err)]));
     }
-    const id = `p${++this.seq}-${proc.pid}`;
-    const info: PtyInfo = { id, pid: proc.pid, cwd, account: account.id, agentId: `${account.id}:${proc.pid}`, startedAt: this.now() };
+    const info: PtyInfo = { id, pid, cwd, account: account.id, agentId: `${account.id}:${pid}`, startedAt };
     if (p.resume) info.resumed = p.resume;
     if (p.from) info.fromAgent = p.from;
-    const pty: Pty = { info, proc, screen: this.createScreen(cols, rows), clients: new Set(), pending: new Map() };
-    this.ptys.set(id, pty);
+    this.register(info, proc, cols, rows, tmuxName);
+    log.info(p.resume ? tr('Terminal {0} aberto em {1} (conta {2}, retomando {3}).', [id, cwd, account.id, p.resume]) : tr('Terminal {0} aberto em {1} (conta {2}).', [id, cwd, account.id]));
+    this.opts.onChange();
+    return { ...info };
+  }
+
+  /** O comando que o tmux roda: `env` limpa as variáveis de sessão herdadas e escolhe a conta, e dá `exec` no claude. */
+  private sessionArgv(account: PtyAccount, args: string[]): string[] {
+    const unset = [...INHERITED_SESSION_VARS, ...(account.isDefault ? ['CLAUDE_CONFIG_DIR'] : [])].flatMap((k) => ['-u', k]);
+    const set = ['COLORTERM=truecolor', ...(account.isDefault ? [] : [`CLAUDE_CONFIG_DIR=${account.dir}`])];
+    return ['env', ...unset, ...set, this.opts.claudeBin, ...args];
+  }
+
+  /** Põe um terminal (novo ou reconhecido) na lista e liga a saída dele às telas conectadas. */
+  private register(info: PtyInfo, proc: PtyProcess, cols: number, rows: number, tmux?: string): Pty {
+    const pty: Pty = { info, proc, tmux, attachedAt: this.now(), screen: this.createScreen(cols, rows), clients: new Set(), pending: new Map() };
+    this.ptys.set(info.id, pty);
+    this.bind(pty, proc);
+    return pty;
+  }
+
+  private bind(pty: Pty, proc: PtyProcess): void {
     proc.onData((data) => {
       pty.screen.write(data);
       for (const queue of pty.pending.values()) queue.push(data);
       this.broadcast(pty, 'data', data);
     });
     proc.onExit(({ exitCode }) => {
+      if (pty.tmux) {
+        // Servidor encerrando (ou terminal já tirado da lista): o cliente caiu, a sessão do tmux segue.
+        if (this.ptys.get(pty.info.id) !== pty) return;
+        // O cliente caiu mas a sessão ainda existe (alguém o desconectou): anexa de novo, a não ser que ele caia logo.
+        if (this.now() - pty.attachedAt > REATTACH_MIN_MS && this.tmuxAlive(pty.tmux) && this.reattach(pty)) return;
+      }
       pty.info.exitedAt = this.now();
       pty.info.exitCode = exitCode;
       this.broadcast(pty, 'exit', { code: exitCode });
       this.opts.onChange();
     });
-    log.info(p.resume ? tr('Terminal {0} aberto em {1} (conta {2}, retomando {3}).', [id, cwd, account.id, p.resume]) : tr('Terminal {0} aberto em {1} (conta {2}).', [id, cwd, account.id]));
-    this.opts.onChange();
-    return { ...info };
+  }
+
+  private tmuxAlive(name: string): boolean {
+    return !!this.opts.tmux?.list().some((s) => s.name === name);
+  }
+
+  private reattach(pty: Pty): boolean {
+    const spawn = this.opts.spawn;
+    const tmux = this.opts.tmux;
+    if (!spawn || !tmux || !pty.tmux) return false;
+    try {
+      const at = tmux.attach(pty.tmux);
+      const proc = spawn(at.file, at.args, { cwd: pty.info.cwd, cols: 100, rows: 30, env: { ...(this.opts.env ?? process.env), TERM: 'xterm-256color' } });
+      pty.proc = proc;
+      pty.attachedAt = this.now();
+      this.bind(pty, proc);
+      return true;
+    } catch (err) {
+      log.warn(tr('Falha ao reanexar o terminal {0}: {1}', [pty.info.id, errMsg(err)]));
+      return false;
+    }
+  }
+
+  /**
+   * Reconhece as sessões do tmux que o Habblaud abriu antes (o servidor reiniciou) e anexa um cliente a cada uma:
+   * as conversas continuam de onde estavam, com o mesmo id de terminal (a janela do navegador reconecta sozinha).
+   */
+  adopt(): number {
+    const tmux = this.opts.tmux;
+    const spawn = this.opts.spawn;
+    if (!tmux || !spawn) return 0;
+    let adopted = 0;
+    for (const s of tmux.list()) {
+      const id = s.name.slice(SESSION_PREFIX.length);
+      if (this.ptys.has(id)) continue;
+      let meta: { cwd?: unknown; account?: unknown; cols?: unknown; rows?: unknown; startedAt?: unknown; resumed?: unknown; from?: unknown };
+      try {
+        meta = JSON.parse(s.meta) as typeof meta;
+      } catch {
+        continue;
+      }
+      const account = typeof meta.account === 'string' ? this.opts.accounts().find((a) => a.id === meta.account) : undefined;
+      if (!account || typeof meta.cwd !== 'string') {
+        log.warn(tr('Sessão {0} do tmux ignorada: conta ou pasta desconhecida.', [s.name]));
+        continue;
+      }
+      const cols = clampInt(meta.cols, 20, 400, 100);
+      const rows = clampInt(meta.rows, 5, 200, 30);
+      let proc: PtyProcess;
+      try {
+        const at = tmux.attach(s.name);
+        proc = spawn(at.file, at.args, { cwd: meta.cwd, cols, rows, env: { ...(this.opts.env ?? process.env), TERM: 'xterm-256color' } });
+      } catch (err) {
+        log.warn(tr('Não consegui reanexar a sessão {0} do tmux: {1}', [s.name, errMsg(err)]));
+        continue;
+      }
+      const info: PtyInfo = {
+        id,
+        pid: s.panePid,
+        cwd: meta.cwd,
+        account: account.id,
+        agentId: `${account.id}:${s.panePid}`,
+        startedAt: typeof meta.startedAt === 'number' ? meta.startedAt : this.now(),
+      };
+      if (typeof meta.resumed === 'string') info.resumed = meta.resumed;
+      if (typeof meta.from === 'string') info.fromAgent = meta.from;
+      this.register(info, proc, cols, rows, s.name);
+      adopted++;
+    }
+    if (adopted) {
+      log.info(tr('{0} terminal(is) continuam abertos de antes do reinício (tmux).', [adopted]));
+      this.opts.onChange();
+    }
+    return adopted;
   }
 
   private byAgent(agentId: string): Pty | undefined {
@@ -520,6 +646,8 @@ export class PtyManager {
   }
 
   private kill(pty: Pty): void {
+    // Encerrar de verdade: derruba a sessão do tmux (só fechar o cliente deixaria o Claude Code rodando).
+    if (pty.tmux) this.opts.tmux?.kill(pty.tmux);
     try {
       pty.proc.kill();
     } catch (err) {

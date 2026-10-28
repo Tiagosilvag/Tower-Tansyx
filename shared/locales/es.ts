@@ -3292,4 +3292,10 @@ export const ES: Readonly<Record<string, string>> = {
   "Chat": "Chat",
   "Mostra o terminal interativo desta sessão (nada é encerrado)": "Muestra el terminal interactivo de esta sesión (no se cierra nada)",
   "Mostra a conversa em formato de chat, com a caixa de mensagem (o terminal continua rodando)": "Muestra la conversación como chat, con la caja de mensaje (el terminal sigue en marcha)",
+  "   Terminais no tmux: as conversas abertas sobrevivem a reiniciar o Habblaud.": "   Terminales en tmux: las conversaciones abiertas sobreviven al reinicio de Habblaud.",
+  "   Terminais sem tmux: reiniciar o Habblaud fecha as conversas abertas (instale o tmux).": "   Terminales sin tmux: reiniciar Habblaud cierra las conversaciones abiertas (instala tmux).",
+  "Falha ao reanexar o terminal {0}: {1}": "Error al reanexar el terminal {0}: {1}",
+  "Sessão {0} do tmux ignorada: conta ou pasta desconhecida.": "Sesión {0} de tmux ignorada: cuenta o carpeta desconocida.",
+  "Não consegui reanexar a sessão {0} do tmux: {1}": "No pude reanexar la sesión {0} de tmux: {1}",
+  "{0} terminal(is) continuam abertos de antes do reinício (tmux).": "{0} terminal(es) siguen abiertos de antes del reinicio (tmux).",
 };

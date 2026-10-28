@@ -24,6 +24,7 @@ import { RoomAliases } from './model/room-aliases';
 import { createPtyRoutes } from './http/pty';
 import { claudeBinFrom, isExecutableFile, loadPty, PtyManager, type ScreenFactory, type SpawnPty } from './pty/manager';
 import { loadHeadlessScreen } from './pty/screen';
+import { createTmuxDriver } from './pty/tmux';
 import { currentCwdOf, openMainAgent, SessionHistory } from './sources/history';
 import { HistorySet, SourceSet } from './sources/source';
 import { createPermissionRoutes } from './permissions/http';
@@ -42,7 +43,7 @@ import { UpdateChecker } from './updates/checker';
 import { getLocale, tr } from '../shared/i18n';
 import type { WorldLocale } from '../shared/world/protocol';
 import { createCliRunner, createOpener, SpawnService, type SpawnAccount } from './spawn/spawn';
-import { runnableClaudeBin } from './claude-bin';
+import { findExecutable, runnableClaudeBin } from './claude-bin';
 import { AttachmentStore } from './spawn/attachments';
 import { recentFolders } from './spawn/folders';
 import { isDemoId } from '../shared/timeline';
@@ -306,9 +307,13 @@ else {
     if (screen.reason) log.warn(tr('Terminal interativo sem a tela completa ({0}): ao reconectar, modos como a colagem entre colchetes podem se perder.', [screen.reason]));
   }
 }
+// Terminais dentro do tmux: sobrevivem a reiniciar o Habblaud (HABBLAUD_PTY_TMUX=0 desliga; só Linux/macOS).
+const tmuxBin = process.platform !== 'win32' && process.env.HABBLAUD_PTY_TMUX?.trim() !== '0' ? findExecutable('tmux') : undefined;
+const ptyTmux = spawnPty && tmuxBin ? createTmuxDriver(tmuxBin, { mouse: process.env.HABBLAUD_TMUX_MOUSE?.trim() !== '0' }) : null;
 const ptys = spawnPty
   ? new PtyManager({
       spawn: spawnPty,
+      tmux: ptyTmux,
       claudeBin: claudeBin ?? 'claude',
       accounts: () => accounts.entries().map((a) => ({ id: a.id, dir: a.dir, isDefault: isDefaultDir(a.dir, config.home) })),
       // Retomar uma sessão encerrada: quem diz se ela existe naquela conta é o histórico (ele resolve links).
@@ -329,6 +334,7 @@ const ptys = spawnPty
     })
   : undefined;
 late.ptys = ptys;
+ptys?.adopt();
 late.ptyOff = ptyOff;
 
 if (config.demo) office.setDemo(true);
@@ -510,6 +516,7 @@ server.listen(config.port, config.host, () => {
   if (config.terminal) log.info(tr('   Terminal: ligado (acesso só local).'));
   else log.info(tr('   Terminal: desligado ({0}).', [terminalOffReason(process.env, config.host, config.inDocker)]));
   log.info(ptys ? tr('   Terminal interativo: ligado ({0}).', [claudeBin]) : tr('   Terminal interativo: {0}.', [ptyOff ?? tr('desligado')]));
+  if (ptys) log.info(ptyTmux ? tr('   Terminais no tmux: as conversas abertas sobrevivem a reiniciar o Habblaud.') : tr('   Terminais sem tmux: reiniciar o Habblaud fecha as conversas abertas (instale o tmux).'));
   log.info(
     !spawn
       ? tr('   Novo agente: desligado ({0}).', [!ptyOptIn ? tr('ligue com HABBLAUD_PTY=1') : tr('mesma trava das mensagens')])

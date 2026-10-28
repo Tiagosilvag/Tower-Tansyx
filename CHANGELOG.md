@@ -26,6 +26,15 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Os terminais interativos sobrevivem a reiniciar o Habblaud.** Com o `tmux` instalado, cada `claude` aberto pelo
+  escritório roda numa sessão de um servidor do tmux próprio (`-L habblaud`, sem ler o `~/.tmux.conf`) e o Habblaud só
+  anexa um cliente a ela. Antes, o `claude` era filho do servidor: um deploy ou um crash fechava o pseudo-terminal e
+  matava todas as conversas abertas. Agora, ao subir, o servidor reconhece as sessões (`adopt`) e anexa de novo, com o
+  mesmo id de terminal, então a janela do navegador reconecta sozinha. **Encerrar** continua encerrando de verdade
+  (`kill-session`). O prefixo do tmux e o atraso do Esc ficam desligados (o Claude Code usa Ctrl+B e Esc). A roda do
+  mouse rola o histórico do tmux; para selecionar texto, Shift+arrastar (`HABBLAUD_TMUX_MOUSE=0` desliga).
+  `HABBLAUD_PTY_TMUX=0` volta ao pty direto; sem o `tmux` instalado também, e o aviso sai no log de início. No
+  systemd é preciso `KillMode=process`.
 - **Várias janelas de terminal ao mesmo tempo.** Clicar noutro agente (na lista, na gaveta ou no botão do terminal)
   abre outra janela em vez de trocar a que estava aberta; clicar num agente que já tem janela só a traz para a
   frente, e o botão do terminal dele fecha apenas aquela. Cada janela tem a própria posição (guardada no navegador),
