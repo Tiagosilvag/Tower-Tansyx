@@ -29,6 +29,9 @@ do meio (0.**3**.0).
 - **O chat mostra a pergunta do agente e a sua resposta em todos os filtros.** Com "Sem ferramentas" ou "Só prompts", o
   `AskUserQuestion` (a pergunta com a resposta que você deu) sumia junto com as outras ferramentas e parecia que a
   resposta tinha sido ignorada; agora ele fica visível, como uma conversa com você.
+- **O nome na tela passa a ser "Tower Tansyx".** O título da aba, o logotipo em pixels da barra e da tela de abertura
+  (agora desenhado por uma fonte bitmap em `ui/icons.ts`, "Tower" em creme e "Tansyx" em âmbar) e o título das
+  notificações do navegador. O restante do código (serviço, variáveis `HABBLAUD_*`, pastas) continua com o nome antigo.
 - **A pergunta do agente no chat virou um cartão.** Em vez do bloco bruto da ferramenta (a pergunta repetida em texto
   corrido e a resposta no formato interno do Claude Code), o chat mostra a pergunta, as opções e "Você respondeu" com a
   opção escolhida em destaque; sem resposta ainda, "Aguardando a sua resposta…". Com várias perguntas, cada uma mostra

@@ -648,7 +648,7 @@
   gap: 4px;
 }
 
-/* Logotipo em pixels: 47×8 px da placa da marca, em escala inteira (3×) para ficar nítido. */
+/* Logotipo em pixels: 60×8 px (ui/icons.ts), em escala inteira (3×) para ficar nítido. */
 .ui-brand__name {
   display: block;
   line-height: 0;
@@ -656,7 +656,7 @@
 
 .ui-wordmark {
   display: block;
-  width: 135px;
+  width: 180px;
   height: 24px;
   image-rendering: pixelated;
 }
@@ -3317,7 +3317,7 @@
 }
 
 .ui-splash__name .ui-wordmark {
-  width: 225px;
+  width: 300px;
   height: 40px;
 }
 

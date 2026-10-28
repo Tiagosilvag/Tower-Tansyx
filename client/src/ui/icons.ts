@@ -332,19 +332,56 @@ export const FALLBACK_MARK = pixelIcon(
 );
 
 /**
- * Logotipo "Habblaud" em pixels, com a mesma fonte bitmap da placa da marca (assets/brand/signage.png, gerada por
- * scripts/assets/pixelart.py): a Pixelify Sans não fica nítida nesse tamanho.
- * c = "Hab" (creme), t = "blaud" (âmbar), s = sombra de 1 px.
+ * Logotipo "Tower Tansyx" em pixels. A fonte bitmap é pequena e fica aqui mesmo (a Pixelify Sans não fica nítida nesse
+ * tamanho): maiúsculas com 6 linhas, minúsculas com 5 e o `y` descendo uma linha; a 8ª linha é a sombra de 1 px.
+ * c = "Tower" (creme), t = "Tansyx" (âmbar), s = sombra.
  */
-export const WORDMARK_ROWS = [
-  'c...c.......c.....t.....tt..................t',
-  'c...c.......c.....t.....st..................t',
-  'c...c..ccc..cccc..tttt...t...ttt..t...t..tttt',
-  'ccccc..sssc.csssc.tssst..t...ssst.t...t.tssst',
-  'csssc..cccc.c...c.t...t..t...tttt.t...t.t...t',
-  'c...c.csssc.c...c.t...t..t..tssst.t...t.t...t',
-  'c...c.scccc.ccccs.tttts.ttt.stttt.stttt.stttt',
-  's...s..ssss.ssss..ssss..sss..ssss..ssss..ssss',
-] as const;
+const WORDMARK_GLYPHS: Readonly<Record<string, { top: number; rows: readonly string[] }>> = {
+  T: { top: 0, rows: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..'] },
+  o: { top: 1, rows: ['.##.', '#..#', '#..#', '#..#', '.##.'] },
+  w: { top: 1, rows: ['#...#', '#...#', '#.#.#', '#.#.#', '.#.#.'] },
+  e: { top: 1, rows: ['.##.', '#..#', '####', '#...', '.###'] },
+  r: { top: 1, rows: ['#.##', '##..', '#...', '#...', '#...'] },
+  a: { top: 1, rows: ['.##.', '...#', '.###', '#..#', '.###'] },
+  n: { top: 1, rows: ['###.', '#..#', '#..#', '#..#', '#..#'] },
+  s: { top: 1, rows: ['.###', '#...', '.##.', '...#', '###.'] },
+  y: { top: 1, rows: ['#..#', '#..#', '.###', '...#', '...#', '###.'] },
+  x: { top: 1, rows: ['#..#', '#..#', '.##.', '#..#', '#..#'] },
+};
+
+const WORDMARK_HEIGHT = 8;
+
+/** Monta as linhas do logotipo: cada trecho com a sua cor, uma coluna entre as letras, duas entre as palavras e a sombra. */
+export function buildWordmark(parts: ReadonlyArray<readonly [text: string, color: string]>): string[] {
+  const cols: string[][] = [];
+  const blank = () => Array.from({ length: WORDMARK_HEIGHT }, () => '.');
+  for (const [text, color] of parts) {
+    for (const ch of text) {
+      const g = WORDMARK_GLYPHS[ch];
+      if (!g) {
+        cols.push(blank(), blank());
+        continue;
+      }
+      for (let x = 0; x < g.rows[0].length; x++) {
+        const col = blank();
+        g.rows.forEach((r, y) => {
+          if (r[x] === '#') col[g.top + y] = color;
+        });
+        cols.push(col);
+      }
+      cols.push(blank());
+    }
+  }
+  // Sombra: um pixel para baixo e para a direita de cada pixel aceso, onde estiver vazio.
+  const lit = cols.map((c) => [...c]);
+  for (let x = 0; x < lit.length; x++) {
+    for (let y = 0; y < WORDMARK_HEIGHT; y++) {
+      if (lit[x][y] !== '.' && lit[x][y] !== 's' && cols[x + 1]?.[y + 1] === '.') cols[x + 1][y + 1] = 's';
+    }
+  }
+  return Array.from({ length: WORDMARK_HEIGHT }, (_, y) => cols.map((c) => c[y]).join(''));
+}
+
+export const WORDMARK_ROWS = buildWordmark([['Tower', 'c'], [' ', 'c'], ['Tansyx', 't']]);
 
 export const WORDMARK = pixelIcon(WORDMARK_ROWS, { s: 'rgba(6, 8, 14, 0.62)', c: '#f4f1ea', t: '#fac665' }, 'ui-wordmark');

@@ -471,7 +471,7 @@ export const FR: Readonly<Record<string, string>> = {
   "Expandir na tela toda": "Agrandir en plein écran",
 
   // client/src/ui/notify.ts
-  "Habblaud — precisa de você": "Habblaud — on a besoin de vous",
+  "Tower Tansyx — precisa de você": "Tower Tansyx — on a besoin de vous",
 
   // client/src/ui/overlays.ts
   "Conectando ao escritório…": "Connexion au bureau…",
