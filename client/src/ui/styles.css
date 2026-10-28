@@ -11455,3 +11455,13 @@ html.is-replay #world {
   color: var(--ui-muted);
   font-style: italic;
 }
+
+/* Com várias perguntas, um filete separa cada uma (a resposta fica dentro da própria pergunta). */
+.ui-term__q + .ui-term__q {
+  padding-top: 10px;
+  border-top: 1px solid var(--ui-line-strong);
+}
+
+.ui-term__q-reply-slot:empty {
+  display: none;
+}

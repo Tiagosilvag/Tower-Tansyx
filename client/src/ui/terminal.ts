@@ -528,8 +528,10 @@ function askRow(t: ToolEntry, now: number): ToolRefs | undefined {
   if (!questions.length) return undefined;
   const cards = questions.map((q) => {
     const opts = q.options.map((o) => h('li', { class: 'ui-term__q-opt' }, h('strong', { text: o.label }), o.desc ? h('span', { class: 'ui-term__q-desc', text: o.desc }) : null));
-    const card = h('div', { class: 'ui-term__q' }, h('p', { class: 'ui-term__q-text', text: q.question }), opts.length ? h('ul', { class: 'ui-term__q-opts' }, ...opts) : null);
-    return { q, opts, card };
+    // A resposta de cada pergunta aparece logo abaixo dela (com várias, "Você respondeu (1)" lá embaixo não dizia de qual).
+    const reply = h('div', { class: 'ui-term__q-reply-slot' });
+    const card = h('div', { class: 'ui-term__q' }, h('p', { class: 'ui-term__q-text', text: q.question }), opts.length ? h('ul', { class: 'ui-term__q-opts' }, ...opts) : null, reply);
+    return { q, opts, card, reply };
   });
   const slot = h('div', { class: 'ui-term__q-reply-slot' }, h('span', { class: 'ui-term__q-wait', text: tr('Aguardando a sua resposta…'), attrs: { 'data-chrome': '' } }));
   const col = h('div', { class: 'ui-term__col ui-term__q-col' }, h('div', { class: 'ui-term__q-tag', text: tr('Pergunta do agente'), attrs: { 'data-chrome': '' } }), ...cards.map((c) => c.card), slot);
@@ -537,20 +539,20 @@ function askRow(t: ToolEntry, now: number): ToolRefs | undefined {
   el.classList.add('is-pending');
   const fill = (r: ResultEntry) => {
     const parsed = parseAskAnswers(r.text);
-    const replies = cards.map((c, i) => {
+    for (const c of cards) {
       // Cada pergunta pelo texto dela; com uma só, o texto inteiro serve quando o formato não bate.
       const answer = parsed.byQuestion.get(c.q.question) ?? (cards.length === 1 ? parsed.text : '');
       const chosen = chosenLabels(answer, c.q.options);
       c.opts.forEach((li, k) => li.classList.toggle('is-chosen', chosen.has(c.q.options[k].label)));
-      if (!answer) return null;
-      return h(
-        'div',
-        { class: 'ui-term__q-reply' },
-        h('span', { class: 'ui-term__q-reply-tag', text: r.error ? tr('Sem resposta') : cards.length > 1 ? `${tr('Você respondeu')} (${i + 1})` : tr('Você respondeu'), attrs: { 'data-chrome': '' } }),
-        h('span', { class: 'ui-term__q-reply-text', text: answer }),
+      c.reply.replaceChildren(
+        ...(answer
+          ? [
+              h('div', { class: 'ui-term__q-reply' }, h('span', { class: 'ui-term__q-reply-tag', text: r.error ? tr('Sem resposta') : tr('Você respondeu'), attrs: { 'data-chrome': '' } }), h('span', { class: 'ui-term__q-reply-text', text: answer })),
+            ]
+          : []),
       );
-    });
-    slot.replaceChildren(...replies.filter((n): n is HTMLDivElement => !!n));
+    }
+    slot.replaceChildren();
   };
   return { row: el, slot, fill };
 }

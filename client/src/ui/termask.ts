@@ -43,11 +43,16 @@ export interface AskAnswers {
   text: string;
 }
 
-/** Lê o resultado: `The user answered: "pergunta"="resposta", "outra"="resposta". Read the answers carefully…`. */
+/**
+ * Lê o resultado. O Claude Code usa mais de um texto em volta dos pares: uma pergunta vem como
+ * `The user answered: "pergunta"="resposta". Read the answers carefully…` e várias como
+ * `Your questions have been answered: "p1"="r1", "p2"="r2". You can now continue with these answers in mind.`
+ * Então o prefixo é tudo antes da primeira aspa e o aviso final é cortado pelas frases que conhecemos.
+ */
 export function parseAskAnswers(result: string): AskAnswers {
   const text = result
-    .replace(/\s*Read the answers carefully[\s\S]*$/, '')
-    .replace(/^\s*The user answered:\s*/, '')
+    .replace(/\s*(Read the answers carefully|You can now continue)[\s\S]*$/, '')
+    .replace(/^[^"]*(?=")/, '')
     .replace(/\.\s*$/, '')
     .trim();
   const byQuestion = new Map<string, string>();

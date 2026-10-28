@@ -25,6 +25,12 @@ describe('pergunta do agente no chat', () => {
     expect([...b.byQuestion]).toEqual([['P1?', 'A'], ['P2?', 'B, C']]);
   });
 
+  it('várias perguntas: o texto "Your questions have been answered" também é lido, as duas respostas', () => {
+    const a = parseAskAnswers('Your questions have been answered: "Quem atualiza?"="Os dois", "Como definir?"="Nova ação por perfil (Recommended)". You can now continue with these answers in mind.');
+    expect([...a.byQuestion]).toEqual([['Quem atualiza?', 'Os dois'], ['Como definir?', 'Nova ação por perfil (Recommended)']]);
+    expect(chosenLabels(a.byQuestion.get('Como definir?') ?? '', [{ label: 'Nova ação por perfil (Recommended)' }, { label: 'Fixo' }]).has('Nova ação por perfil (Recommended)')).toBe(true);
+  });
+
   it('aspas dentro da resposta não quebram; formato desconhecido devolve só o texto', () => {
     const a = parseAskAnswers('The user answered: "P?"="ele disse "oi" e saiu". Read the answers carefully');
     expect(a.byQuestion.get('P?')).toBe('ele disse "oi" e saiu');
