@@ -3353,4 +3353,8 @@ export const EN: Readonly<Record<string, string>> = {
   "já existe um usuário com esse nome": "a user with that name already exists",
   "usuário não encontrado": "user not found",
   "não dá para remover o único usuário": "the only user cannot be removed",
+  "Tower Tansyx · entrar": "Tower Tansyx · sign in",
+  "Entre para ver o escritório": "Sign in to see the office",
+  "Sem conexão com o Tower Tansyx.": "No connection to Tower Tansyx.",
+  "createRemoteGate: passe users, ou config e sessions (só um dos dois modos)": "createRemoteGate: pass users, or config and sessions (only one of the two modes)",
 };

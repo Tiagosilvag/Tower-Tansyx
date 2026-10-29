@@ -3370,4 +3370,8 @@ export const FR: Readonly<Record<string, string>> = {
   "já existe um usuário com esse nome": "un utilisateur portant ce nom existe déjà",
   "usuário não encontrado": "utilisateur introuvable",
   "não dá para remover o único usuário": "impossible de supprimer le seul utilisateur",
+  "Tower Tansyx · entrar": "Tower Tansyx · connexion",
+  "Entre para ver o escritório": "Connectez-vous pour voir le bureau",
+  "Sem conexão com o Tower Tansyx.": "Pas de connexion à Tower Tansyx.",
+  "createRemoteGate: passe users, ou config e sessions (só um dos dois modos)": "createRemoteGate : passez users, ou config et sessions (un seul des deux modes)",
 };

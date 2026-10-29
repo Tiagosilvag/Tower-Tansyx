@@ -28,6 +28,8 @@ import { dirname, join } from 'node:path';
 import { parsePasswordHash, verifyPassword, type PasswordHash } from '../remote/password';
 import { hostAllowed } from './guard';
 import { getLocale, tr } from '../../shared/i18n';
+import type { LoginResult, UserAuth } from '../users/auth';
+import { setUser } from '../users/identity';
 
 export type RemoteFeature = 'permissions' | 'messages' | 'terminal' | 'spawn';
 
@@ -343,12 +345,41 @@ function esc(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export function loginPage(opts: { caDownload: boolean }): string {
-  const ca = opts.caDownload
-    ? `<p class="ca">${esc(tr('Primeira vez neste celular?'))} <a href="${CA_PATH}" download="habblaud-ca.crt">${esc(tr('Instale o certificado do Habblaud'))}</a> ${esc(tr('para tirar o aviso de segurança (confira a impressão digital que o npm run remote:setup mostrou).'))}</p>`
-    : '';
-  // Dentro do <script>: JSON com "<" escapado, para nenhum texto fechar a tag.
-  const js = (text: string) => JSON.stringify(text).replace(/</g, '\\u003c');
+/** Dentro do <script>: JSON com "<" escapado, para nenhum texto fechar a tag. */
+function js(text: string): string {
+  return JSON.stringify(text).replace(/</g, '\\u003c');
+}
+
+/** Envio do formulário, igual nos dois modos: o texto de erro mostrado é o que o servidor mandou. */
+function loginScript(noConnection: string): string {
+  return `<script>
+  const f = document.getElementById('f'), b = document.getElementById('b'), err = document.getElementById('err');
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    b.disabled = true; err.textContent = '';
+    try {
+      const r = await fetch('/api/remote/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', body: JSON.stringify({ user: f.username.value, password: f.password.value }) });
+      if (r.ok) { location.replace('/'); return; }
+      const body = await r.json().catch(() => ({}));
+      err.textContent = body.error || ${js(tr('Não deu para entrar.'))};
+    } catch { err.textContent = ${js(noConnection)}; }
+    b.disabled = false;
+  });
+</script>`;
+}
+
+function caParagraph(): string {
+  return `<p class="ca">${esc(tr('Primeira vez neste celular?'))} <a href="${CA_PATH}" download="habblaud-ca.crt">${esc(tr('Instale o certificado do Habblaud'))}</a> ${esc(tr('para tirar o aviso de segurança (confira a impressão digital que o npm run remote:setup mostrou).'))}</p>`;
+}
+
+/**
+ * Tela de login. `users` = modo de usuários: a marca do Tower Tansyx (como no mockup aprovado), com a fonte só
+ * nomeada no CSS: a tela não busca nada em outro host. Sem `users`, a tela de sempre do Habblaud.
+ */
+export function loginPage(opts: { caDownload: boolean; users: boolean }): string {
+  if (opts.users) return towerLoginPage(opts.caDownload);
+  const ca = opts.caDownload ? caParagraph() : '';
   return `<!doctype html>
 <html lang="${getLocale()}">
 <head>
@@ -394,21 +425,71 @@ export function loginPage(opts: { caDownload: boolean }): string {
   <div id="err" role="alert"></div>
   ${ca}
 </form>
-<script>
-  const f = document.getElementById('f'), b = document.getElementById('b'), err = document.getElementById('err');
-  f.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    b.disabled = true; err.textContent = '';
-    try {
-      const r = await fetch('/api/remote/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin', body: JSON.stringify({ user: f.username.value, password: f.password.value }) });
-      if (r.ok) { location.replace('/'); return; }
-      const body = await r.json().catch(() => ({}));
-      err.textContent = body.error || ${js(tr('Não deu para entrar.'))};
-    } catch { err.textContent = ${js(tr('Sem conexão com o Habblaud.'))}; }
-    b.disabled = false;
-  });
-</script>
+${loginScript(tr('Sem conexão com o Habblaud.'))}
+</body>
+</html>
+`;
+}
+
+function towerLoginPage(caDownload: boolean): string {
+  const ca = caDownload ? caParagraph() : '';
+  return `<!doctype html>
+<html lang="${getLocale()}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>${esc(tr('Tower Tansyx · entrar'))}</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tower Tansyx">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b0f18; color: #e8ecf5;
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 16px; }
+  form { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 16px; padding: 36px 26px 30px;
+         background: radial-gradient(120% 80% at 50% 0%, #17223a 0%, #121826 62%); border: 1px solid #26304a; border-radius: 10px; }
+  .brand { margin: 0 0 4px; text-align: center; font-family: "Pixelify Sans", ui-monospace, monospace; font-weight: 700;
+           font-size: 28px; line-height: 1; letter-spacing: .02em; text-shadow: 2px 2px 0 rgba(6, 8, 14, .7); }
+  .tower { color: #f4f1ea; }
+  .tansyx { color: #fac665; }
+  .sub { margin: -6px 0 0; text-align: center; color: #8c97b2; font-size: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: 12px; color: #8c97b2; }
+  input { width: 100%; min-height: 40px; padding: 9px 11px; font: inherit; font-size: 16px; color: inherit; background: #0d1220;
+          border: 1px solid #26304a; border-radius: 6px; }
+  input:focus { outline: none; border-color: #fac665; }
+  button { padding: 11px 14px; font: inherit; font-weight: 600; color: #1a1405; background: #fac665; border: 0; border-radius: 6px;
+           cursor: pointer; }
+  button:disabled { color: #8e95a8; background: #3a3f50; cursor: wait; }
+  #err { padding: 9px 11px; font-size: 13px; color: #ff8a7a; background: rgba(255, 138, 122, .08); border: 1px solid #5a2e2e;
+         border-radius: 6px; }
+  #err:empty { display: none; }
+  p.ca { margin: 4px 0 0; text-align: center; color: #8c97b2; font-size: 12px; }
+  a { color: #fac665; }
+</style>
+</head>
+<body>
+<form id="f" autocomplete="on">
+  <h1 class="brand"><span class="tower">Tower</span> <span class="tansyx">Tansyx</span></h1>
+  <p class="sub">${esc(tr('Entre para ver o escritório'))}</p>
+  <div class="field">
+    <label for="u">${esc(tr('Usuário'))}</label>
+    <input id="u" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+  </div>
+  <div class="field">
+    <label for="p">${esc(tr('Senha'))}</label>
+    <input id="p" name="password" type="password" autocomplete="current-password" required>
+  </div>
+  <div id="err" role="alert"></div>
+  <button id="b" type="submit">${esc(tr('Entrar'))}</button>
+  ${ca}
+</form>
+${loginScript(tr('Sem conexão com o Tower Tansyx.'))}
 </body>
 </html>
 `;
@@ -430,11 +511,15 @@ function cookieHeader(value: string, maxAgeS: number, secure: boolean): string {
   return `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeS}${secure ? '; Secure' : ''}`;
 }
 
+/**
+ * Um modo ou o outro: `users` (contas no SQLite) ou `config` + `sessions` (usuário único do ambiente).
+ */
 export interface RemoteGateDeps {
-  config: Pick<SingleUserCreds, 'user' | 'passwordHash'>;
-  sessions: RemoteSessions;
-  /** Cookie com Secure (a porta fala HTTPS). */
-  secure: boolean;
+  config?: Pick<SingleUserCreds, 'user' | 'passwordHash'>;
+  sessions?: RemoteSessions;
+  users?: UserAuth;
+  /** Cookie com Secure (a porta fala HTTPS). Função = decidido a cada pedido (proxy que termina o TLS). */
+  secure: boolean | ((req: IncomingMessage) => boolean);
   /** Arquivo da CA pública servido em /remote/ca.crt (ausente = sem download). */
   caFile?: string;
   throttle?: LoginThrottle;
@@ -447,19 +532,67 @@ export interface RemoteGateDeps {
  * logout, 401, redirecionamento, CA) e false quando a requisição está autenticada — e então a marca como remota.
  */
 export function createRemoteGate(deps: RemoteGateDeps): (req: IncomingMessage, res: ServerResponse, url: URL) => boolean {
+  const { users } = deps;
+  // Os dois modos juntos (ou nenhum) seria um portão que ninguém sabe qual senha confere: erro de montagem, não de uso.
+  if (users ? !!(deps.config || deps.sessions) : !(deps.config && deps.sessions)) {
+    throw new Error(tr('createRemoteGate: passe users, ou config e sessions (só um dos dois modos)'));
+  }
   const throttle = deps.throttle ?? new LoginThrottle();
   const verify = deps.verify ?? verifyPassword;
   const caAvailable = () => !!deps.caFile && existsSync(deps.caFile);
+  const secureFor = (req: IncomingMessage) => (typeof deps.secure === 'function' ? deps.secure(req) : deps.secure);
   return (req, res, url) => {
     const path = url.pathname;
     const method = req.method ?? 'GET';
-    const authed = deps.sessions.verify(readCookie(req.headers.cookie, COOKIE));
+    const token = readCookie(req.headers.cookie, COOKIE);
+    // Modo de usuários: o usuário é relido a cada pedido, então removido ou com senha trocada já não passa.
+    const user = users?.userOf(token);
+    const authed = users ? !!user : deps.sessions!.verify(token);
+
+    if (path === '/api/remote/login' && users) {
+      if (method !== 'POST') {
+        sendJson(res, 405, { error: tr('método não permitido') }, { Allow: 'POST' });
+        return true;
+      }
+      // O freio e a fila de conferências ficam no UserAuth (por usuário, então precisa do nome que vem no corpo).
+      readBody(req)
+        .then(async (raw) => {
+          let body: { user?: unknown; password?: unknown } = {};
+          try {
+            const parsed: unknown = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') body = parsed as typeof body;
+          } catch {
+            // corpo inválido: vira usuário e senha vazios, recusados como qualquer erro
+          }
+          let result: LoginResult;
+          try {
+            result = await users.login(body.user, body.password);
+          } catch {
+            // falha do armazém depois da senha certa: resposta genérica, sem cookie e sem a mensagem de dentro
+            return sendJson(res, 500, { error: tr('erro interno') });
+          }
+          if (result.ok) {
+            return sendJson(res, 200, { ok: true }, { 'Set-Cookie': cookieHeader(result.token, result.maxAgeS, secureFor(req)) });
+          }
+          if (result.status === 429) {
+            const wait = Math.max(1, result.retryAfter ?? 1);
+            return sendJson(res, 429, { error: tr('Muitas tentativas. Tente de novo em {0} s.', [wait]) }, { 'Retry-After': String(wait) });
+          }
+          // o mesmo texto para nome inexistente e senha errada: a resposta não revela quem existe
+          sendJson(res, 401, { error: tr('Usuário ou senha incorretos.') });
+        })
+        .catch(() => {
+          if (!res.headersSent) sendJson(res, 400, { error: tr('requisição inválida') });
+        });
+      return true;
+    }
 
     if (path === '/api/remote/login') {
       if (method !== 'POST') {
         sendJson(res, 405, { error: tr('método não permitido') }, { Allow: 'POST' });
         return true;
       }
+      const single = { config: deps.config!, sessions: deps.sessions! };
       const tooMany = () => {
         const wait = Math.max(1, throttle.retryAfter());
         sendJson(res, 429, { error: tr('Muitas tentativas. Tente de novo em {0} s.', [wait]) }, { 'Retry-After': String(wait) });
@@ -486,12 +619,12 @@ export function createRemoteGate(deps: RemoteGateDeps): (req: IncomingMessage, r
           const user = typeof body.user === 'string' ? body.user : '';
           const password = typeof body.password === 'string' ? body.password : '';
           // O scrypt roda sempre (sem atalho que denuncie se foi o usuário ou a senha que errou).
-          const okPassword = await verify(password, deps.config.passwordHash);
-          const okUser = safeEqual(user.trim(), deps.config.user);
+          const okPassword = await verify(password, single.config.passwordHash);
+          const okUser = safeEqual(user.trim(), single.config.user);
           if (!(okUser && okPassword)) return sendJson(res, 401, { error: tr('Usuário ou senha incorretos.') });
           ok = true;
-          const { token, maxAgeS } = deps.sessions.issue();
-          sendJson(res, 200, { ok: true }, { 'Set-Cookie': cookieHeader(token, maxAgeS, deps.secure) });
+          const { token, maxAgeS } = single.sessions.issue();
+          sendJson(res, 200, { ok: true }, { 'Set-Cookie': cookieHeader(token, maxAgeS, secureFor(req)) });
         })
         .catch(() => {
           if (!res.headersSent) sendJson(res, 400, { error: tr('requisição inválida') });
@@ -506,8 +639,9 @@ export function createRemoteGate(deps: RemoteGateDeps): (req: IncomingMessage, r
       req.resume();
       if (method !== 'POST') sendJson(res, 405, { error: tr('método não permitido') }, { Allow: 'POST' });
       else {
-        deps.sessions.revoke(readCookie(req.headers.cookie, COOKIE));
-        sendJson(res, 200, { ok: true }, { 'Set-Cookie': cookieHeader('', 0, deps.secure) });
+        if (users) users.logout(token);
+        else deps.sessions!.revoke(token);
+        sendJson(res, 200, { ok: true }, { 'Set-Cookie': cookieHeader('', 0, secureFor(req)) });
       }
       return true;
     }
@@ -535,12 +669,14 @@ export function createRemoteGate(deps: RemoteGateDeps): (req: IncomingMessage, r
       if (authed) {
         res.writeHead(302, { Location: '/', 'Cache-Control': 'no-store' });
         res.end();
-      } else sendHtml(res, loginPage({ caDownload: caAvailable() }));
+      } else sendHtml(res, loginPage({ caDownload: caAvailable(), users: !!users }));
       return true;
     }
 
     if (authed) {
       remoteRequests.add(req);
+      // a API (userOf) fica sabendo quem pediu
+      if (user) setUser(req, user);
       return false;
     }
     // Ícone e manifesto do app (Tela de Início): públicos, o celular os busca antes do login (e sem o cookie).
