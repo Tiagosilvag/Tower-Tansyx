@@ -701,6 +701,25 @@ Quer ver o escritório cheio sem ter sessões abertas?
   demonstração** —, que coloca agentes fictícios junto com os reais. Com `npm run demo` (ou `HABBLAUD_DEMO=1` no
   `.env` do Docker), esse modo já começa ligado.
 
+### Kanban
+
+O botão do quadro na barra superior (ou a tecla **K**) abre o Kanban do time: um quadro **Geral** para coisas soltas e um
+quadro **por projeto**, com as colunas Ideias, A fazer, Fazendo e Feito. É do time, não dos agentes: serve para organizar
+ideias, tarefas, prioridades e projetos. Os dados ficam no SQLite do Habblaud (`HABBLAUD_DB`, o mesmo banco dos usuários),
+e o Kanban funciona também sem o modo de usuários.
+
+- **Estante de projetos:** à esquerda, o Geral e os projetos como livros, com a contagem de cartões abertos. O botão ◀
+  recolhe a estante para lombadas com a inicial (ela lembra a escolha e o último quadro). Tem busca de projetos.
+- **Busca de tarefas:** no alto do quadro, filtra só o quadro aberto, ignorando acentos e maiúsculas.
+- **Cartões:** título, descrição, prioridade, responsável, coluna e comentários. Arraste entre as colunas (ou use
+  **Alt+setas** no cartão focado, ou o seletor de coluna no cartão aberto). Com a busca ligada o arrasto fica desligado.
+- **Geral e projetos:** o que está no Geral não aparece no quadro do projeto. Um cartão do Geral pode ter uma **etiqueta de
+  projeto** (só uma referência); "Mover para o quadro" o tira do Geral e o põe no quadro escolhido, sem cópia.
+- **Histórico:** cada mudança grava quem fez, e quando foi um agente a pedido do usuário, a marca **via agente**.
+- **Agentes:** leem e alteram os quadros pelo comando `npm run kanban` (ou direto pela API local). O autor é o usuário que
+  pediu (`--as tiago`); pela porta remota o autor é sempre o usuário logado. Veja [`docs/kanban-agentes.md`](docs/kanban-agentes.md)
+  para o bloco de instruções que você cola no `CLAUDE.md` ou no `AGENTS.md`.
+
 ## Contas e uso (5 horas e semanal)
 
 > As contas do **Codex** entram sozinhas (cada pasta `~/.codex*` ou `CODEX_HOME` é uma conta; a letra vem de um

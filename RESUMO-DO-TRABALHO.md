@@ -251,31 +251,46 @@ foram apagados do servidor; os repositórios originais continuam nas contas de o
 **Não testado no navegador real.** Estas mudanças foram validadas por typecheck, `i18n:check`, vitest, build e e2e do
 servidor; o aspecto visual foi conferido só nos prints do usuário.
 
-### Login e usuários (código pronto, troca pendente)
+### Login e usuários (em produção desde 29/10/2026)
 
-O código está pronto no repositório, na branch `worktree-anexos-pty` (commits de `feat(users)` a `feat(ui): chip do
-usuário…`), **ainda não implantado em produção**. O Caddy **continua** na frente (`:8080`) e a produção segue com o
-Basic Auth; nada disto está ligado lá.
+No ar em `https://towertansyx.coffetech.com.br`. O túnel aponta para `http://127.0.0.1:4748` (a porta remota do Habblaud) e o
+Caddy está **desligado e desabilitado** (continua instalado; volta com `systemctl enable --now caddy` e apontando o túnel
+para `8080`). Só existem os usuários `tiago` e `ansysar`; o `luciano`, que entrava pelo Caddy, está sem conta até alguém
+criá-la.
 
 - **Arquitetura:** contas num SQLite (`node:sqlite`, `HABBLAUD_DB`, padrão `<dataDir>/habblaud.db`, modo 600) com
   hashes scrypt (`server/db/`, `server/users/`); a porta remota 4748 confere o login com `HABBLAUD_REMOTE_USERS=1`,
-  com freio de 5 erros/15 min por IP+usuário (IP do `CF-Connecting-IP` atrás do túnel) e sessão de 30 dias; `HABBLAUD_REMOTE_FULL=1` faz a sessão logada valer como
-  o próprio computador (terminal, agentes, Novo agente), sem abrir hooks, plugins, Codex, auxiliar do host nem o
-  Habblaud World; CLI `npm run users:add|passwd|list` e tela **Usuários** no chip do usuário. Detalhes no README
-  ("Acesso por usuários").
-- **Troca (NÃO feita, depende do dono):** (1) criar os usuários com `npm run users:add`; (2) ajuste do serviço
-  `/etc/systemd/system/habblaud.service.d/remote-users.conf` com `HABBLAUD_REMOTE_USERS=1`, `HABBLAUD_REMOTE_FULL=1`,
-  `HABBLAUD_REMOTE_INSECURE_HTTP=1`, `HABBLAUD_REMOTE_HOST=127.0.0.1`, `HABBLAUD_REMOTE_ALLOW`, `HABBLAUD_PTY=1` e `HABBLAUD_ALLOWED_HOSTS=<domínio público>` (sem isso o cloudflared recebe "Host não permitido"), mais `daemon-reload` e
-  `restart`; (3) testar com `curl -H 'Host: <dominio>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login` e apontar o serviço do túnel `towertansyx` de `http://localhost:8080` para `http://127.0.0.1:4748`;
-  (4) só depois de todos entrarem, desligar o Caddy. Volta: apontar o túnel de novo para `8080`.
+  com freio de 5 erros/15 min por IP+usuário (IP do `CF-Connecting-IP` atrás do túnel) e sessão de 30 dias;
+  `HABBLAUD_REMOTE_FULL=1` faz a sessão logada valer como o próprio computador (terminal, agentes, Novo agente), sem abrir
+  hooks, plugins, Codex, auxiliar do host nem o Habblaud World; CLI `npm run users:add|passwd|list` (num terminal de verdade:
+  a senha é pedida escondida) e tela **Usuários** no chip do usuário. Detalhes no README ("Acesso por usuários").
+- **Configuração do serviço:** `/etc/systemd/system/habblaud.service.d/remote-users.conf` com `HABBLAUD_REMOTE_USERS=1`,
+  `HABBLAUD_REMOTE_FULL=1`, `HABBLAUD_REMOTE_INSECURE_HTTP=1` e `HABBLAUD_REMOTE_HOST=127.0.0.1`; `HABBLAUD_PTY=1` e
+  `HABBLAUD_ALLOWED_HOSTS=towertansyx.coffetech.com.br` já estavam no serviço. O código roda de `/root/habblaud`, que é um
+  clone separado: o deploy é `git fetch /root/projetos/Tower-Tansyx <branch>` + `git merge --ff-only FETCH_HEAD` +
+  `npm ci --include=dev` (o shell tem `NODE_ENV=production`) + `npm run build` + `systemctl restart habblaud`.
 - **Aviso:** com `HABBLAUD_REMOTE_FULL=1`, o login é a única barreira de um shell root.
 - Spec: `docs/superpowers/specs/2026-10-28-login-usuarios-design.md`; plano:
   `docs/superpowers/plans/2026-10-28-login-usuarios.md`.
 
+### Kanban (código pronto, ainda não implantado em produção)
+
+Segundo projeto da série, na branch `worktree-anexos-pty`. **Não está em produção**: o serviço roda de `/root/habblaud`, que
+só recebe o código no deploy (veja acima).
+
+- **O que é:** quadro **Geral** e um quadro por projeto (Ideias, A fazer, Fazendo, Feito), no cenário da sala em pixel art
+  (quadro branco, post-its, estante retrátil de projetos), com busca de projetos e de tarefas, arrastar, cartão aberto com
+  comentários e histórico. Botão na barra superior e tecla K. Detalhes no README ("Kanban").
+- **Agentes:** `npm run kanban -- boards|list|show|add|move|comment|edit`, com `--as <usuário>`; o autor é o usuário que pediu e o
+  cartão leva a marca "via agente". Guia para colar no `CLAUDE.md`/`AGENTS.md`: `docs/kanban-agentes.md`.
+- **Fora desta versão:** colunas personalizáveis, busca em todos os quadros ao mesmo tempo, datas de entrega, anexos,
+  arrastar com o dedo no celular (o seletor de coluna do cartão cobre) e renomear ou apagar projeto pela página (a API tem).
+- Spec: `docs/superpowers/specs/2026-10-29-kanban-design.md`; plano: `docs/superpowers/plans/2026-10-29-kanban.md`.
+
 ## 7. Pendências
 
-1. **Trocar a senha do Caddy** (`caddy hash-password` → editar o Caddyfile → `systemctl reload caddy`). A
-   atual circulou em conversa.
+1. ~~Trocar a senha do Caddy~~ — o Caddy foi desligado em 29/10 (login por usuários no ar). Se o Caddy voltar a ser usado,
+   a senha antiga circulou em conversa: trocá-la antes (`caddy hash-password`).
 2. **Rotacionar o token do túnel** (Zero Trust → Tunnels → `towertansyx` → Configure → Refresh token) e
    reinstalar o serviço. Também circulou.
 3. **Cloudflare Access** no lugar do Basic Auth, quando puderem assinar o Zero Trust.

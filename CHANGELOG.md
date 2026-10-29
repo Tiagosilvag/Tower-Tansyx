@@ -33,6 +33,11 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Kanban do time.** Um quadro **Geral** e um quadro por projeto (colunas Ideias, A fazer, Fazendo e Feito), num botão da
+  barra superior (tecla K), no cenário da sala em pixel art: o quadro branco da parede, post-its com fita e uma estante
+  retrátil com os projetos. Tem busca de projetos e de tarefas, arrastar entre colunas (ou Alt+setas), cartão com
+  descrição, prioridade, responsável, etiqueta de projeto, comentários e histórico. Os agentes leem e alteram os quadros
+  por `npm run kanban` (autor = o usuário que pediu, com a marca "via agente"); veja `docs/kanban-agentes.md`.
 - **Login com usuários.** A porta remota pode conferir um banco de usuários em vez do login único: ligue com
   `HABBLAUD_REMOTE_USERS=1` (sem a variável, o modo de usuário único segue exatamente como antes; ligada e sem nenhum
   usuário no banco, a porta não sobe). Os usuários nascem por `npm run users:add -- <usuario> [--name "Nome"]

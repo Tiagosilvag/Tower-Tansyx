@@ -703,6 +703,25 @@ Want to see the office full without having any sessions open?
   mode** — which puts made-up agents alongside the real ones. With `npm run demo` (or `HABBLAUD_DEMO=1` in the
   Docker `.env`), this mode starts already on.
 
+### Kanban
+
+The board button in the top bar (or the **K** key) opens the team Kanban: a **General** board for loose things and one
+board **per project**, with the columns Ideas, To do, Doing and Done. It belongs to the team, not to the agents: it is for
+organizing ideas, tasks, priorities and projects. The data lives in Habblaud's SQLite database (`HABBLAUD_DB`, the same one
+the users use), and the Kanban also works without users mode.
+
+- **Project shelf:** on the left, General and the projects as books, with the count of open cards. The ◀ button collapses
+  the shelf into spines with each project's initial (it remembers that choice and the last board). It has a project search.
+- **Task search:** at the top of the board, it filters only the open board, ignoring accents and case.
+- **Cards:** title, description, priority, assignee, column and comments. Drag between columns (or use **Alt+arrows** on the
+  focused card, or the column selector in the open card). With the search on, dragging is turned off.
+- **General and projects:** what is in General does not show on a project board. A General card can carry a **project tag**
+  (just a reference); "Move to board" takes it out of General and puts it on the chosen board, with no copy.
+- **History:** every change records who made it, and when an agent did it at the user's request, the **via agent** mark.
+- **Agents:** they read and change the boards with the `npm run kanban` command (or straight through the local API). The
+  author is the user who asked (`--as tiago`); through the remote port the author is always the logged-in user. See
+  [`docs/kanban-agentes.md`](docs/kanban-agentes.md) for the instruction block to paste into `CLAUDE.md` or `AGENTS.md`.
+
 ## Accounts and usage (5-hour and weekly)
 
 > **Codex** accounts come in on their own (each `~/.codex*` folder or `CODEX_HOME` is an account; the letter comes from an

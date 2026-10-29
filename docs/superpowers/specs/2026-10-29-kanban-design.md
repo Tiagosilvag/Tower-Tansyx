@@ -1,6 +1,6 @@
 # Kanban do Tower Tansyx — design
 
-Data: 29/10/2026 · Estado: aprovado para implementar (o usuário pediu para seguir) · Mockups: https://claude.ai/artifact/11oyzJc3fLaBt9yU18Ht69 (privado, versão 4)
+Data: 29/10/2026 · Estado: implementado (ainda não em produção) · Mockups: https://claude.ai/artifact/11oyzJc3fLaBt9yU18Ht69 (privado, versão 4)
 
 Segundo projeto da série (o primeiro, login e usuários, já está em produção). Usa o mesmo banco SQLite e os usuários do login.
 
