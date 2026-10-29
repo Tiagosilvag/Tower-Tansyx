@@ -712,7 +712,9 @@ e o Kanban funciona também sem o modo de usuários.
   faixa da parede, puxe as bordas e quinas para mudar o tamanho, use o botão de expandir na tela toda, e dê duplo clique na
   barra para devolver ao lugar. Posição e tamanho ficam no navegador. **Esc** fecha.
 - **Estante de projetos:** à esquerda, o Geral e os projetos como livros, com a contagem de cartões abertos. O botão ◀
-  recolhe a estante para lombadas com a inicial (ela lembra a escolha e o último quadro). Tem busca de projetos.
+  recolhe a estante para lombadas com a inicial (ela lembra a escolha e o último quadro). Tem busca de projetos. Ao criar um
+  projeto, conforme você digita aparecem abaixo os **projetos do Habblaud** que combinam (nome, caminho e há quanto tempo, os
+  mesmos do Novo agente); setas e Enter ou um clique preenchem o nome, e Enter de novo cria.
 - **Busca de tarefas:** no alto do quadro, filtra só o quadro aberto, ignorando acentos e maiúsculas.
 - **Cartões:** título, descrição, prioridade, responsável, coluna e comentários. Arraste entre as colunas (ou use
   **Alt+setas** no cartão focado, ou o seletor de coluna no cartão aberto). Com a busca ligada o arrasto fica desligado.

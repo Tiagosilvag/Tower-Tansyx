@@ -2549,6 +2549,7 @@ export const FR: Readonly<Record<string, string>> = {
   "o Kanban só aceita alterações pelo próprio computador: a porta do Habblaud está exposta na rede": "le Kanban n'accepte les modifications que depuis l'ordinateur lui-même : le port d'Habblaud est exposé au réseau",
   "Renomear": "Renommer",
   "Excluir o projeto \"{0}\"? O cartão dele também será apagado.": "Supprimer le projet « {0} » ? Sa carte sera aussi supprimée.",
+  "Projetos do Habblaud": "Projets d'Habblaud",
   "acesso remoto desligado: senha em texto puro (HABBLAUD_REMOTE_PASSWORD) não é aceita; rode npm run remote:setup": "accès à distance désactivé : un mot de passe en clair (HABBLAUD_REMOTE_PASSWORD) n'est pas accepté ; lancez npm run remote:setup",
   "acesso remoto desligado: faltam HABBLAUD_REMOTE_USER e HABBLAUD_REMOTE_PASSWORD_HASH; rode npm run remote:setup": "accès à distance désactivé : HABBLAUD_REMOTE_USER et HABBLAUD_REMOTE_PASSWORD_HASH manquent ; lancez npm run remote:setup",
   "acesso remoto desligado: HABBLAUD_REMOTE_PASSWORD_HASH inválido; rode npm run remote:setup": "accès à distance désactivé : HABBLAUD_REMOTE_PASSWORD_HASH invalide ; lancez npm run remote:setup",

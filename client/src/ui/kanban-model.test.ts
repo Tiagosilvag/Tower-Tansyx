@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { KanbanBoard, KanbanCard } from '../../../shared/kanban';
 import type { KanbanEvent } from '../../../shared/kanban';
-import { applyMove, describeEvent, dropTarget, filterBoards, filterCards, groupByColumn, loadShelf, saveShelf, SHELF_KEY } from './kanban-model';
+import { applyMove, describeEvent, dropTarget, projectSuggestions, roomProjects, filterBoards, filterCards, groupByColumn, loadShelf, saveShelf, SHELF_KEY } from './kanban-model';
 
 const card = (id: number, column: KanbanCard['column'], position: number, over: Partial<KanbanCard> = {}): KanbanCard => ({
   id, boardId: 1, column, position, title: `c${id}`, description: '', priority: 'media', assigneeId: null, assigneeName: null, projectId: null,
@@ -125,5 +125,62 @@ describe('describeEvent', () => {
     expect(describeEvent(ev('comment', 'dá para usar push'))).toEqual({ text: 'comentou', quote: 'dá para usar push' });
     expect(describeEvent(ev('moved', 'lixo')).text).toBe('moveu o cartão');
     expect(describeEvent(ev('priority', 'x→y')).text).toBe('mudou a prioridade de x para y');
+  });
+});
+
+describe('projectSuggestions', () => {
+  const folders = [
+    { name: 'Tower-Tansyx', path: '/root/projetos/Tower-Tansyx', lastAt: 300 },
+    { name: 'loja-virtual', path: '/root/projetos/loja-virtual', lastAt: 500 },
+    { name: 'Açaí-PDV', path: '/home/ana/acai', lastAt: 100 },
+    { name: 'tower-docs', path: '/root/projetos/tower-docs', lastAt: 400 },
+  ];
+  const boards: KanbanBoard[] = [{ id: 1, kind: 'general', name: 'Geral', openCount: 0 }];
+
+  it('sem texto digitado não sugere nada', () => {
+    expect(projectSuggestions(folders, boards, '')).toEqual([]);
+    expect(projectSuggestions(folders, boards, '   ')).toEqual([]);
+  });
+
+  it('acha pelo nome ou pelo caminho, sem diferenciar caixa nem acento, e põe o mais recente primeiro', () => {
+    expect(projectSuggestions(folders, boards, 'tower').map((f) => f.name)).toEqual(['tower-docs', 'Tower-Tansyx']);
+    expect(projectSuggestions(folders, boards, 'ACAI').map((f) => f.name)).toEqual(['Açaí-PDV']);
+    expect(projectSuggestions(folders, boards, 'home/ana').map((f) => f.name)).toEqual(['Açaí-PDV']);
+    expect(projectSuggestions(folders, boards, 'zzz')).toEqual([]);
+  });
+
+  it('não repete quem já é projeto no Kanban (mesmo nome, sem diferenciar caixa nem acento)', () => {
+    const withTower: KanbanBoard[] = [...boards, { id: 2, kind: 'project', name: 'tower-tansyx', openCount: 0 }, { id: 3, kind: 'project', name: 'ACAI-pdv', openCount: 0 }];
+    expect(projectSuggestions(folders, withTower, 'tower').map((f) => f.name)).toEqual(['tower-docs']);
+    expect(projectSuggestions(folders, withTower, 'acai')).toEqual([]);
+  });
+
+  it('respeita o limite', () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({ name: `proj-${i}`, path: `/p/${i}`, lastAt: i }));
+    expect(projectSuggestions(many, boards, 'proj')).toHaveLength(6);
+    expect(projectSuggestions(many, boards, 'proj', 3).map((f) => f.name)).toEqual(['proj-19', 'proj-18', 'proj-17']);
+  });
+});
+
+describe('roomProjects', () => {
+  it('lista as salas de verdade (sem as do demo) com o horário do último evento de cada uma', () => {
+    const snap = {
+      rooms: [
+        { id: 'r1', name: 'Tower Tansyx', path: '/root/projetos/Tower-Tansyx' },
+        { id: 'r2', name: 'api-pagamentos', path: '/home/ana/api' },
+        { id: 'demo:1', name: 'Demo', path: '/demo/x' },
+        { id: 'r3', name: 'sem caminho', path: '' },
+      ],
+      agents: [
+        { roomId: 'r1', lastEventAt: 100 },
+        { roomId: 'r1', lastEventAt: 250 },
+        { roomId: 'r2', lastEventAt: undefined },
+      ],
+    } as never;
+    expect(roomProjects(snap)).toEqual([
+      { name: 'Tower Tansyx', path: '/root/projetos/Tower-Tansyx', lastAt: 250 },
+      { name: 'api-pagamentos', path: '/home/ana/api', lastAt: 0 },
+    ]);
+    expect(roomProjects(null)).toEqual([]);
   });
 });

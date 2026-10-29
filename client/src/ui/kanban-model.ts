@@ -1,6 +1,9 @@
 // Funções puras do Kanban da página (ui/kanban.ts): busca, agrupamento por coluna, onde cai um cartão solto e a estante
 // lembrada. Testadas em kanban-model.test.ts.
 import { tr } from '../../../shared/i18n';
+import { isDemoId } from '../../../shared/timeline';
+import type { OfficeSnapshot } from '../../../shared/types';
+import { filterFolders } from './spawn';
 import { COLUMNS, normalizeText, type Column, type KanbanBoard, type KanbanCard, type KanbanEvent, type Priority } from '../../../shared/kanban';
 
 export const COLUMN_LABEL: Record<Column, string> = { ideias: tr('Ideias'), a_fazer: tr('A fazer'), fazendo: tr('Fazendo'), feito: tr('Feito') };
@@ -87,6 +90,38 @@ export function describeEvent(e: KanbanEvent): { text: string; quote?: string } 
     default:
       return { text: e.kind };
   }
+}
+
+/** Um projeto que o Habblaud já conhece (uma pasta de trabalho), oferecido como nome ao criar um projeto no Kanban. */
+export interface ProjectSuggestion {
+  name: string;
+  path: string;
+  /** Último movimento (ms; 0 = desconhecido). */
+  lastAt: number;
+}
+
+/**
+ * Os projetos do Habblaud que batem com o que está sendo digitado (nome ou caminho, sem diferenciar caixa nem acento), os
+ * mais recentes primeiro. Sem texto não sugere nada, e quem já é projeto no Kanban (mesmo nome) fica de fora: escolher esse
+ * daria "já existe".
+ */
+export function projectSuggestions(folders: readonly ProjectSuggestion[], boards: readonly KanbanBoard[], query: string, limit = 6): ProjectSuggestion[] {
+  if (!query.trim()) return [];
+  const taken = new Set(boards.map((b) => normalizeText(b.name)));
+  return filterFolders(folders, query)
+    .filter((f) => !taken.has(normalizeText(f.name)))
+    .sort((a, b) => b.lastAt - a.lastAt)
+    .slice(0, limit);
+}
+
+/** As salas do escritório como projetos (reserva quando o servidor não manda a lista de pastas): só as reais, com caminho. */
+export function roomProjects(snap: Pick<OfficeSnapshot, 'rooms' | 'agents'> | null | undefined): ProjectSuggestion[] {
+  if (!snap) return [];
+  const last = new Map<string, number>();
+  for (const a of snap.agents) last.set(a.roomId, Math.max(last.get(a.roomId) ?? 0, a.lastEventAt ?? 0));
+  return snap.rooms
+    .filter((r) => !isDemoId(r.id) && /^(\/|[A-Za-z]:[\\/])/.test(r.path ?? ''))
+    .map((r) => ({ name: r.name, path: r.path, lastAt: last.get(r.id) ?? 0 }));
 }
 
 export const SHELF_KEY = 'habblaud:kanban-shelf';

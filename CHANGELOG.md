@@ -35,7 +35,7 @@ do meio (0.**3**.0).
 
 - **Kanban do time.** Um quadro **Geral** e um quadro por projeto (colunas Ideias, A fazer, Fazendo e Feito), num botão da
   barra superior (tecla K), no cenário da sala em pixel art: o quadro branco da parede, post-its com fita e uma estante
-  retrátil com os projetos. Janela como a do chat: flutua sobre o escritório, arrasta, redimensiona e expande. Tem busca de projetos e de tarefas, arrastar entre colunas (ou Alt+setas), cartão com
+  retrátil com os projetos. Janela como a do chat: flutua sobre o escritório, arrasta, redimensiona e expande. Tem busca de projetos e de tarefas, e ao criar um projeto o nome é sugerido pelos projetos do Habblaud que combinam com o que se digita, arrastar entre colunas (ou Alt+setas), cartão com
   descrição, prioridade, responsável, etiqueta de projeto, comentários e histórico. Os agentes leem e alteram os quadros
   por `npm run kanban` (autor = o usuário que pediu, com a marca "via agente"); veja `docs/kanban-agentes.md`.
 - **Login com usuários.** A porta remota pode conferir um banco de usuários em vez do login único: ligue com

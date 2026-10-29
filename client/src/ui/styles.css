@@ -12553,3 +12553,79 @@ html.is-replay #world {
 .ui-kb__btn--danger {
   background: var(--kb-hi);
 }
+
+/* Kanban: sugestões de nome ao criar um projeto, com os projetos que o Habblaud já conhece (ui/kanban.ts) */
+.ui-kb__adder-box {
+  display: grid;
+  gap: 6px;
+  margin: 0 2px;
+}
+
+.ui-kb__suggest {
+  display: grid;
+  gap: 4px;
+}
+
+.ui-kb__suggest-label {
+  margin: 0;
+  color: #f4e2c4;
+  font: 12px/1 var(--font-px);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ui-kb__suggest-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: #fff8e6;
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+}
+
+.ui-kb__suggest-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 8px;
+  padding: 6px 8px;
+  color: var(--kb-ink);
+  cursor: pointer;
+}
+
+.ui-kb__suggest-item + .ui-kb__suggest-item {
+  border-top: 2px dashed var(--kb-edge);
+}
+
+.ui-kb__suggest-item:hover,
+.ui-kb__suggest-item.is-active {
+  background: var(--kb-b);
+}
+
+.ui-kb__suggest-name {
+  grid-column: 1;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-kb__suggest-path {
+  grid-column: 1;
+  overflow: hidden;
+  color: var(--kb-soft);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-kb__suggest-when {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--kb-soft);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ui-kb--collapsed .ui-kb__adder-box {
+  display: none;
+}

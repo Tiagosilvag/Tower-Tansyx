@@ -715,6 +715,8 @@ the users use), and the Kanban also works without users mode.
   Position and size are kept in the browser. **Esc** closes it.
 - **Project shelf:** on the left, General and the projects as books, with the count of open cards. The ◀ button collapses
   the shelf into spines with each project's initial (it remembers that choice and the last board). It has a project search.
+  When you create a project, as you type the matching **Habblaud projects** show up below (name, path and how long ago, the
+  same ones as New agent); arrows and Enter or a click fill in the name, and Enter again creates it.
 - **Task search:** at the top of the board, it filters only the open board, ignoring accents and case.
 - **Cards:** title, description, priority, assignee, column and comments. Drag between columns (or use **Alt+arrows** on the
   focused card, or the column selector in the open card). With the search on, dragging is turned off.

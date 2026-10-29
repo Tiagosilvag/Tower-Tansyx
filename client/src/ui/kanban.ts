@@ -9,7 +9,9 @@ import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
 import { CardDialog } from './kanban-card';
 import { maximizeButton, Movable } from './movable';
-import { applyMove, COLUMN_LABEL, dropTarget, filterBoards, filterCards, groupByColumn, loadShelf, PRIORITY_LABEL, saveShelf, type ShelfState } from './kanban-model';
+import { ago, shortPath } from './spawn';
+import { usersApi } from './users';
+import { applyMove, COLUMN_LABEL, dropTarget, filterBoards, filterCards, groupByColumn, loadShelf, PRIORITY_LABEL, projectSuggestions, roomProjects, saveShelf, type ProjectSuggestion, type ShelfState } from './kanban-model';
 
 /** Cores dos post-its e das lombadas, em rodízio. */
 const TINTS = ['y', 'p', 'm', 'b'] as const;
@@ -32,6 +34,9 @@ export class KanbanPanel implements UiComponent {
   /** Texto que o usuário tinha digitado quando o servidor recusou: o campo reaparece com ele. */
   private draft = '';
   private renaming = false;
+  /** Projetos que o Habblaud já conhece, para sugerir nomes ao criar um projeto (carregados ao abrir o campo). */
+  private known: ProjectSuggestion[] = [];
+  private repaintSuggest: (() => void) | null = null;
   private confirmingDelete = false;
   private readonly cardDialog: CardDialog;
   private readonly movable: Movable;
@@ -351,8 +356,109 @@ export class KanbanPanel implements UiComponent {
   }
 
   private projectAdder(): HTMLElement {
-    if (!this.addingProject) return h('button', { class: 'ui-kb__adder', type: 'button', text: tr('+ novo projeto'), on: { click: () => ((this.addingProject = true), this.renderShelf()) } });
-    return this.inlineInput(tr('Nome do projeto'), MAX_BOARD_NAME, (name) => void this.createProject(name), () => ((this.addingProject = false), this.renderShelf()));
+    if (!this.addingProject) {
+      this.repaintSuggest = null;
+      return h('button', { class: 'ui-kb__adder', type: 'button', text: tr('+ novo projeto'), on: { click: () => this.startAddingProject() } });
+    }
+    const input = this.inlineInput(tr('Nome do projeto'), MAX_BOARD_NAME, (name) => void this.createProject(name), () => ((this.addingProject = false), this.renderShelf()));
+    return this.withSuggestions(input);
+  }
+
+  private startAddingProject(): void {
+    this.addingProject = true;
+    this.renderShelf();
+    void this.loadKnownProjects();
+  }
+
+  /** As pastas recentes do computador (as mesmas do "Novo agente") e as salas do escritório; sem a lista do servidor, só as salas. */
+  private async loadKnownProjects(): Promise<void> {
+    const byPath = new Map<string, ProjectSuggestion>();
+    for (const p of roomProjects(this.ctx.store.snapshot)) byPath.set(p.path, p);
+    this.known = [...byPath.values()];
+    this.repaintSuggest?.();
+    try {
+      const r = await usersApi<{ folders?: ProjectSuggestion[] }>('/api/spawn/folders');
+      for (const f of r.folders ?? []) if (f && typeof f.path === 'string' && typeof f.name === 'string') byPath.set(f.path, { name: f.name, path: f.path, lastAt: Number(f.lastAt) || 0 });
+    } catch {
+      // sem a lista do servidor (recurso desligado ou sem permissão): ficam as salas
+    }
+    this.known = [...byPath.values()];
+    this.repaintSuggest?.();
+  }
+
+  /**
+   * O campo de nome de projeto com a lista de projetos do Habblaud que combinam com o que se digita, logo abaixo. Setas e
+   * Enter escolhem; clicar também. Escolher só preenche o nome: criar continua sendo o Enter (ou Esc para cancelar).
+   */
+  private withSuggestions(input: HTMLElement): HTMLElement {
+    const field = input as HTMLInputElement;
+    const list = h('ul', { class: 'ui-kb__suggest-list', role: 'listbox', attrs: { id: 'ui-kb-suggest', 'aria-label': tr('Projetos do Habblaud') } });
+    const label = h('p', { class: 'ui-kb__suggest-label', text: tr('Projetos do Habblaud') });
+    const box = h('div', { class: 'ui-kb__suggest', hidden: true }, label, list);
+    let shown: ProjectSuggestion[] = [];
+    let active = -1;
+    field.setAttribute('role', 'combobox');
+    field.setAttribute('aria-autocomplete', 'list');
+    field.setAttribute('aria-controls', 'ui-kb-suggest');
+    field.setAttribute('aria-expanded', 'false');
+    const mark = () => {
+      [...list.children].forEach((li, i) => {
+        li.classList.toggle('is-active', i === active);
+        li.setAttribute('aria-selected', String(i === active));
+      });
+      if (active >= 0) field.setAttribute('aria-activedescendant', `ui-kb-suggest-${active}`);
+      else field.removeAttribute('aria-activedescendant');
+    };
+    const pick = (f: ProjectSuggestion) => {
+      field.value = f.name.slice(0, MAX_BOARD_NAME);
+      paint();
+      field.focus();
+    };
+    const paint = () => {
+      shown = projectSuggestions(this.known, this.boards, field.value);
+      active = -1;
+      const now = Date.now();
+      list.replaceChildren(
+        ...shown.map((f, i) => {
+          const when = ago(f.lastAt, now);
+          const li = h(
+            'li',
+            { class: 'ui-kb__suggest-item', role: 'option', title: f.path, attrs: { id: `ui-kb-suggest-${i}`, 'aria-selected': 'false' } },
+            h('span', { class: 'ui-kb__suggest-name', text: f.name }),
+            h('span', { class: 'ui-kb__suggest-path', text: shortPath(f.path) }),
+            when ? h('span', { class: 'ui-kb__suggest-when', text: when }) : null,
+          );
+          // Sem tirar o foco do campo: ele cancelaria o "+ novo projeto" se estivesse vazio.
+          li.addEventListener('mousedown', (e) => e.preventDefault());
+          li.addEventListener('click', () => pick(f));
+          return li;
+        }),
+      );
+      setHidden(box, shown.length === 0);
+      field.setAttribute('aria-expanded', String(shown.length > 0));
+      mark();
+    };
+    field.addEventListener('input', paint);
+    // Antes do tratamento do campo (Enter cria, Esc cancela): com uma sugestão marcada, Enter só preenche o nome.
+    field.addEventListener(
+      'keydown',
+      (e) => {
+        if (!shown.length) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          active = e.key === 'ArrowDown' ? (active + 1) % shown.length : (active - 1 + shown.length) % shown.length;
+          mark();
+        } else if (e.key === 'Enter' && active >= 0) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          pick(shown[active]!);
+        }
+      },
+      true,
+    );
+    this.repaintSuggest = paint;
+    paint();
+    return h('div', { class: 'ui-kb__adder-box' }, field, box);
   }
 
   private renderBoard(): void {
