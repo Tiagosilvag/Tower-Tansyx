@@ -44,6 +44,11 @@ import { intlLocale, tr } from '../../../shared/i18n';
 
 /** Máximo de itens no DOM: os mais antigos saem primeiro. */
 export const TERMINAL_DOM_LIMIT = 1500;
+let domLimit = TERMINAL_DOM_LIMIT;
+/** Linhas mantidas na tela (o modo mínimo de Configurações › Desempenho baixa o limite; ui/perf.ts). */
+export function setTerminalDomLimit(n: number): void {
+  domLimit = Math.max(50, Math.floor(n));
+}
 /** Linhas do resultado visíveis antes do "… +N linhas". */
 export const RESULT_PREVIEW_LINES = 6;
 /** Entrada de ferramenta (comando, diff, JSON) longa: recolhida nas primeiras linhas. */
@@ -1200,7 +1205,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   private ingest(entries: readonly TerminalEntry[], initial: boolean): void {
     for (const e of entries) if (e.at > this.lastEntryAt) this.lastEntryAt = e.at;
     const batch = this.log.push(entries);
-    const evicted = this.log.trim(TERMINAL_DOM_LIMIT);
+    const evicted = this.log.trim(domLimit);
     if (evicted.length) {
       const before = this.follow ? 0 : this.scroll.scrollHeight;
       for (const key of evicted) {

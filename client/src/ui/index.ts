@@ -34,6 +34,7 @@ import { SoundControl } from './sound';
 import { TERMINAL_UNAVAILABLE_HINT } from './terminal';
 import { TerminalWindows } from './termwindows';
 import { TimelapsePlayer } from './timelapse';
+import { PerfController } from './perf-controller';
 import { Toasts } from './toasts';
 import { UpdateToaster } from './version';
 import { TopBar } from './topbar';
@@ -88,6 +89,8 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   let scene: SceneSwitch | null = null;
   const inCity = () => !!scene?.inCity;
 
+  // Desempenho (Configurações › Desempenho): criado antes do contexto, que o consulta ao salvar as preferências.
+  let perf!: PerfController;
   const ctx: UiContext = {
     store,
     world,
@@ -98,7 +101,8 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
     updatePrefs(patch) {
       prefs = { ...prefs, ...patch };
       savePrefs(storage, prefs);
-      world.setOptions(worldOptionsFrom(prefs));
+      perf.apply();
+      world.setOptions(worldOptionsFrom(prefs, perf.level()));
       invalidate();
     },
     now: () => timelapse?.replayTime ?? Date.now() + skew,
@@ -210,6 +214,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   drawer = new Drawer(ctx, wins, wins);
   const feed = new FeedPanel(ctx);
   const toasts = new Toasts(ctx);
+  perf = new PerfController(ctx, (n) => toasts.push(n), inCity);
   const updateToaster = new UpdateToaster(ctx, (n) => toasts.push(n));
   // Habblaud World (em desenvolvimento): a janela própria (botão na barra do topo) e os popups de lançamento, só com
   // meta.world ligado. As Configurações só recebem dela a dica do tema em Aparência.
@@ -267,7 +272,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   const scrim = h('div', { class: 'ui-scrim', attrs: { 'aria-hidden': 'true' }, on: { click: () => ctx.togglePanel('sidebar', false) } });
 
   root.classList.add('ui-root');
-  root.append(timelapse.vignette, topbar.el, sidebar.el, scrim, feed.el, drawer.el, ...wins.els, timelapse.el, timelapse.badge, toasts.el, banner.el, update.el, empty.el, popups.el, tip.el, settings.el, worldDialog.el, history.el, deliveries.el, help.el, renamer.el, live, splash.el);
+  root.append(timelapse.vignette, topbar.el, sidebar.el, scrim, feed.el, drawer.el, ...wins.els, timelapse.el, timelapse.badge, toasts.el, perf.el, banner.el, update.el, empty.el, popups.el, tip.el, settings.el, worldDialog.el, history.el, deliveries.el, help.el, renamer.el, live, splash.el);
   area = new FreeArea(world, { root, topbar: topbar.el, sidebar: sidebar.el, drawer: drawer.el, feed: feed.el }, () => ({
     sidebar: panels.sidebar,
     feed: panels.feed,
@@ -465,7 +470,9 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   }
 
   // ---------------------------------------------------------------- início
-  world.setOptions(worldOptionsFrom(prefs));
+  perf.apply();
+  world.setOptions(worldOptionsFrom(prefs, perf.level()));
+  perf.start();
   applyLayout();
   renderAll();
 }

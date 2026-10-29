@@ -19,6 +19,8 @@ export interface WorldOptions {
   daylight?: DaylightMode;
   /** Tema visual: automático (segue o calendário; ver seasonalThemeFor), nenhum, Natal ou Halloween. */
   theme?: OfficeTheme;
+  /** (Opcional, aditivo) Desempenho: 'light' e 'min' desenham a 30 quadros por segundo, sem partículas, luzes e efeitos de data, com o canvas em 1×. */
+  perf?: 'normal' | 'light' | 'min';
 }
 
 /** Tema que o renderer desenha: o escritório original ('none') ou um dos sazonais. */
@@ -98,6 +100,8 @@ export interface WorldApi {
    * câmera; ao voltar, a simulação avança o tempo que passou (como com a aba em segundo plano).
    */
   setSuspended?(suspended: boolean): void;
+  /** (Opcional, aditivo) Quadros por segundo desenhados no último segundo (0 = parado, oculto ou ainda sem medida). */
+  fps?(): number;
   destroy(): void;
 }
 

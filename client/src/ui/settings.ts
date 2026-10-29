@@ -35,6 +35,13 @@ function pickLanguage(v: LanguageChoice): void {
   location.reload();
 }
 
+const PERF_HINTS: Record<UiPrefs['perf'], () => string> = {
+  auto: () => tr('O app decide: começa no Normal e passa para o Leve se o escritório ficar lento por 10 segundos. Nunca passa para o Mínimo sozinho.'),
+  normal: () => tr('Tudo ligado: 60 quadros por segundo, iluminação, partículas e efeitos de data comemorativa.'),
+  light: () => tr('30 quadros por segundo, sem partículas, sem efeitos de data e sem a iluminação suave. Canvas em 1×.'),
+  min: () => tr('Tudo do Leve, com o escritório parado quando o terminal está em tela cheia, até 150 linhas no chat e sem animações.'),
+};
+
 type BoolPref = { [K in keyof UiPrefs]: UiPrefs[K] extends boolean ? K : never }[keyof UiPrefs];
 
 interface SwitchRefs {
@@ -89,6 +96,8 @@ export class SettingsPopover implements UiComponent {
   private liveliness: ReturnType<typeof segmented<UiPrefs['liveliness']>>;
   private daylight: ReturnType<typeof segmented<UiPrefs['daylight']>>;
   private theme: ReturnType<typeof segmented<UiPrefs['theme']>>;
+  private perf: ReturnType<typeof segmented<UiPrefs['perf']>>;
+  private perfHint: HTMLElement;
   private language: ReturnType<typeof segmented<LanguageChoice>>;
   private soundGroup: SoundSettingsGroup;
   private demoGroup: HTMLElement;
@@ -141,6 +150,18 @@ export class SettingsPopover implements UiComponent {
       (v) => ctx.updatePrefs({ daylight: v }),
     );
     this.daylight.row.append(h('span', { class: 'ui-set__hint', text: tr('Automático: céu, luzes e sol nas janelas seguem a hora local.') }));
+    this.perf = segmented<UiPrefs['perf']>(
+      tr('Deixar o app mais leve'),
+      [
+        ['auto', tr('Automático')],
+        ['normal', tr('Normal')],
+        ['light', tr('Leve')],
+        ['min', tr('Mínimo')],
+      ],
+      (v) => ctx.updatePrefs({ perf: v }),
+    );
+    this.perfHint = h('span', { class: 'ui-set__hint' });
+    this.perf.row.append(this.perfHint);
     this.theme = segmented<UiPrefs['theme']>(
       tr('Tema do escritório'),
       [['auto', tr('Automático')], ['none', tr('Nenhum')], ['christmas', tr('Natal')], ['halloween', tr('Halloween')]],
@@ -211,6 +232,13 @@ export class SettingsPopover implements UiComponent {
         { class: 'ui-set-group' },
         h('h3', { text: tr('Avisos') }),
         sw('browserNotifications', tr('Notificações do navegador'), tr('Avisa quando alguém precisa de você e a aba está em segundo plano.'), () => void this.toggleNotifications()),
+      ),
+      h(
+        'div',
+        { class: 'ui-set-group' },
+        h('h3', { text: tr('Desempenho') }),
+        this.perf.row,
+        sw('perfStats', tr('Mostrar quadros por segundo e linhas do chat'), tr('Uma linha no canto da tela para comparar os modos.'), flip('perfStats')),
       ),
       this.soundGroup.el,
       h('div', { class: 'ui-set-group' }, h('h3', { text: tr('Idioma') }), this.language.row),
@@ -285,6 +313,8 @@ export class SettingsPopover implements UiComponent {
     this.liveliness.set(p.liveliness);
     this.daylight.set(p.daylight);
     this.theme.set(p.theme);
+    this.perf.set(p.perf);
+    setText(this.perfHint, PERF_HINTS[p.perf]());
     this.language.set(savedLanguage());
     this.soundGroup.render();
     setHidden(this.demoGroup, this.ctx.store.mock || access().remote);

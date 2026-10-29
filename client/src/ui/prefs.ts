@@ -3,6 +3,7 @@
 import { DEFAULT_SOUND_SETTINGS, sanitizeSoundSettings, type SoundSettings } from '../audio/scheduler';
 import type { DaylightMode, WorldOptions } from '../world/api';
 import { DEFAULT_WORLD_OPTIONS } from '../world/api';
+import { PERF_MODES, type PerfLevel, type PerfMode } from './perf';
 
 export const PREFS_KEY = 'habblaud:prefs';
 
@@ -25,6 +26,10 @@ export interface UiPrefs {
   hiddenAccounts: string[];
   /** Habblaud World: aviso quando o primeiro visitante entra no seu prédio (a cada conexão). Ligado por padrão. */
   worldVisitNotify: boolean;
+  /** Desempenho: automático, normal, leve ou mínimo (ui/perf.ts). */
+  perf: PerfMode;
+  /** Linha com os quadros por segundo e as linhas do chat, no canto da tela. */
+  perfStats: boolean;
 }
 
 export const DEFAULT_PREFS: UiPrefs = {
@@ -40,6 +45,8 @@ export const DEFAULT_PREFS: UiPrefs = {
   feedOpen: true,
   hiddenAccounts: [],
   worldVisitNotify: true,
+  perf: 'auto',
+  perfStats: false,
 };
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
@@ -66,6 +73,8 @@ export function sanitizePrefs(raw: unknown): UiPrefs {
     feedOpen: bool(o.feedOpen, d.feedOpen),
     hiddenAccounts: Array.isArray(o.hiddenAccounts) ? o.hiddenAccounts.filter((x): x is string => typeof x === 'string').slice(0, 20) : [],
     worldVisitNotify: bool(o.worldVisitNotify, d.worldVisitNotify),
+    perf: oneOf(o.perf, PERF_MODES, d.perf),
+    perfStats: bool(o.perfStats, d.perfStats),
   };
 }
 
@@ -89,8 +98,8 @@ export function savePrefs(storage: StorageLike | null, prefs: UiPrefs): void {
 }
 
 /** Parte das preferências que o mundo (canvas) consome. */
-export function worldOptionsFrom(p: UiPrefs): Partial<WorldOptions> {
-  return { showNames: p.showNames, bubbles: p.bubbles, liveliness: p.liveliness, dayNight: p.daylight !== 'day', daylight: p.daylight, theme: p.theme };
+export function worldOptionsFrom(p: UiPrefs, perf: PerfLevel = 'normal'): Partial<WorldOptions> {
+  return { perf, showNames: p.showNames, bubbles: p.bubbles, liveliness: p.liveliness, dayNight: p.daylight !== 'day', daylight: p.daylight, theme: p.theme };
 }
 
 /** localStorage com proteção contra navegadores que lançam exceção ao acessá-lo. */

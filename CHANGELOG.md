@@ -29,6 +29,12 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Configurações › Desempenho: deixar o app mais leve.** Quatro modos. **Automático** (padrão) começa no Normal e,
+  se o escritório ficar abaixo de 24 quadros por segundo por 10 segundos, passa para o Leve e avisa (nunca vai para
+  o Mínimo sozinho). **Normal** é como era. **Leve** desenha o escritório a 30 quadros por segundo, com o canvas em
+  1×, sem partículas, sem efeitos de data comemorativa e sem a iluminação suave. **Mínimo** soma a isso a pausa do
+  escritório com o terminal em tela cheia, no máximo 150 linhas no chat e nenhuma animação. Uma opção mostra no
+  canto da tela os quadros por segundo e as linhas do chat, para comparar. Vale só para o seu navegador.
 - **O chat mostra quem escreveu cada mensagem.** No modo de usuários, o prompt enviado pela página ganha um degradê
   leve na cor de quem escreveu, uma faixa fina na borda e o nome acima do texto, o que separa melhor a mensagem da
   resposta do agente. O servidor guarda só (hora, texto, usuário) por 30 dias e casa isso com o transcript ao montar a

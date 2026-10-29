@@ -490,14 +490,18 @@ export class Renderer {
     // ---- espera de shell: teias de aranha, confete/pipoca/chuva (por cima das entidades)
     this.drawCobwebs(now);
     this.drainEffects(now);
-    this.roomFx.emit(this.particles, this.sim, now, dt, view);
-    this.particles.update(dt);
-    this.particles.draw(ctx, vx0, vy0, vx1, vy1, now);
+    // Modo leve/mínimo: sem partículas, sem a iluminação suave e sem as luzes de data comemorativa.
+    const lite = !!opts.perf && opts.perf !== 'normal';
+    if (!lite) {
+      this.roomFx.emit(this.particles, this.sim, now, dt, view);
+      this.particles.update(dt);
+      this.particles.draw(ctx, vx0, vy0, vx1, vy1, now);
+    }
 
     // ---- luz: noite, salas apagadas, brilhos
     this.night = this.lighting.night;
-    this.drawLighting(now, vx0, vy0, vx1, vy1);
-    if (this.theme !== 'none') {
+    this.drawLighting(now, vx0, vy0, vx1, vy1, lite);
+    if (this.theme !== 'none' && !lite) {
       for (const vis of this.areas.values()) {
         if (vis.room && vis.room.phase !== 'ready') continue;
         if (!visible(vis.px.x, vis.px.y, vis.px.w, vis.px.h)) continue;
@@ -1195,10 +1199,11 @@ export class Renderer {
    * Luz: o mapa do ciclo dia/noite (exterior, interiores e halos; nada de dia), a sombra das salas
    * com a luz apagada (e a transição de acender/apagar) e os brilhos por cima.
    */
-  private drawLighting(now: number, vx0: number, vy0: number, vx1: number, vy1: number): void {
+  private drawLighting(now: number, vx0: number, vy0: number, vx1: number, vy1: number, lite = false): void {
     const { ctx } = this;
     const view = { x0: vx0, y0: vy0, x1: vx1, y1: vy1 };
-    this.lighting.drawAmbient(ctx, this, view, now, this.dt);
+    // No modo leve fica só o escurecer das salas apagadas (é informação); a noite suave e os brilhos saem.
+    if (!lite) this.lighting.drawAmbient(ctx, this, view, now, this.dt);
     const n = this.night;
     // salas com a luz apagada (e a transição de acender/apagar)
     for (const vis of this.areas.values()) {
@@ -1214,7 +1219,7 @@ export class Renderer {
       ctx.fillStyle = `rgba(8,12,36,${dark})`;
       ctx.fillRect(s.x, s.y, s.w, s.h);
     }
-    this.lighting.drawGlows(ctx, this, view, now);
+    if (!lite) this.lighting.drawGlows(ctx, this, view, now);
   }
 
   private safe(fn: () => void): void {

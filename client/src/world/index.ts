@@ -84,8 +84,11 @@ export function createWorld(canvas: HTMLCanvasElement, store: OfficeStore, o: Cr
 
   // ------------------------------------------------------------------ tamanho/DPR
 
+  /** Densidade do canvas: a da tela (até 3×) ou 1× nos modos leve e mínimo (menos pixels para desenhar). */
+  const canvasDpr = () => (options.perf && options.perf !== 'normal' ? 1 : Math.max(1, Math.min(3, window.devicePixelRatio || 1)));
+
   const resize = () => {
-    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const dpr = canvasDpr();
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
     const pw = Math.floor(w * dpr);
@@ -271,8 +274,26 @@ export function createWorld(canvas: HTMLCanvasElement, store: OfficeStore, o: Cr
 
   // ------------------------------------------------------------------ laço
 
+  // Medida de quadros por segundo (para o modo automático e a linha de diagnóstico).
+  let fpsFrames = 0;
+  let fpsSince = 0;
+  let fpsValue = 0;
+  let fpsAt = 0;
+  let lastDrawTs = 0;
+
   const loop = (ts: number) => {
     raf = requestAnimationFrame(loop);
+    // Leve e mínimo: 30 quadros por segundo. O quadro pulado não mexe em `lastTs`, então o próximo recebe o tempo todo.
+    if (options.perf && options.perf !== 'normal' && lastDrawTs && ts - lastDrawTs < 1000 / 30 - 4) return;
+    lastDrawTs = ts;
+    fpsFrames++;
+    if (!fpsSince) fpsSince = ts;
+    else if (ts - fpsSince >= 1000) {
+      fpsValue = Math.round((fpsFrames * 1000) / (ts - fpsSince));
+      fpsAt = performance.now();
+      fpsFrames = 0;
+      fpsSince = ts;
+    }
     const real = Date.now();
     const realDt = lastTs ? Math.min(0.1, Math.max(0, (ts - lastTs) / 1000)) : 1 / 60;
     lastTs = ts;
@@ -282,7 +303,7 @@ export function createWorld(canvas: HTMLCanvasElement, store: OfficeStore, o: Cr
     if (playback) worldNow += dt * 1000;
     const now = playback ? worldNow : real;
     try {
-      const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+      const dpr = canvasDpr();
       if (canvas.clientWidth !== camera.viewW || canvas.clientHeight !== camera.viewH || dpr !== camera.dpr) resize();
       sim.update(dt, now);
       // partidas e apostas resolvidas: para o feed (as do timelapse são encenação do passado: ficam fora)
@@ -412,8 +433,16 @@ export function createWorld(canvas: HTMLCanvasElement, store: OfficeStore, o: Cr
       }
     },
     getOptions: () => ({ ...options }),
+    fps: () => (suspended || document.hidden || performance.now() - fpsAt > 2500 ? 0 : fpsValue),
     setOptions: (o) => {
+      const perfChanged = o.perf !== undefined && o.perf !== options.perf;
       options = { ...options, ...o };
+      if (perfChanged) {
+        fpsFrames = 0;
+        fpsSince = 0;
+        fpsValue = 0;
+        resize();
+      }
       if (o.followSelected !== undefined) camera.follow = o.followSelected && selection?.type === 'agent' ? selection.id : null;
     },
     setViewInsets: (ins) => {
