@@ -1,7 +1,8 @@
 // Chamadas à API do Kanban (/api/kanban/*). Um método por rota; o fetch, o erro com a mensagem do servidor e o redirecionamento
 // para o login quando a sessão acaba são os de `usersApi` (ui/users.ts). O guard do servidor exige Content-Type JSON em todo
 // pedido que não é GET, até o DELETE sem corpo: por isso os DELETE mandam `{}`.
-import type { Column, KanbanBoard, KanbanCard, KanbanEvent, Priority } from '../../../shared/kanban';
+import type { Column, KanbanBoard, KanbanCard, KanbanEvent, KanbanFile, Priority } from '../../../shared/kanban';
+import { fileToBase64 } from '../ui/ptyapi';
 import { usersApi } from '../ui/users';
 
 const base = '/api/kanban';
@@ -21,7 +22,11 @@ export const kanbanApi = {
   version: async (): Promise<number> => (await usersApi<{ version: number }>(`${base}/version`)).version,
   boards: async (): Promise<KanbanBoard[]> => (await usersApi<{ boards: KanbanBoard[] }>(`${base}/boards`)).boards,
   cards: async (boardId: number, q = ''): Promise<KanbanCard[]> => (await usersApi<{ cards: KanbanCard[] }>(`${base}/boards/${boardId}/cards${q ? `?q=${encodeURIComponent(q)}` : ''}`)).cards,
-  card: (id: number): Promise<{ card: KanbanCard; events: KanbanEvent[] }> => usersApi(`${base}/cards/${id}`),
+  card: (id: number): Promise<{ card: KanbanCard; events: KanbanEvent[]; files?: KanbanFile[] }> => usersApi(`${base}/cards/${id}`),
+  attach: async (cardId: number, file: File): Promise<KanbanFile> =>
+    (await usersApi<{ file: KanbanFile }>(`${base}/cards/${cardId}/files`, { method: 'POST', body: { name: file.name || 'arquivo', type: file.type, data: await fileToBase64(file) } })).file,
+  removeFile: (id: number): Promise<void> => usersApi(`${base}/files/${id}`, { method: 'DELETE', body: {} }),
+  fileUrl: (id: number): string => `${base}/files/${id}`,
   createBoard: async (name: string): Promise<KanbanBoard> => (await usersApi<{ board: KanbanBoard }>(`${base}/boards`, { method: 'POST', body: { name } })).board,
   renameBoard: async (id: number, name: string): Promise<KanbanBoard> => (await usersApi<{ board: KanbanBoard }>(`${base}/boards/${id}`, { method: 'PATCH', body: { name } })).board,
   deleteBoard: (id: number, force = false): Promise<void> => usersApi(`${base}/boards/${id}${force ? '?force=1' : ''}`, { method: 'DELETE', body: {} }),

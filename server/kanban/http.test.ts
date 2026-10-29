@@ -5,6 +5,10 @@ import { openDb } from '../db/db';
 import { readJson } from '../http/app';
 import { setUser } from '../users/identity';
 import { UserStore } from '../users/store';
+import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { KanbanFiles } from './files';
 import { createKanbanRoutes } from './http';
 import { KanbanStore } from './store';
 
@@ -23,7 +27,9 @@ async function montar(opts: { writable?: (req: IncomingMessage) => boolean } = {
   const tiago = users.create({ username: 'tiago', passwordHash: 'h1' });
   const ana = users.create({ username: 'ansysar', passwordHash: 'h2' });
   const store = new KanbanStore(db);
-  const routes = createKanbanRoutes({ store, users, readJson: (req: IncomingMessage) => readJson(req), isRemote: (req) => req.headers['x-remote'] === '1', writable: opts.writable });
+  const filesDir = mkdtempSync(join(tmpdir(), 'kbfiles-'));
+  limpar.push(() => rmSync(filesDir, { recursive: true, force: true }));
+  const routes = createKanbanRoutes({ store, users, files: new KanbanFiles(filesDir), readJson: (req: IncomingMessage, max?: number) => readJson(req, max), isRemote: (req) => req.headers['x-remote'] === '1', writable: opts.writable });
   const server: Server = http.createServer((req, res) => {
     const nome = req.headers['x-user'];
     const u = typeof nome === 'string' ? users.list().find((x) => x.username === nome) : undefined;
@@ -46,7 +52,7 @@ async function montar(opts: { writable?: (req: IncomingMessage) => boolean } = {
     return { status: r.status, headers: r.headers, json: text ? JSON.parse(text) : undefined };
   };
   const geral = store.boards()[0]!.id;
-  return { store, call, geral, tiago, ana };
+  return { store, call, geral, tiago, ana, filesDir, port };
 }
 
 const AGENTE = { 'X-Habblaud-Via': 'agent' };
@@ -81,6 +87,62 @@ describe('rotas /api/kanban', () => {
     expect(agente.assigneeId).toBe(ana.id);
     const anonimo = (await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'anon' } })).json.card;
     expect(anonimo.assigneeId).toBeNull();
+  });
+
+  it('anexos: envia, lista, baixa com o tipo seguro, mostra no cartão, remove e registra no histórico', async () => {
+    const { call, geral, filesDir, port } = await montar();
+    const card = (await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'c' } })).json.card;
+    const envio = (name: string, text: string, type = 'text/plain') => call('POST', `/api/kanban/cards/${card.id}/files`, { body: { name, type, data: Buffer.from(text).toString('base64') } });
+
+    const ok = await envio('../../etc/relatório final.md', '# oi');
+    expect(ok.status).toBe(201);
+    expect(ok.json.file).toMatchObject({ cardId: card.id, name: 'relatório final.md', size: 4 });
+    const pagina = await envio('pagina.html', '<script>alert(1)</script>', 'text/html');
+    const svg = await envio('x.svg', '<svg onload=alert(1)/>', 'image/svg+xml');
+
+    const lista = (await call('GET', `/api/kanban/cards/${card.id}/files`)).json.files as Array<{ id: number }>;
+    expect(lista).toHaveLength(3);
+    expect((await call('GET', `/api/kanban/cards/${card.id}`)).json.files).toHaveLength(3);
+    expect((await call('GET', `/api/kanban/boards/${geral}/cards`)).json.cards[0].fileCount).toBe(3);
+
+    const baixar = (id: number) => fetch(`http://127.0.0.1:${port}/api/kanban/files/${id}`);
+    const md = await baixar(ok.json.file.id);
+    expect(md.status).toBe(200);
+    expect(await md.text()).toBe('# oi');
+    expect(md.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+    expect(md.headers.get('content-disposition')).toMatch(/^inline; filename\*=UTF-8''/);
+    expect(md.headers.get('x-content-type-options')).toBe('nosniff');
+    for (const f of [pagina, svg]) {
+      const r = await baixar(f.json.file.id);
+      expect(r.headers.get('content-type')).toBe('application/octet-stream');
+      expect(r.headers.get('content-disposition')).toMatch(/^attachment;/);
+    }
+    // nada que o usuário digita vira caminho: o disco só tem números
+    expect(existsSync(join(filesDir, String(card.id), String(ok.json.file.id)))).toBe(true);
+
+    expect((await call('DELETE', `/api/kanban/files/${ok.json.file.id}`)).status).toBe(204);
+    expect((await baixar(ok.json.file.id)).status).toBe(404);
+    expect(existsSync(join(filesDir, String(card.id), String(ok.json.file.id)))).toBe(false);
+    const kinds = ((await call('GET', `/api/kanban/cards/${card.id}`)).json.events as Array<{ kind: string }>).map((e) => e.kind);
+    expect(kinds).toContain('attached');
+    expect(kinds).toContain('detached');
+
+    // apagar o cartão apaga a pasta
+    await call('DELETE', `/api/kanban/cards/${card.id}`);
+    expect(existsSync(join(filesDir, String(card.id)))).toBe(false);
+    expect(lista).toHaveLength(3);
+  });
+
+  it('anexos: recusa arquivo vazio, base64 ruim, cartão que não existe e passa de 20 por cartão', async () => {
+    const { call, geral } = await montar();
+    const card = (await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'c' } })).json.card;
+    const url = `/api/kanban/cards/${card.id}/files`;
+    expect((await call('POST', url, { body: { name: 'a.txt', data: '' } })).status).toBe(400);
+    expect((await call('POST', url, { body: { name: 'a.txt', data: '!!!' } })).status).toBe(400);
+    expect((await call('POST', '/api/kanban/cards/9999/files', { body: { name: 'a.txt', data: 'YQ==' } })).status).toBe(404);
+    for (let i = 0; i < 20; i++) expect((await call('POST', url, { body: { name: `f${i}.txt`, data: 'YQ==' } })).status).toBe(201);
+    expect((await call('POST', url, { body: { name: 'f21.txt', data: 'YQ==' } })).status).toBe(409);
+    expect((await call('GET', '/api/kanban/files/9999')).status).toBe(404);
   });
 
   it('quadros: lista, cria, renomeia e remove (com force)', async () => {

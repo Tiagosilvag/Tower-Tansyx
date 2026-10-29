@@ -13,6 +13,14 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Kanban: anexar arquivos nos cartões
+- **Pedido:** "quero poder anexar arquivos nos cards do kanban".
+- **Feito (defaults que escolhi, ver KI §6):** até 20 arquivos de 15 MB por cartão; botão e arrastar; lista com miniatura das
+  imagens, tamanho, quem enviou; Remover; "N anexos" no cartão do quadro; histórico registra anexou/removeu. Imagem, PDF e
+  texto abrem na tela, o resto só baixa. Disco: `kanban-files/<cartão>/<id>`; apagar o cartão apaga a pasta.
+- **Em aberto:** o `tower-kanban` (agentes) não anexa arquivos; não há limite do total em disco.
+- **Produção:** pendente de deploy (migração nova `card_files` roda sozinha na subida).
+
 ### Agentes de qualquer projeto enxergam o Kanban
 - **Pedido:** o luciano perguntou "no Kanban do Tower Tansyx?" a um agente de outro projeto, e ele respondeu que não tinha
   acesso (print). O pedido original era que os agentes conseguissem ver o Kanban.

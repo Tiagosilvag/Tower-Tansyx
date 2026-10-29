@@ -59,7 +59,7 @@ export async function closePty(id: string): Promise<void> {
   await postPty(`/api/pty/${encodeURIComponent(id)}/close`, {});
 }
 
-function fileToBase64(file: Blob): Promise<string> {
+export function fileToBase64(file: Blob): Promise<string> {
   return new Promise((ok, fail) => {
     const r = new FileReader();
     r.onload = () => ok(String(r.result).replace(/^data:[^,]*,/, ''));

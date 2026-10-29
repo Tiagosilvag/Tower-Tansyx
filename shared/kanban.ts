@@ -11,6 +11,8 @@ export const MAX_TITLE = 200;
 export const MAX_DESCRIPTION = 5000;
 export const MAX_BOARD_NAME = 60;
 export const MAX_COMMENT = 2000;
+/** Arquivos anexados por cartão e tamanho de cada um (o mesmo teto dos outros anexos do Habblaud). */
+export const MAX_FILES_PER_CARD = 20;
 
 export interface KanbanBoard {
   id: number;
@@ -34,6 +36,8 @@ export interface KanbanCard {
   /** Nome de exibição e cor do responsável (o cartão mostra o avatar na cor dele). Ausentes sem responsável. */
   assigneeDisplayName?: string | null;
   assigneeColor?: string | null;
+  /** Quantos arquivos estão anexados ao cartão. */
+  fileCount?: number;
   /** Etiqueta de projeto (só no Geral). */
   projectId: number | null;
   createdBy: number | null;
@@ -43,7 +47,20 @@ export interface KanbanCard {
   updatedAt: number;
 }
 
-export type KanbanEventKind = 'created' | 'edited' | 'moved' | 'priority' | 'assigned' | 'tagged' | 'comment' | 'moved_board';
+/** Arquivo anexado a um cartão. O conteúdo vem de GET /api/kanban/files/:id; o caminho no disco nunca sai do servidor. */
+export interface KanbanFile {
+  id: number;
+  cardId: number;
+  name: string;
+  /** Tipo informado no envio (só para mostrar; o servidor decide como entregar). */
+  type: string;
+  size: number;
+  userId: number | null;
+  userName: string | null;
+  createdAt: number;
+}
+
+export type KanbanEventKind = 'created' | 'edited' | 'moved' | 'priority' | 'assigned' | 'tagged' | 'comment' | 'moved_board' | 'attached' | 'detached';
 
 export interface KanbanEvent {
   id: number;

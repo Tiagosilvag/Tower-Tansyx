@@ -54,5 +54,6 @@ Você não sabe quem escreveu a mensagem. Só use `--as <usuário>` se a própri
 
 Para quem não usar o comando: `GET /api/kanban/boards`, `GET /api/kanban/boards/<id>/cards?q=`, `GET /api/kanban/cards/<id>`,
 `POST /api/kanban/boards/<id>/cards`, `PATCH /api/kanban/cards/<id>`, `POST /api/kanban/cards/<id>/move` e
-`POST /api/kanban/cards/<id>/comments`. Os corpos são JSON; mande `X-Habblaud-Via: agent` e `"as": "<usuário>"` nas
+`POST /api/kanban/cards/<id>/comments`. Arquivos anexados: `GET|POST /api/kanban/cards/<id>/files` (POST com
+`{name, type, data}` em base64) e `GET|DELETE /api/kanban/files/<id>`; o comando `tower-kanban` ainda não anexa. Os corpos são JSON; mande `X-Habblaud-Via: agent` e `"as": "<usuário>"` nas
 escritas.

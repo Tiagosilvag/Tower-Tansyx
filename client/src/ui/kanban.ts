@@ -582,6 +582,7 @@ export class KanbanPanel implements UiComponent {
       h('span', { class: `ui-kb__pri ui-kb__pri--${c.priority}`, text: PRIORITY_LABEL[c.priority] }),
       tag ? h('span', { class: 'ui-kb__badge ui-kb__badge--project', text: tag }) : null,
       c.createdVia === 'agent' ? h('span', { class: 'ui-kb__badge ui-kb__badge--agent', text: tr('via agente'), title: tr('Criado por um agente, a pedido do usuário') }) : null,
+      c.fileCount ? h('span', { class: 'ui-kb__badge', text: c.fileCount === 1 ? tr('1 anexo') : tr('{0} anexos', [c.fileCount]), title: tr('Arquivos anexados') }) : null,
       this.assignee(c),
     );
     // Com a busca ligada a lista na tela não é a coluna inteira: o arrasto fica desligado (o índice de soltar mentiria).

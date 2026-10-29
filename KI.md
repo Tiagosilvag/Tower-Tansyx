@@ -99,6 +99,13 @@ Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qu
 
 ## 6. Kanban
 
+_Anexos nos cartões:_ metadados na tabela `card_files` (migração 4), bytes em `<dataDir>/kanban-files/<cartão>/<id do arquivo>` (nome
+no disco = só o número; o nome original fica no banco). Rotas em `server/kanban/http.ts`: `POST|GET /api/kanban/cards/:id/files`,
+`GET|DELETE /api/kanban/files/:id`. Envio em JSON base64 (limite de 15 MB, 20 por cartão; `readJson` recebe o teto maior só nessa rota).
+Entrega (`server/kanban/files.ts`, `delivery`): só imagem (png/jpg/gif/webp), PDF e texto (`txt md csv log json sql`) abrem
+`inline`; todo o resto vai como `attachment` + `application/octet-stream` + `nosniff` (HTML e SVG nunca rodam na origem).
+Apagar cartão ou projeto apaga a pasta. O agente (`tower-kanban`) ainda não anexa arquivos.
+
 _Agentes:_ o comando é `tower-kanban` (`scripts/tower-kanban`, symlink em `/usr/local/bin`), que funciona de qualquer pasta. O bloco
 que ensina o agente a usá-lo está no `CLAUDE.md` do usuário de cada conta do Claude Code (`/root/.claude/CLAUDE.md`,
 `/root/.claude-socio/CLAUDE.md`); só vale para sessões novas. Conta nova precisa do mesmo bloco (texto em `docs/kanban-agentes.md`).

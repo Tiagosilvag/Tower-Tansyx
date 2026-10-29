@@ -85,6 +85,10 @@ export function describeEvent(e: KanbanEvent): { text: string; quote?: string } 
       return { text: e.detail === '—' ? tr('tirou a etiqueta de projeto') : tr('etiquetou com o projeto {0}', [e.detail]) };
     case 'moved_board':
       return { text: tr('moveu do quadro {0} para {1}', [from ?? '', to ?? '']) };
+    case 'attached':
+      return { text: tr('anexou {0}', [e.detail]) };
+    case 'detached':
+      return { text: tr('removeu o anexo {0}', [e.detail]) };
     case 'comment':
       return { text: tr('comentou'), quote: e.detail };
     default:

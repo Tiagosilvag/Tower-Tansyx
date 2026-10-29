@@ -12653,6 +12653,63 @@ html.is-replay #world {
   font-size: 13px;
 }
 
+.ui-kbc__attach {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ui-kbc__files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-kbc__files li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ui-kbc__thumb,
+.ui-kbc__ext {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.ui-kbc__ext {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 11px var(--font-mono);
+}
+
+.ui-kbc__fmain {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ui-kbc__fname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-kbc__attach-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .ui-kbc__quote {
   margin: 4px 0 0;
   padding: 2px 0 2px 10px;

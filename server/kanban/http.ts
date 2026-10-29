@@ -4,19 +4,24 @@
 // agente são ignorados). Na porta local, um agente manda `X-Habblaud-Via: agent` e `as` (nome de usuário, conferido contra
 // os cadastrados; ausente ou desconhecido = sem usuário). A página local não tem login: sem usuário e via `user`.
 // Nada aqui toca em terminal, spawn ou arquivos: as rotas só leem e escrevem no banco.
+import { createReadStream } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { tr } from '../../shared/i18n';
 import type { Column, Priority } from '../../shared/kanban';
 import { HttpError } from '../http/app';
+import { ATTACHMENT_BODY_MAX, parseAttachment } from '../spawn/attachments';
 import { isRemoteRequest } from '../http/remote';
 import { userOf } from '../users/identity';
 import type { UserStore } from '../users/store';
+import { delivery, type KanbanFiles } from './files';
 import { KanbanError, type Actor, type KanbanStore } from './store';
 
 export interface KanbanRoutesDeps {
   store: KanbanStore;
   users?: UserStore;
-  readJson: (req: IncomingMessage) => Promise<unknown>;
+  readJson: (req: IncomingMessage, max?: number) => Promise<unknown>;
+  /** Arquivos anexados aos cartões (no disco). Ausente = anexos desligados: 404 nessas rotas. */
+  files?: KanbanFiles;
   /** A requisição veio pela porta remota? (injetável nos testes; padrão: o marcador do portão). */
   isRemote?: (req: IncomingMessage) => boolean;
   /**
@@ -68,7 +73,7 @@ function whole(b: Record<string, unknown>, key: string, nullable = false): numbe
 const num = (b: Record<string, unknown>, key: string): number | undefined => whole(b, key) as number | undefined;
 
 export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessage, res: ServerResponse, url: URL) => boolean {
-  const { store, users, readJson } = deps;
+  const { store, users, readJson, files } = deps;
   const isRemote = deps.isRemote ?? isRemoteRequest;
   const writable = deps.writable ?? (() => true);
   /**
@@ -149,7 +154,9 @@ export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessag
       if (method === 'DELETE') {
         req.resume();
         return run(() => {
+          const cardIds = files ? store.cards(id).map((c) => c.id) : [];
           store.deleteBoard(id, url.searchParams.get('force') === '1');
+          for (const c of cardIds) files?.removeCard(c);
           send(res, 204);
         });
       }
@@ -204,11 +211,12 @@ export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessag
       return run(() => {
         if (method === 'DELETE') {
           store.deleteCard(id);
+          files?.removeCard(id);
           return send(res, 204);
         }
         const card = store.card(id);
         if (!card) throw new KanbanError(404, tr('cartão não encontrado'));
-        send(res, 200, { card, events: store.events(id) });
+        send(res, 200, { card, events: store.events(id), files: store.files(id) });
       });
     }
     if (seg[0] === 'cards' && id !== undefined && seg[2] === 'move' && seg.length === 3) {
@@ -223,6 +231,58 @@ export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessag
       return run(async () => {
         const b = await body();
         send(res, 201, { event: store.comment(id, text(b, 'text', true)!, actorOf(req, b)) });
+      });
+    }
+    if (seg[0] === 'cards' && id !== undefined && seg[2] === 'files' && seg.length === 3) {
+      if (only('GET', 'POST')) return true;
+      if (!files) return notFound();
+      if (method === 'GET') {
+        req.resume();
+        return run(() => {
+          if (!store.card(id)) throw new KanbanError(404, tr('cartão não encontrado'));
+          send(res, 200, { files: store.files(id) });
+        });
+      }
+      return run(async () => {
+        const b = asObject(await readJson(req, ATTACHMENT_BODY_MAX));
+        const a = parseAttachment(b);
+        if ('error' in a) throw new KanbanError(400, a.error);
+        const actor = actorOf(req, b);
+        const file = store.addFile(id, { name: a.name, type: a.type, size: a.data.length }, actor);
+        try {
+          files.write(id, file.id, a.data);
+        } catch {
+          store.removeFile(file.id, actor);
+          throw new HttpError(500, tr('não deu para gravar o arquivo no disco'));
+        }
+        send(res, 201, { file });
+      });
+    }
+    if (seg[0] === 'files' && id !== undefined && seg.length === 2) {
+      if (only('GET', 'DELETE')) return true;
+      if (!files) return notFound();
+      req.resume();
+      return run(() => {
+        const file = store.file(id);
+        if (!file) throw new KanbanError(404, tr('arquivo não encontrado'));
+        if (method === 'DELETE') {
+          store.removeFile(id, actorOf(req, {}));
+          files.remove(file.cardId, id);
+          return send(res, 204);
+        }
+        const size = files.sizeOf(file.cardId, id);
+        if (size === undefined) throw new KanbanError(404, tr('o arquivo sumiu do disco'));
+        const how = delivery(file.name);
+        res.writeHead(200, {
+          'Content-Type': how.type,
+          'Content-Length': size,
+          'Content-Disposition': `${how.inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+          'X-Content-Type-Options': 'nosniff',
+          'Cache-Control': 'private, no-store',
+        });
+        const stream = createReadStream(files.pathOf(file.cardId, id));
+        stream.on('error', () => res.destroy());
+        stream.pipe(res);
       });
     }
     return notFound();

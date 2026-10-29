@@ -6,6 +6,7 @@ import {
   MAX_BOARD_NAME,
   MAX_COMMENT,
   MAX_DESCRIPTION,
+  MAX_FILES_PER_CARD,
   MAX_TITLE,
   normalizeText,
   PRIORITIES,
@@ -13,6 +14,7 @@ import {
   type KanbanBoard,
   type KanbanCard,
   type KanbanEvent,
+  type KanbanFile,
   type KanbanEventKind,
   type Priority,
   type Via,
@@ -53,6 +55,7 @@ interface CardRow {
   assignee_name: string | null;
   assignee_display_name: string | null;
   assignee_color: string | null;
+  file_count: number;
   project_id: number | null;
   created_by: number | null;
   created_by_name: string | null;
@@ -60,6 +63,19 @@ interface CardRow {
   created_at: number;
   updated_at: number;
 }
+interface FileRow {
+  id: number;
+  card_id: number;
+  name: string;
+  type: string;
+  size: number;
+  user_id: number | null;
+  user_name: string | null;
+  created_at: number;
+}
+
+const toFile = (r: FileRow): KanbanFile => ({ id: r.id, cardId: r.card_id, name: r.name, type: r.type, size: r.size, userId: r.user_id, userName: r.user_name, createdAt: r.created_at });
+
 interface EventRow {
   id: number;
   card_id: number;
@@ -71,7 +87,7 @@ interface EventRow {
   detail: string;
 }
 
-const CARD_COLS = 'id, board_id, column_key, position, title, description, priority, assignee_id, (SELECT username FROM users WHERE users.id = cards.assignee_id) AS assignee_name, (SELECT display_name FROM users WHERE users.id = cards.assignee_id) AS assignee_display_name, (SELECT color FROM users WHERE users.id = cards.assignee_id) AS assignee_color, project_id, created_by, created_by_name, created_via, created_at, updated_at';
+const CARD_COLS = 'id, board_id, column_key, position, title, description, priority, assignee_id, (SELECT username FROM users WHERE users.id = cards.assignee_id) AS assignee_name, (SELECT display_name FROM users WHERE users.id = cards.assignee_id) AS assignee_display_name, (SELECT color FROM users WHERE users.id = cards.assignee_id) AS assignee_color, (SELECT COUNT(*) FROM card_files WHERE card_files.card_id = cards.id) AS file_count, project_id, created_by, created_by_name, created_via, created_at, updated_at';
 
 const toCard = (r: CardRow): KanbanCard => ({
   id: r.id,
@@ -85,6 +101,7 @@ const toCard = (r: CardRow): KanbanCard => ({
   assigneeName: r.assignee_name,
   assigneeDisplayName: r.assignee_display_name,
   assigneeColor: r.assignee_color,
+  fileCount: r.file_count,
   projectId: r.project_id,
   createdBy: r.created_by,
   createdByName: r.created_by_name,
@@ -272,6 +289,40 @@ export class KanbanStore {
     if (clean.length > MAX_COMMENT) throw new KanbanError(400, tr('o comentário passa de {0} caracteres', [MAX_COMMENT]));
     this.log(id, actor, 'comment', clean);
     return this.events(id)[0]!;
+  }
+
+  files(cardId: number): KanbanFile[] {
+    return this.db.all<FileRow>('SELECT id, card_id, name, type, size, user_id, user_name, created_at FROM card_files WHERE card_id = ? ORDER BY id', cardId).map(toFile);
+  }
+
+  file(id: number): KanbanFile | undefined {
+    const r = this.db.get<FileRow>('SELECT id, card_id, name, type, size, user_id, user_name, created_at FROM card_files WHERE id = ?', id);
+    return r && toFile(r);
+  }
+
+  /** Registra o arquivo (os bytes são gravados por quem chama, com o id devolvido). */
+  addFile(cardId: number, f: { name: string; type: string; size: number }, actor: Actor): KanbanFile {
+    this.requireCard(cardId);
+    return this.db.transaction(() => {
+      const n = this.db.get<{ n: number }>('SELECT COUNT(*) AS n FROM card_files WHERE card_id = ?', cardId)?.n ?? 0;
+      if (n >= MAX_FILES_PER_CARD) throw new KanbanError(409, tr('o cartão já tem {0} arquivos: remova algum antes de anexar outro', [MAX_FILES_PER_CARD]));
+      const at = this.now();
+      const { lastInsertRowid } = this.db.run('INSERT INTO card_files (card_id, name, type, size, user_id, user_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)', cardId, f.name, f.type, f.size, actor.userId, actor.name, at);
+      this.db.run('UPDATE cards SET updated_at = ? WHERE id = ?', at, cardId);
+      this.log(cardId, actor, 'attached', f.name);
+      return this.file(lastInsertRowid)!;
+    });
+  }
+
+  removeFile(id: number, actor: Actor): KanbanFile {
+    const f = this.file(id);
+    if (!f) throw new KanbanError(404, tr('arquivo não encontrado'));
+    this.db.transaction(() => {
+      this.db.run('DELETE FROM card_files WHERE id = ?', id);
+      this.db.run('UPDATE cards SET updated_at = ? WHERE id = ?', this.now(), f.cardId);
+      this.log(f.cardId, actor, 'detached', f.name);
+    });
+    return f;
   }
 
   deleteCard(id: number): void {

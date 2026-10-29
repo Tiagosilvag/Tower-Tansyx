@@ -19,6 +19,7 @@ import { UserAuth, UserSessions, UserThrottle } from './users/auth';
 import { createUsersRoutes } from './users/http';
 import { UserStore } from './users/store';
 import { SenderLog } from './users/senders';
+import { KanbanFiles } from './kanban/files';
 import { Presence } from './users/presence';
 import { createPresenceRoutes } from './users/presence-http';
 import { TypedLines } from './users/typing';
@@ -436,7 +437,7 @@ const noteTyped = (req: http.IncomingMessage, ptyId: string, data: string): void
   if (!user || !senders) return;
   for (const line of typed.feed(`${user.id}:${ptyId}`, data)) noteSender(req, line);
 };
-const kanban = db ? createKanbanRoutes({ store: new KanbanStore(db), users: new UserStore(db), readJson: (req) => readJson(req), writable: () => config.terminal }) : undefined;
+const kanban = db ? createKanbanRoutes({ store: new KanbanStore(db), users: new UserStore(db), files: new KanbanFiles(join(config.dataDir, 'kanban-files')), readJson: (req, max) => readJson(req, max), writable: () => config.terminal }) : undefined;
 
 const api = createApiHandler({
   renameRoom: (id, name) => {

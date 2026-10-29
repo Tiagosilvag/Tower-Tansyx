@@ -73,6 +73,19 @@ export const MIGRATIONS: readonly string[] = [
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
   );
   CREATE INDEX message_senders_by_at ON message_senders (at)`,
+  // Arquivos anexados aos cartões do Kanban: os bytes ficam em <dataDir>/kanban-files/<cartão>/<id>; aqui só os metadados.
+  // Apagar o cartão apaga as linhas; o servidor apaga a pasta do disco.
+  `CREATE TABLE card_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    user_name TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX card_files_by_card ON card_files (card_id)`,
 ];
 
 /**

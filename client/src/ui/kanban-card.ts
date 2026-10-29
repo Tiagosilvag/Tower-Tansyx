@@ -2,7 +2,7 @@
 // e exclusão. Um <dialog> modal dentro do painel (ui/kanban.ts), que recarrega o quadro quando algo muda.
 // Tudo que vem do servidor entra como texto (h/setText), nunca como HTML.
 import { tr } from '../../../shared/i18n';
-import { COLUMNS, MAX_COMMENT, MAX_DESCRIPTION, MAX_TITLE, PRIORITIES, type Column, type KanbanBoard, type KanbanCard, type KanbanEvent, type Priority } from '../../../shared/kanban';
+import { COLUMNS, MAX_COMMENT, MAX_DESCRIPTION, MAX_TITLE, PRIORITIES, type Column, type KanbanBoard, type KanbanCard, type KanbanEvent, type KanbanFile, type Priority } from '../../../shared/kanban';
 import type { UserInfo } from '../../../shared/types';
 import { kanbanApi, type CardPatch } from '../net/kanban';
 import { h, iconButton, setText } from './dom';
@@ -16,6 +16,8 @@ export interface CardHost {
   changed(): void;
 }
 
+const sizeLabel = (n: number): string => (n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
+
 const option = (value: string, label: string, selected: boolean): HTMLOptionElement => {
   const o = h('option', { text: label });
   o.value = value;
@@ -27,6 +29,7 @@ export class CardDialog {
   readonly el: HTMLDialogElement;
   private card: KanbanCard | null = null;
   private events: KanbanEvent[] = [];
+  private files: KanbanFile[] = [];
   private users: UserInfo[] | null = null;
   private confirming = false;
   private opener: HTMLElement | null = null;
@@ -74,6 +77,7 @@ export class CardDialog {
       const r = await kanbanApi.card(id);
       this.card = r.card;
       this.events = r.events;
+      this.files = r.files ?? [];
       this.render();
     } catch (err) {
       this.say((err as Error).message);
@@ -156,11 +160,58 @@ export class CardDialog {
       description,
       h('dl', { class: 'ui-kbc__fields' }, ...rows.flatMap(([label, node]) => [h('dt', { text: label }), h('dd', {}, node)])),
       ...(mover ? [mover] : []),
+      this.filesSection(c),
       h('div', { class: 'ui-kbc__comment' }, comment, send),
       h('h3', { class: 'ui-kbc__h', text: tr('Histórico') }),
       h('ul', { class: 'ui-kbc__log' }, ...this.events.map((e) => this.eventRow(e))),
       this.danger(c),
     );
+  }
+
+  /** Anexos do cartão: lista (miniatura das imagens, nome que abre/baixa, tamanho, quem enviou) e o botão de anexar. */
+  private filesSection(c: KanbanCard): HTMLElement {
+    const picker = h('input', { type: 'file', hidden: true, attrs: { multiple: 'true', 'aria-label': tr('Anexar arquivos') } });
+    picker.addEventListener('change', () => {
+      const chosen = Array.from(picker.files ?? []);
+      picker.value = '';
+      void this.upload(c.id, chosen);
+    });
+    const add = h('button', { class: 'ui-kbc__btn', type: 'button', text: tr('Anexar arquivo'), on: { click: () => picker.click() } });
+    const list = h(
+      'ul',
+      { class: 'ui-kbc__files' },
+      ...this.files.map((f) => {
+        const image = /\.(png|jpe?g|gif|webp)$/i.test(f.name);
+        const url = kanbanApi.fileUrl(f.id);
+        const thumb = image ? h('img', { class: 'ui-kbc__thumb', attrs: { src: url, alt: '', loading: 'lazy' } }) : h('span', { class: 'ui-kbc__ext', text: (f.name.split('.').pop() ?? '').slice(0, 4).toUpperCase() || tr('ARQ'), attrs: { 'aria-hidden': 'true' } });
+        return h(
+          'li',
+          {},
+          thumb,
+          h('span', { class: 'ui-kbc__fmain' }, h('a', { class: 'ui-kbc__fname', text: f.name, attrs: { href: url, target: '_blank', rel: 'noopener' } }), h('small', { text: `${sizeLabel(f.size)} · ${f.userName ?? tr('alguém')} · ${new Date(f.createdAt).toLocaleString()}` })),
+          h('button', { class: 'ui-kbc__link', type: 'button', text: tr('Remover'), attrs: { 'aria-label': tr('Remover o anexo {0}', [f.name]) }, on: { click: () => void this.save(() => kanbanApi.removeFile(f.id)) } }),
+        );
+      }),
+    );
+    const box = h('div', { class: 'ui-kbc__attach' }, h('h3', { class: 'ui-kbc__h', text: tr('Anexos') }), list, h('div', { class: 'ui-kbc__attach-bar' }, add, h('small', { text: tr('Arraste arquivos para cá ou use o botão (até 15 MB cada).') })), picker);
+    if (!this.files.length) list.hidden = true;
+    box.addEventListener('dragover', (e) => {
+      if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+    });
+    box.addEventListener('drop', (e) => {
+      if (!e.dataTransfer?.files.length) return;
+      e.preventDefault();
+      void this.upload(c.id, Array.from(e.dataTransfer.files));
+    });
+    return box;
+  }
+
+  /** Envia um por vez; um que falha mostra o erro e os outros seguem. */
+  private async upload(cardId: number, chosen: File[]): Promise<void> {
+    for (const file of chosen) {
+      this.say(tr('Enviando {0}…', [file.name]));
+      await this.save(() => kanbanApi.attach(cardId, file));
+    }
   }
 
   private eventRow(e: KanbanEvent): HTMLElement {
