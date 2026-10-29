@@ -28,6 +28,8 @@ import { hashPassword, parsePasswordHash } from '../remote/password';
 import { SpawnService } from '../spawn/spawn';
 import type { PtyManager } from '../pty/manager';
 import type { UsageRefresher } from '../accounts/usage-refresh';
+import type { FileFetcher } from '../deliveries/fetcher';
+import type { DictationService } from '../dictation/dictation';
 import { createPtyRoutes, ptyRequestProblem } from './pty';
 
 setQuiet(true);
@@ -262,7 +264,14 @@ async function start(allow: RemoteFeature[] = ['permissions'], opts: { full?: bo
       sendJson(res, 200, { ok: true });
     },
     pty: full ? createPtyRoutes(fakePtys, { remoteFull: true }) : fakePty,
-    ...(full ? { usageRefresh: { run: async () => [] } as unknown as UsageRefresher } : {}),
+    // Recursos ligados no modo total, para um 403 das rotas do auxiliar não vir de "desligado". Nunca são chamados.
+    ...(full
+      ? {
+          usageRefresh: { run: async () => [] } as unknown as UsageRefresher,
+          files: {} as unknown as FileFetcher,
+          dictation: {} as unknown as DictationService,
+        }
+      : {}),
     renameRoom: () => 'sala',
     remote: { is: isRemoteRequest, allows: (f) => allowSet.has(f), full },
     world: (req, res, url) => {
@@ -272,7 +281,7 @@ async function start(allow: RemoteFeature[] = ['permissions'], opts: { full?: bo
     },
   });
   const guard = createRequestGuard(full ? { allowedHosts: new Set([TUNNEL_HOST]) } : {});
-  const gate =createRemoteGate({ config: CFG, sessions: new RemoteSessions(SECRET, CFG), secure: false });
+  const gate = createRemoteGate({ config: CFG, sessions: new RemoteSessions(SECRET, CFG), secure: false });
   const page = (_req: http.IncomingMessage, res: http.ServerResponse) => {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end('<!doctype html><title>Habblaud</title>');
@@ -620,12 +629,17 @@ describe('porta remota com acesso total', () => {
       ['POST', '/api/host/files/poll'],
       ['POST', '/api/host/spawn/poll'],
       ['POST', '/api/host/dictation/poll'],
-      ['GET', '/api/world/status'],
-      ['POST', '/api/world/login'],
     ];
+    // A mensagem prova que a recusa veio do bloqueio do topo (os recursos estão ligados, não é "desligado").
     for (const [method, path] of blocked) {
       const r = await request(s.remoteBase, path, { method, headers, ...(method === 'POST' ? { body: {} } : {}) });
       expect(r.status, `${method} ${path}`).toBe(403);
+      expect(JSON.parse(r.body).error, `${method} ${path}`).toMatch(/rota só do próprio computador/);
+    }
+    for (const [method, path] of [['GET', '/api/world/status'], ['POST', '/api/world/login']] as const) {
+      const r = await request(s.remoteBase, path, { method, headers, ...(method === 'POST' ? { body: {} } : {}) });
+      expect(r.status, `${method} ${path}`).toBe(403);
+      expect(JSON.parse(r.body).error.code, `${method} ${path}`).toBe('local_only');
     }
     expect(s.permissionCalls).toEqual([]);
     expect(s.worldCalls).toEqual([]);
@@ -660,6 +674,8 @@ describe('porta remota com acesso total', () => {
     expect(ptyRequestProblem(req({ host: TUNNEL_HOST, origin: `https://${TUNNEL_HOST.toUpperCase()}` }, '::ffff:127.0.0.1'), true)).toBeNull();
     expect(ptyRequestProblem(req({ host: TUNNEL_HOST, origin: 'https://evil.example' }), true)).toMatch(/origem/);
     expect(ptyRequestProblem(req({ host: TUNNEL_HOST, origin: 'http://localhost:4747' }), true)).toMatch(/origem/);
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST, origin: 'null' }), true)).toMatch(/origem/);
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST, origin: `https://${TUNNEL_HOST}.` }), true)).toMatch(/origem/);
     expect(ptyRequestProblem(req({ host: TUNNEL_HOST, 'sec-fetch-site': 'cross-site' }), true)).toMatch(/origem/);
     expect(ptyRequestProblem(req({ host: TUNNEL_HOST, 'sec-fetch-site': 'same-site' }), true)).toMatch(/origem/);
     // Sem o modo total, como antes.

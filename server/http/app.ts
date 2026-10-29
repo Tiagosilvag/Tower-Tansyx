@@ -284,7 +284,8 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
   /**
    * A trava "pelo próprio computador": na porta local, o Host precisa ser loopback (como antes); na porta remota, só o
    * que HABBLAUD_REMOTE_ALLOW liberar (`feature` ausente = nunca pela porta remota), ou tudo no acesso total. As rotas
-   * só da máquina e o Habblaud World são barrados antes, no topo do roteador, e não passam por aqui.
+   * só da máquina e o Habblaud World são barrados antes, no topo do roteador; as do Codex e do auxiliar do host repetem
+   * `!isRemote(req)` mesmo assim, para o acesso total nunca as abrir se aquele bloqueio regredir.
    */
   const trusted = (req: IncomingMessage, feature?: RemoteFeature): boolean =>
     isRemote(req) ? isRemoteFull(req) || (!!feature && !!deps.remote?.allows(feature)) : isLoopbackHost(req.headers.host);
@@ -521,7 +522,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       // sempre conecta pelo loopback (o Host sozinho um cliente da rede consegue imitar); no Docker ele chega pela porta
       // publicada, com o endereço do gateway.
       if (method !== 'POST') methodNotAllowed(res, 'POST');
-      else if (!trusted(req) || (!deps.inDocker && !isLoopbackAddress(req.socket.remoteAddress))) {
+      else if (!(!isRemote(req) && trusted(req)) || (!deps.inDocker && !isLoopbackAddress(req.socket.remoteAddress))) {
         sendJson(res, 403, { error: denied(req, tr('eventos do Codex só são aceitos pelo próprio computador (http://localhost ou http://127.0.0.1)')) });
       } else handleCodexEvent(req, res, { live: deps.codexLive, entries: () => accounts.entriesOf('codex') }).catch((err) => fail(res, err));
       return true;
@@ -638,7 +639,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       const files = deps.files;
       if (method !== 'POST') methodNotAllowed(res, 'POST');
       else if (!files) sendJson(res, 403, { error: tr('arquivos desligados') });
-      else if (!trusted(req) || (!deps.inDocker && !isLoopbackAddress(req.socket.remoteAddress))) {
+      else if (!(!isRemote(req) && trusted(req)) || (!deps.inDocker && !isLoopbackAddress(req.socket.remoteAddress))) {
         sendJson(res, 403, { error: denied(req, tr('só o auxiliar do próprio computador')) });
       } else if (path === '/api/host/files/poll') {
         req.resume();
@@ -658,7 +659,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       const dictation = deps.dictation;
       if (method !== 'POST') methodNotAllowed(res, 'POST');
       else if (!dictation) sendJson(res, 403, { error: tr('ditado desligado') });
-      else if (!trusted(req) || (!deps.inDocker && !isLoopbackAddress(req.socket.remoteAddress))) {
+      else if (!(!isRemote(req) && trusted(req)) || (!deps.inDocker && !isLoopbackAddress(req.socket.remoteAddress))) {
         sendJson(res, 403, { error: denied(req, tr('só o auxiliar do próprio computador')) });
       } else if (path === '/api/host/dictation/poll') {
         req.resume();
@@ -678,7 +679,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       const spawn = deps.spawn;
       if (method !== 'POST') methodNotAllowed(res, 'POST');
       else if (!spawn) sendJson(res, 403, { error: tr('novo agente pelo escritório desligado') });
-      else if (!trusted(req) || (!deps.inDocker && !isLoopbackAddress(req.socket.remoteAddress))) {
+      else if (!(!isRemote(req) && trusted(req)) || (!deps.inDocker && !isLoopbackAddress(req.socket.remoteAddress))) {
         sendJson(res, 403, { error: denied(req, tr('só o auxiliar do próprio computador')) });
       } else if (path === '/api/host/spawn/poll') {
         req.resume();
