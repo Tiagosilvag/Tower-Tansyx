@@ -10,6 +10,10 @@ do meio (0.**3**.0).
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Exportar o .md na janela do documento.** Um botão na barra baixa o arquivo com o nome original.
+
 ### Corrigido
 
 - **A janela do documento .md aparecia transparente.** Ela era criada fora do contêiner da interface, onde as cores do

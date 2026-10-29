@@ -695,6 +695,7 @@ export const EN: Readonly<Record<string, string>> = {
   "os documentos do chat só abrem pelo próprio computador (http://localhost)": "chat documents only open from the computer itself (http://localhost)",
   "Atualizar o documento": "Refresh the document",
   "Copiar o texto": "Copy the text",
+  "Exportar o .md": "Export the .md",
   "Documento grande: só o começo aparece aqui. Use Abrir para ver tudo.": "Large document: only the start is shown here. Use Open to see all of it.",
   "Ver {0}": "View {0}",
 

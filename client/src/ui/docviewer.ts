@@ -40,6 +40,7 @@ class DocWindow {
   private readonly openEl: HTMLAnchorElement;
   private readonly refreshBtn: HTMLButtonElement;
   private readonly copyBtn: HTMLButtonElement;
+  private readonly exportBtn: HTMLButtonElement;
   private readonly movable: Movable;
   private project = '';
   private path = '';
@@ -53,6 +54,7 @@ class DocWindow {
     this.openEl = h('a', { class: 'ui-btn ui-btn--sm ui-doc__open', text: tr('Abrir'), attrs: { target: '_blank', rel: 'noopener' } }) as HTMLAnchorElement;
     this.refreshBtn = iconButton(ICONS.refresh, tr('Atualizar o documento'), () => void this.load(), 'ui-icon-btn--sm ui-doc__refresh');
     this.copyBtn = iconButton(ICONS.copy, tr('Copiar o texto'), () => this.copy(), 'ui-icon-btn--sm');
+    this.exportBtn = iconButton(ICONS.download, tr('Exportar o .md'), () => this.export(), 'ui-icon-btn--sm');
     const close = iconButton(ICONS.close, tr('Fechar (Esc)'), () => this.close(), 'ui-icon-btn--sm');
     this.bodyEl = h('div', { class: 'ui-doc__body' });
     const bar = h(
@@ -62,6 +64,7 @@ class DocWindow {
       this.openEl,
       this.refreshBtn,
       this.copyBtn,
+      this.exportBtn,
       maximizeButton(() => this.movable),
       close,
     );
@@ -107,6 +110,20 @@ class DocWindow {
     setTimeout(() => this.copyBtn.classList.remove('is-done'), 1200);
   }
 
+  /** Baixa o markdown como arquivo, com o nome do original (o link temporário fica dentro da janela). */
+  private export(): void {
+    if (!this.text) return;
+    const name = this.path.split('/').pop() || 'documento.md';
+    const url = URL.createObjectURL(new Blob([this.text], { type: 'text/markdown;charset=utf-8' }));
+    const a = h('a', { hidden: true, attrs: { href: url, download: name } });
+    this.el.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    this.exportBtn.classList.add('is-done');
+    setTimeout(() => this.exportBtn.classList.remove('is-done'), 1200);
+  }
+
   private async load(): Promise<void> {
     const seq = ++this.seq;
     this.refreshBtn.classList.add('is-spinning');
@@ -129,6 +146,7 @@ class DocWindow {
       box = h('p', { class: 'ui-doc__state is-error', text: tr('Não deu para abrir: {0}', [(e as Error).message]) });
     }
     setHidden(this.copyBtn, !this.text);
+    setHidden(this.exportBtn, !this.text);
     this.bodyEl.replaceChildren(box);
     this.bodyEl.scrollTop = keep;
     this.refreshBtn.classList.remove('is-spinning');
