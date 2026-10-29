@@ -4565,6 +4565,38 @@
   background: rgba(255, 255, 255, 0.035);
 }
 
+/* Barra na cor da sala (--room): degradê, faixa na lateral, nome do agente e da sala em destaque. */
+.ui-term__bar.is-roomed {
+  height: auto;
+  min-height: 50px;
+  padding-block: 6px 8px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--room) 34%, #0b0f15) 0%, color-mix(in srgb, var(--room) 14%, #0b0f15) 70%);
+  box-shadow: inset 5px 0 0 var(--room);
+}
+.ui-term__bar.is-roomed::after {
+  background: repeating-linear-gradient(90deg, var(--room) 0 4px, transparent 4px 5px);
+}
+.ui-term__bar.is-roomed .ui-term__name {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+}
+.ui-term__bar.is-roomed .ui-term__kind,
+.ui-term__bar.is-roomed .ui-term__icon {
+  color: color-mix(in srgb, var(--room) 55%, #fff);
+}
+.ui-term__room.is-chip {
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: var(--room);
+  color: color-mix(in srgb, var(--room) 12%, #000);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
 /* Fio segmentado em pixels sob a barra, como as barras de uso. */
 .ui-term__bar::after {
   content: '';

@@ -9,6 +9,7 @@
 // testado em ui/terminal.test.ts; a montagem usa só textContent (o markdown das respostas vem de ui/markdown.ts).
 // Sessão do Codex: selo "Codex" no cabeçalho e um spinner neutro no rodapé (o ✻ é do Claude Code).
 import type { AgentInfo, Provider, RecentSession, TerminalEntry, TerminalImage, TerminalInit } from '../../../shared/types';
+import { roomTheme } from '../art';
 import { MessageComposer } from './composer';
 import type { UiComponent, UiContext, WindowOptions } from './context';
 import { askQuestionNodes, PermissionCard } from './permission';
@@ -765,6 +766,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   private frames: readonly string[] = SPINNER;
   private roleEl: HTMLElement;
   private roomEl: HTMLElement;
+  private barEl!: HTMLElement;
   private reconnEl: HTMLElement;
   private findBtn: HTMLButtonElement;
   private alertEl: HTMLElement;
@@ -844,6 +846,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
       maximizeButton(() => this.movable),
       close,
     );
+    this.barEl = bar;
 
     // Barra de ferramentas: filtro (segmentado) e a busca, que aparece com Ctrl/⌘+F ou a lupa.
     const filters = h('div', { class: 'ui-seg ui-term__filter', role: 'radiogroup', attrs: { 'aria-label': tr('Filtrar a conversa') } });
@@ -1053,11 +1056,26 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     setHidden(this.roleEl, !a);
     if (a) setVariant(this.roleEl, 'ui-role--', a.kind);
     const room = a ? this.ctx.store.room(a.roomId) : undefined;
-    setText(this.roomEl, room ? tr('sala {0}', [room.name]) : '');
-    setTitle(this.roomEl, room?.path ?? '');
+    setText(this.roomEl, room ? room.name : '');
+    setTitle(this.roomEl, room ? `${tr('sala {0}', [room.name])} · ${room.path}` : '');
     setHidden(this.roomEl, !room);
+    this.paintBar(room?.seed);
     setAttr(this.el, 'aria-label', tr('Terminal de {0}', [name]));
     this.el.classList.toggle('is-gone', !live);
+  }
+
+  /** A barra segue a cor da sala (a mesma do cabeçalho dela na barra lateral); sessão do histórico fica na cor padrão. */
+  private paintBar(seed: number | undefined): void {
+    let color: string | undefined;
+    try {
+      if (seed !== undefined) color = roomTheme(seed).accent;
+    } catch {
+      // Sem tema: cor padrão.
+    }
+    if (color) this.barEl.style.setProperty('--room', color);
+    else this.barEl.style.removeProperty('--room');
+    this.barEl.classList.toggle('is-roomed', !!color);
+    this.roomEl.classList.toggle('is-chip', !!color);
   }
 
   /** Sessão do histórico: conta, título, projeto e a data de início. */
@@ -1073,6 +1091,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     setText(this.roomEl, `${sessionProjectName(s)} · ${formatDateTime(s.firstAt ?? s.lastAt)}`);
     setTitle(this.roomEl, s.project ?? s.projectDir);
     setHidden(this.roomEl, false);
+    this.paintBar(undefined);
     setAttr(this.el, 'aria-label', tr('Terminal da sessão {0}', [title]));
     this.el.classList.remove('is-gone');
   }

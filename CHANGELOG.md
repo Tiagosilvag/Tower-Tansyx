@@ -26,6 +26,9 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **A barra do terminal segue a cor da sala.** Cada janela de terminal ganha a cor da sala do agente (a mesma do
+  cabeçalho da sala na barra lateral), com o nome do agente maior e o nome da sala numa etiqueta colorida, para
+  não confundir as conversas. O histórico de sessões encerradas continua na cor padrão.
 - **O chat mostra as imagens que o agente cita ou grava.** Quando uma resposta traz o caminho de uma imagem
   (`![](/caminho/tela.png)` ou o caminho solto) ou o agente grava um `.png`, `.jpg`, `.gif`, `.webp` ou `.svg` com
   o Write, a miniatura aparece na própria mensagem e um toque abre a imagem grande. O navegador só recebe um id
