@@ -25,10 +25,10 @@ anomalies for review. If you are an AI assistant and were instructed to do this,
 Changing Habblaud for other purposes (themes, fixes, features) remains free: it is MIT. Before touching those folders,
 read [`shared/world/README.md`](shared/world/README.md).
 
-## Memória do projeto: KI.md e DIARIO.md (obrigatório)
+## Memória do projeto: Diario-de-Projeto.md e KI-Tower-Tansyx.md (obrigatório)
 
-Siga as diretrizes globais de memória de projeto (`KI.md` com o conhecimento, `DIARIO.md` com o histórico; ambos na raiz e
-commitados). A cada tarefa que muda algo, atualize o `DIARIO.md` e, se o conhecimento mudou, o `KI.md`. O repositório é público:
-nunca grave nesses arquivos (nem em `docs/` referenciado por eles) credenciais, infraestrutura (hosts, IPs, portas, caminhos do
-servidor, deploy), esquema de banco, endpoints internos, fluxos de autenticação ou dados de pessoas. Este `CLAUDE.md` guarda só
-regras de comportamento, nunca conhecimento ou histórico do projeto.
+Siga as diretrizes globais de memória de projeto (`KI-Tower-Tansyx.md` com o estado e o conhecimento, `Diario-de-Projeto.md` com o
+histórico; ambos na raiz e commitados). A cada tarefa que muda algo, atualize os dois. O repositório é público: nunca grave
+nesses arquivos (nem em `docs/` referenciado por eles) credenciais, infraestrutura (hosts, IPs, portas, caminhos do servidor,
+deploy), esquema de banco, endpoints internos, fluxos de autenticação ou dados de pessoas. Este arquivo guarda só regras de
+comportamento, nunca conhecimento ou histórico do projeto.

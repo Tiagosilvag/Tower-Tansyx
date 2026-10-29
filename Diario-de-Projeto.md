@@ -1,0 +1,182 @@
+# Diário de Projeto — Tower Tansyx
+
+Log cronológico (o quando e o porquê), entrada nova no topo. O estado atual e onde está cada coisa ficam no
+[`KI-Tower-Tansyx.md`](KI-Tower-Tansyx.md). Este arquivo é commitado em repositório **público**: sem credenciais, infraestrutura,
+esquema de banco, endpoints internos, fluxos de autenticação nem dados de pessoas. Entradas antigas não se apagam.
+
+---
+
+## 29/10/2026 — Diretrizes de memória (segunda versão) e formato novo
+
+- **Problema:** as diretrizes globais mudaram (nomes de arquivo, formato e regras de segurança); o KI e o diário estavam no formato anterior.
+- **Decisão do dono:** opção 1: reformatar mantendo o conteúdo genérico, porque o repositório é público.
+- **O que foi feito / Arquivos novos:** `KI.md` virou `KI-Tower-Tansyx.md` (com Estado atual, Onde está cada coisa e decisões em tabela);
+  `DIARIO.md` virou `Diario-de-Projeto.md` neste formato, com todas as entradas antigas mantidas; `CLAUDE.md` e `AGENTS.md` do
+  repositório apontam para os nomes novos.
+- **Testes:** só documentação, nada a testar.
+- **Limite conhecido:** o histórico do git ainda tem versões antigas dos dois arquivos com detalhes de ambiente (sem credenciais).
+- **Para subir / Pendente:** nada de código. Decidir o destino de `docs/` (login, Kanban para agentes), `RESUMO-DO-TRABALHO.md` e
+  `PLANO-PTY-ACCESS.md`, que têm detalhes de ambiente. [CONFIRMAR]
+- **Lição:** **diretriz de memória mudou duas vezes no mesmo dia; reformatar é barato, então guardar o texto vigente nas contas e não neste repo.**
+
+---
+
+## 29/10/2026 — Chat: clicar num `.md` citado abre o documento
+
+- **Problema:** o chat mostra caminhos de `.md` mas não dava para ler o arquivo sem sair dele.
+- **Decisão do dono:** abrir como o visualizador de HTML; depois, ao ver a primeira versão em tela cheia, pediu janela flutuante como o Kanban.
+- **O que foi feito / Arquivos novos:** caminho de markdown escrito como código fica clicável e abre formatado numa janela flutuante
+  (arrasta, redimensiona, expande, Atualizar, Copiar, Abrir). Servidor: só markdown, só de pasta de projeto conhecida, nunca nome de
+  segredo, sempre relido do disco.
+- **Testes:** testes do resolvedor de caminho, typecheck, build e traduções. Visual não conferido no navegador por mim.
+- **Limite conhecido:** caminho solto no texto, sem crase, não é clicável.
+- **Para subir / Pendente:** já em produção.
+- **Lição:** **a primeira versão em tela cheia ficou feia; janelas deste projeto seguem o padrão flutuante do Kanban (`Movable`).**
+
+---
+
+## 29/10/2026 — Kanban: carregar conversa anterior no chat
+
+- **Problema:** o chat só lia o fim do transcript e não havia como ver o que veio antes.
+- **Decisão do dono:** botão "Carregar conversa anterior".
+- **O que foi feito / Arquivos novos:** 500 entradas por clique, para agentes e histórico; o teto de itens em tela sobe ao carregar.
+- **Testes:** suíte relacionada; ajuste de teste do estado inicial.
+- **Limite conhecido:** só lê para trás em janelas; arquivo muito grande é cortado em início de linha.
+- **Para subir / Pendente:** em produção.
+- **Lição:** **sem subir o teto de itens, a próxima mensagem descartaria o que o usuário acabou de pedir.**
+
+---
+
+## 29/10/2026 — Chat abre sempre em "Só prompts"
+
+- **Problema:** o chat abria em "Tudo".
+- **Decisão do dono:** padrão "Só prompts" em toda janela.
+- **O que foi feito / Arquivos novos:** novo padrão; a escolha vale só enquanto a janela está aberta.
+- **Testes:** suíte do terminal.
+- **Limite conhecido:** a escolha não é lembrada entre aberturas.
+- **Para subir / Pendente:** em produção. Opcional: lembrar a última escolha.
+
+---
+
+## 29/10/2026 — Kanban: coluna Revisão
+
+- **Problema:** faltava uma etapa de revisão entre Fazendo e Feito, com o motivo registrado.
+- **Decisão do dono:** coluna Revisão; mover para ela exige comentário com o motivo; regra gravada no `CLAUDE.md` das contas.
+- **O que foi feito / Arquivos novos:** coluna nova; o comando dos agentes recusa o movimento sem `--comment`.
+- **Testes:** testes do Kanban e do comando (colunas de 4 para 5).
+- **Limite conhecido:** a página não obriga o motivo (para não atrapalhar quem arrasta).
+- **Para subir / Pendente:** em produção.
+
+---
+
+## 29/10/2026 — Chat: "Compactando a conversa…"
+
+- **Problema:** durante a compactação o rodapé ficava em "Pensando…" porque o transcript não registra nada.
+- **Decisão do dono:** mostrar o estado no chat.
+- **O que foi feito / Arquivos novos:** o servidor lê a saída do terminal do agente e o chat mostra o estado.
+- **Testes:** testes do detector de compactação.
+- **Limite conhecido:** só sessões abertas no terminal interativo; depende do texto em inglês do Claude Code.
+- **Para subir / Pendente:** em produção.
+
+---
+
+## 29/10/2026 — Kanban: anexos e Ctrl+V
+
+- **Problema:** não dava para anexar arquivos nos cartões.
+- **Decisão do dono:** anexar (botão, arrastar) e colar print com Ctrl+V.
+- **O que foi feito / Arquivos novos:** anexos por cartão com entrega segura (só imagem, PDF e texto abrem na tela; o resto baixa).
+- **Testes:** testes do armazenamento e das rotas.
+- **Limite conhecido:** o comando dos agentes ainda não anexa; não há teto de espaço total.
+- **Para subir / Pendente:** em produção. Opcional: `tower-kanban attach`.
+
+---
+
+## 29/10/2026 — Kanban: agentes de qualquer pasta enxergam o quadro
+
+- **Problema:** um agente de outro projeto não achava o Kanban porque o comando só rodava na pasta do Habblaud.
+- **Decisão do dono:** qualquer sessão enxerga o quadro; o escopo de quadros por projeto fica para depois.
+- **O que foi feito / Arquivos novos:** comando `tower-kanban` e bloco de instruções no `CLAUDE.md` do usuário de cada conta.
+- **Testes:** uso real pelo comando.
+- **Limite conhecido:** conta nova do Claude Code precisa do mesmo bloco; sessões abertas só leem as instruções ao reiniciar.
+- **Para subir / Pendente:** em produção. Tema "quadros por projeto" adiado pelo dono.
+
+---
+
+## 29/10/2026 — Kanban: responsável visível e atualização automática
+
+- **Problema:** o quadro só atualizava depois de fechar e abrir; o cartão não mostrava o responsável.
+- **Decisão do dono:** botão Atualizar e atualização automática; responsável no cartão.
+- **O que foi feito / Arquivos novos:** avatar do responsável na cor da pessoa (cartão novo nasce com quem o criou); janela se atualiza sozinha.
+- **Testes:** testes do Kanban.
+- **Limite conhecido:** não recarrega enquanto o usuário digita ou arrasta.
+- **Para subir / Pendente:** em produção. Opcional: preencher o responsável dos cartões antigos.
+
+---
+
+## 29/10/2026 — Presença em tempo real
+
+- **Problema:** não dava para saber quem mais estava com o agente aberto nem quem digitava.
+- **Decisão do dono:** avatares e "está digitando…" nas barras do chat e do terminal e na linha do agente; na barra lateral, pílulas (opção A).
+- **O que foi feito / Arquivos novos:** presença em memória, aviso periódico do navegador e consulta curta.
+- **Testes:** testes de presença e do modelo do cliente.
+- **Limite conhecido:** é só aviso, não bloqueia ninguém.
+- **Para subir / Pendente:** em produção. Opcional: trava "um escreve por vez"; conferir no navegador.
+- **Lição:** **o aviso de "digitando" era descartado logo após outro aviso; passou a ser agendado.**
+
+---
+
+## 29/10/2026 — Marcação de quem escreveu cada mensagem
+
+- **Problema:** difícil diferenciar o que o usuário disse da resposta do agente.
+- **Decisão do dono:** degradê leve na cor do usuário (mockup aprovado).
+- **O que foi feito / Arquivos novos:** degradê, faixa e nome no chat; o agente não recebe o nome.
+- **Testes:** testes do registro e do casamento com o transcript.
+- **Limite conhecido:** não marca mensagem digitada fora da página.
+- **Para subir / Pendente:** em produção.
+
+---
+
+## 29/10/2026 — Arquivos nas Entregas e política de senha
+
+- **Problema:** sql, md, txt e HTML não abriam nas Entregas; a senha mínima era curta.
+- **Decisão do dono:** visualizar texto e HTML; PowerPoint, Word e Excel só baixam; senha mínima maior.
+- **O que foi feito / Arquivos novos:** sql, json, yaml e código comum abrem como texto; markdown aparece formatado.
+- **Testes:** testes de tipos e do visualizador.
+- **Limite conhecido:** sem visualizador para formatos do Office.
+- **Para subir / Pendente:** em produção.
+
+---
+
+## 29/10/2026 — Contas de usuário e Kanban em produção
+
+- **Problema:** liberar o acesso da equipe.
+- **Decisão do dono:** login com usuários por sócio.
+- **O que foi feito / Arquivos novos:** contas e Kanban liberados; ajuste no freio de tentativas do login, com teste.
+- **Testes:** testes de autenticação, incluindo o freio.
+- **Limite conhecido:** detalhes de configuração ficam fora do repositório.
+- **Para subir / Pendente:** em produção.
+
+---
+
+## 28/10/2026 e antes — Preparação do projeto
+
+- **Problema:** montar a base do Tower Tansyx a partir do Habblaud.
+- **Decisão do dono:** hospedagem própria; repositório na conta nova do GitHub; contas de usuário; Kanban; nome "Tower Tansyx".
+- **O que foi feito / Arquivos novos:** repositórios movidos para a conta nova (documentos e remotos atualizados; projetos não usados
+  removidos); novo agente com lista de projetos sem pastas inexistentes e pesquisa, e "+ Projeto novo"; cartão com a pergunta do agente e
+  a resposta no chat; nome na aba, logotipo e notificações; skills `superpowers` e `impeccable`; Kanban em SQLite (Geral e por projeto);
+  contas de usuário com revisão por tarefa e revisão final (método subagent-driven).
+- **Testes:** suíte do projeto; um teste herdou a variável do terminal interativo e se anexou por segundos a sessões reais (sem dano).
+- **Limite conhecido:** nenhum novo.
+- **Para subir / Pendente:** em produção.
+- **Lição:** **testes rodam sempre com `HABBLAUD_PTY` vazio.**
+
+---
+
+## Em aberto
+
+- Decidir o destino dos documentos em `docs/`, do `RESUMO-DO-TRABALHO.md` e do `PLANO-PTY-ACCESS.md` que têm detalhes de ambiente. [CONFIRMAR]
+- Presença: conferir no navegador e, se a equipe quiser, uma trava de "um escreve por vez".
+- Kanban: comando dos agentes anexar arquivos; preencher o responsável dos cartões antigos; separar quadros por projeto (a discutir).
+- Chat: lembrar a última escolha de filtro, se a equipe quiser.
+- Conferir no navegador as telas novas (login, usuários, marcação, presença, anexos, revisão, janela de documentos).
