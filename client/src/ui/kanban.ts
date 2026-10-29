@@ -28,6 +28,10 @@ export class KanbanPanel implements UiComponent {
   private addingCard: Column | null = null;
   private addingProject = false;
   private dragId: number | null = null;
+  /** Texto que o usuário tinha digitado quando o servidor recusou: o campo reaparece com ele. */
+  private draft = '';
+  private renaming = false;
+  private confirmingDelete = false;
   private readonly cardDialog: CardDialog;
   private opener: HTMLElement | null = null;
 
@@ -39,6 +43,8 @@ export class KanbanPanel implements UiComponent {
   private readonly statusText: HTMLElement;
   private readonly retry: HTMLButtonElement;
   private readonly emptyEl: HTMLElement;
+  private readonly actionsEl: HTMLElement;
+  private readonly confirmEl: HTMLElement;
   private readonly cols: HTMLElement;
   private readonly searchTask: HTMLInputElement;
   private readonly searchProj: HTMLInputElement;
@@ -80,6 +86,13 @@ export class KanbanPanel implements UiComponent {
     this.retry = h('button', { class: 'ui-link-btn', type: 'button', text: tr('Tentar de novo'), hidden: true, on: { click: () => void this.load() } });
     this.statusEl = h('p', { class: 'ui-kb__status', attrs: { role: 'status', 'aria-live': 'polite' } }, this.statusText, this.retry);
     this.emptyEl = h('p', { class: 'ui-kb__empty', hidden: true });
+    this.confirmEl = h('div', { class: 'ui-kb__confirm', role: 'alert', hidden: true });
+    this.actionsEl = h(
+      'span',
+      { class: 'ui-kb__actions', hidden: true },
+      h('button', { class: 'ui-kb__link', type: 'button', text: tr('Renomear'), on: { click: () => ((this.renaming = true), this.renderBoard()) } }),
+      h('button', { class: 'ui-kb__link ui-kb__link--danger', type: 'button', text: tr('Excluir projeto'), on: { click: () => ((this.confirmingDelete = true), this.renderBoard()) } }),
+    );
     this.cols = h('div', { class: 'ui-kb__cols' });
 
     this.el = h(
@@ -96,10 +109,11 @@ export class KanbanPanel implements UiComponent {
             { class: 'ui-kb__bar' },
             h('h2', { class: 'ui-kb__title', text: tr('Kanban'), attrs: { id: 'ui-kb-title' } }),
             this.titleEl,
+            this.actionsEl,
             h('label', { class: 'ui-kb__search' }, h('span', { text: '⌕', attrs: { 'aria-hidden': 'true' } }), this.searchTask),
             close,
           ),
-          h('div', { class: 'ui-kb__layout' }, this.shelfEl, h('div', { class: 'ui-kb__main' }, this.statusEl, this.emptyEl, this.cols)),
+          h('div', { class: 'ui-kb__layout' }, this.shelfEl, h('div', { class: 'ui-kb__main' }, this.statusEl, this.confirmEl, this.emptyEl, this.cols)),
         ),
       ),
       this.cardDialog.el,
@@ -196,6 +210,8 @@ export class KanbanPanel implements UiComponent {
     this.qTask = '';
     this.searchTask.value = '';
     this.addingCard = null;
+    this.renaming = false;
+    this.confirmingDelete = false;
     this.cards = [];
     this.renderAll();
     void this.refresh();
@@ -224,7 +240,10 @@ export class KanbanPanel implements UiComponent {
       this.addingCard = null;
       await this.refresh();
     } catch (err) {
+      // O campo some quando confirma; volta, com o que foi digitado, para a pessoa corrigir (e o erro aparece acima).
+      this.draft = title;
       this.say((err as Error).message);
+      this.renderBoard();
     }
   }
 
@@ -235,7 +254,40 @@ export class KanbanPanel implements UiComponent {
       this.boards = [...this.boards, board];
       this.selectBoard(board.id);
     } catch (err) {
+      this.draft = name;
       this.say((err as Error).message);
+      this.renderShelf();
+    }
+  }
+
+  private async renameBoard(name: string): Promise<void> {
+    if (this.boardId === null) return;
+    try {
+      await kanbanApi.renameBoard(this.boardId, name);
+      this.renaming = false;
+      await this.refresh();
+    } catch (err) {
+      this.draft = name;
+      this.say((err as Error).message);
+      this.renderBoard();
+    }
+  }
+
+  /** Apaga o projeto aberto (com os cartões, se houver: a confirmação já avisou) e volta para o Geral. */
+  private async deleteProject(): Promise<void> {
+    const board = this.board;
+    if (!board || board.kind !== 'project') return;
+    try {
+      await kanbanApi.deleteBoard(board.id, this.cards.length > 0);
+      this.confirmingDelete = false;
+      this.boardId = null;
+      this.shelf = { ...this.shelf, boardId: null };
+      saveShelf(this.shelf);
+      await this.load();
+    } catch (err) {
+      this.confirmingDelete = false;
+      this.say((err as Error).message);
+      this.renderBoard();
     }
   }
 
@@ -293,7 +345,18 @@ export class KanbanPanel implements UiComponent {
   }
 
   private renderBoard(): void {
-    setText(this.titleEl, this.board?.name ?? '');
+    const board = this.board;
+    const project = board?.kind === 'project';
+    if (!project) {
+      this.renaming = false;
+      this.confirmingDelete = false;
+    }
+    if (this.renaming && board) {
+      this.titleEl.replaceChildren(this.inlineInput(tr('Novo nome do projeto'), MAX_BOARD_NAME, (name) => void this.renameBoard(name), () => ((this.renaming = false), this.renderBoard()), board.name));
+      this.titleEl.querySelector<HTMLInputElement>('input')?.focus();
+    } else setText(this.titleEl, board?.name ?? '');
+    setHidden(this.actionsEl, !project || this.renaming);
+    this.renderConfirm(board);
     const visible = filterCards(this.cards, this.qTask);
     const groups = groupByColumn(visible);
     const searching = this.qTask.trim() !== '';
@@ -302,6 +365,21 @@ export class KanbanPanel implements UiComponent {
     setHidden(this.emptyEl, !(searching && visible.length === 0) && !none);
     this.cols.replaceChildren(...COLUMNS.map((c) => this.column(c, groups[c])));
     if (this.addingCard) this.cols.querySelector<HTMLInputElement>('input')?.focus();
+  }
+
+  /** Excluir projeto pede confirmação aqui mesmo (sem o confirm() do navegador) e diz quantos cartões vão junto. */
+  private renderConfirm(board: KanbanBoard | undefined): void {
+    const show = this.confirmingDelete && board?.kind === 'project';
+    setHidden(this.confirmEl, !show);
+    if (!show || !board) return this.confirmEl.replaceChildren();
+    const n = this.cards.length;
+    this.confirmEl.replaceChildren(
+      h('span', {
+        text: n === 0 ? tr('Excluir o projeto "{0}"?', [board.name]) : n === 1 ? tr('Excluir o projeto "{0}"? O cartão dele também será apagado.', [board.name]) : tr('Excluir o projeto "{0}"? Os {1} cartões dele também serão apagados.', [board.name, n]),
+      }),
+      h('button', { class: 'ui-kb__btn ui-kb__btn--danger', type: 'button', text: tr('Excluir'), on: { click: () => void this.deleteProject() } }),
+      h('button', { class: 'ui-kb__btn', type: 'button', text: tr('Cancelar'), on: { click: () => ((this.confirmingDelete = false), this.renderBoard()) } }),
+    );
   }
 
   private column(column: Column, cards: KanbanCard[]): HTMLElement {
@@ -425,8 +503,10 @@ export class KanbanPanel implements UiComponent {
   }
 
   /** Campo de uma linha: Enter confirma, Esc ou sair do campo vazio cancela. */
-  private inlineInput(label: string, max: number, onSubmit: (text: string) => void, onCancel: () => void): HTMLElement {
+  private inlineInput(label: string, max: number, onSubmit: (text: string) => void, onCancel: () => void, initial = ''): HTMLElement {
     const input = h('input', { class: 'ui-kb__inline', type: 'text', attrs: { placeholder: label, 'aria-label': label, maxlength: max, autocomplete: 'off' } });
+    input.value = initial || this.draft;
+    this.draft = '';
     let done = false;
     const finish = (fn: () => void) => {
       if (done) return;

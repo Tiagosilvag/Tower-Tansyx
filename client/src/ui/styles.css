@@ -12460,3 +12460,58 @@ html.is-replay #world {
   .ui-kbc__fields { grid-template-columns: 1fr; gap: 2px; }
   .ui-kbc__fields dd { margin-bottom: 8px; }
 }
+
+/* Kanban: renomear e excluir projeto (ui/kanban.ts) */
+.ui-kb__actions {
+  display: inline-flex;
+  gap: 10px;
+}
+
+.ui-kb__link {
+  all: unset;
+  color: var(--kb-soft);
+  font: 13px var(--font-px);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ui-kb__link--danger {
+  color: var(--kb-hi);
+}
+
+.ui-kb__link:focus-visible,
+.ui-kb__btn:focus-visible {
+  outline: 3px solid var(--kb-blue);
+  outline-offset: 3px;
+}
+
+.ui-kb__board-name .ui-kb__inline {
+  width: min(280px, 60vw);
+}
+
+.ui-kb__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 2px;
+  padding: 8px 12px;
+  background: #fff8e6;
+  box-shadow: 0 -2px 0 0 var(--kb-hi), 0 2px 0 0 var(--kb-hi), -2px 0 0 0 var(--kb-hi), 2px 0 0 0 var(--kb-hi);
+}
+
+.ui-kb__btn {
+  all: unset;
+  box-sizing: border-box;
+  margin: 2px;
+  padding: 4px 12px;
+  background: var(--kb-green);
+  color: #fff;
+  font: 600 14px var(--font-px);
+  cursor: pointer;
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink), 3px 3px 0 0 rgba(43, 34, 32, 0.45);
+}
+
+.ui-kb__btn--danger {
+  background: var(--kb-hi);
+}

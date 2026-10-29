@@ -153,4 +153,12 @@ describe('Kanban na subida real', () => {
     expect(s.log()).toMatch(/Kanban: desligado/);
     expect((await fetch(`http://127.0.0.1:${s.port}/api/kanban/boards`)).status).toBe(404);
   }, 30_000);
+
+  it('com a porta local exposta na rede (HABBLAUD_HOST=0.0.0.0) o Kanban vira só leitura, com "as" ou sem', async () => {
+    const s = await boot(() => ({}), /em http:\/\/localhost:\d+/, { HABBLAUD_REMOTE_USERS: '', HABBLAUD_HOST: '0.0.0.0' });
+    const base = `http://127.0.0.1:${s.port}`;
+    expect((await fetch(`${base}/api/kanban/boards`)).status).toBe(200);
+    const r = await fetch(`${base}/api/kanban/boards/1/cards`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Habblaud-Via': 'agent' }, body: JSON.stringify({ title: 'de fora', as: 'tiago' }) });
+    expect(r.status).toBe(403);
+  }, 30_000);
 });

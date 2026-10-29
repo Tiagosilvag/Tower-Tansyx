@@ -410,7 +410,7 @@ if (config.remote?.users && db) {
     log.warn(tr('   Acesso remoto: desligado, não deu para abrir o banco de usuários {0} ({1}).', [config.dbFile, errMsg(err)]));
   }
 }
-const kanban = db ? createKanbanRoutes({ store: new KanbanStore(db), users: new UserStore(db), readJson: (req) => readJson(req) }) : undefined;
+const kanban = db ? createKanbanRoutes({ store: new KanbanStore(db), users: new UserStore(db), readJson: (req) => readJson(req), writable: () => config.terminal }) : undefined;
 
 const api = createApiHandler({
   renameRoom: (id, name) => {

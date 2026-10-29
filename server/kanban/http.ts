@@ -19,6 +19,12 @@ export interface KanbanRoutesDeps {
   readJson: (req: IncomingMessage) => Promise<unknown>;
   /** A requisição veio pela porta remota? (injetável nos testes; padrão: o marcador do portão). */
   isRemote?: (req: IncomingMessage) => boolean;
+  /**
+   * A porta local aceita escritas? Falso quando ela está exposta na rede (HABBLAUD_HOST ou o bind do Docker fora do loopback): aí
+   * qualquer aparelho da rede chegaria sem login, e `as` o deixaria assinar como um usuário real. Padrão: aceita. Não vale
+   * para a sessão remota logada (quem a protege é o portão).
+   */
+  writable?: (req: IncomingMessage) => boolean;
 }
 
 const ID_RE = /^[1-9]\d{0,15}$/;
@@ -64,6 +70,7 @@ const num = (b: Record<string, unknown>, key: string): number | undefined => who
 export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessage, res: ServerResponse, url: URL) => boolean {
   const { store, users, readJson } = deps;
   const isRemote = deps.isRemote ?? isRemoteRequest;
+  const writable = deps.writable ?? (() => true);
 
   /** Quem está agindo (ver o cabeçalho do arquivo). `body` é o corpo já lido, ou {} em GET e DELETE. */
   const actorOf = (req: IncomingMessage, body: Record<string, unknown>): Actor => {
@@ -83,6 +90,11 @@ export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessag
     const method = req.method ?? 'GET';
     const seg = path.slice('/api/kanban/'.length).split('/').filter((s, i, a) => s !== '' || i < a.length - 1);
     const id = seg[1] !== undefined && ID_RE.test(seg[1]) ? Number(seg[1]) : undefined;
+    if (method !== 'GET' && method !== 'HEAD' && !isRemote(req) && !writable(req)) {
+      req.resume();
+      send(res, 403, { error: tr('o Kanban só aceita alterações pelo próprio computador: a porta do Habblaud está exposta na rede') });
+      return true;
+    }
 
     /** Responde 405 quando o método não está na lista; devolve true quando respondeu. */
     const only = (...allowed: string[]): boolean => {

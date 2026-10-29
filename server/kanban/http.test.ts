@@ -17,13 +17,13 @@ afterEach(() => {
  * Servidor mínimo. Cabeçalhos do teste: `x-remote: 1` finge a porta remota e `x-user: <nome>` finge o usuário da sessão
  * (o portão real anota isso na requisição; aqui o teste faz o mesmo com setUser).
  */
-async function montar() {
+async function montar(opts: { writable?: (req: IncomingMessage) => boolean } = {}) {
   const db = openDb(':memory:');
   const users = new UserStore(db);
   const tiago = users.create({ username: 'tiago', passwordHash: 'h1' });
   const ana = users.create({ username: 'ansysar', passwordHash: 'h2' });
   const store = new KanbanStore(db);
-  const routes = createKanbanRoutes({ store, users, readJson: (req: IncomingMessage) => readJson(req), isRemote: (req) => req.headers['x-remote'] === '1' });
+  const routes = createKanbanRoutes({ store, users, readJson: (req: IncomingMessage) => readJson(req), isRemote: (req) => req.headers['x-remote'] === '1', writable: opts.writable });
   const server: Server = http.createServer((req, res) => {
     const nome = req.headers['x-user'];
     const u = typeof nome === 'string' ? users.list().find((x) => x.username === nome) : undefined;
@@ -144,5 +144,27 @@ describe('autoria', () => {
     await call('POST', `/api/kanban/cards/${id}/comments`, { body: { text: 'ok', as: 'ansysar' }, headers: AGENTE });
     const events = (await call('GET', `/api/kanban/cards/${id}`)).json.events as Array<{ kind: string; actorName: string | null; via: string }>;
     expect(events.map((e) => [e.kind, e.actorName, e.via])).toEqual([['comment', 'ansysar', 'agent'], ['priority', 'tiago', 'agent'], ['created', null, 'user']]);
+  });
+});
+
+describe('porta local exposta na rede', () => {
+  const exposta = () => montar({ writable: () => false });
+
+  it('só leitura: qualquer escrita local é 403, mesmo com o cabeçalho de agente e "as" de um usuário real', async () => {
+    const { call, geral } = await exposta();
+    expect((await call('GET', '/api/kanban/boards')).status).toBe(200);
+    const post = await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'x', as: 'tiago' }, headers: AGENTE });
+    expect(post.status).toBe(403);
+    expect((await call('POST', '/api/kanban/boards', { body: { name: 'P' } })).status).toBe(403);
+    expect((await call('PATCH', '/api/kanban/cards/1', { body: { title: 'y' } })).status).toBe(403);
+    expect((await call('DELETE', '/api/kanban/cards/1', { body: {} })).status).toBe(403);
+    expect((await call('GET', `/api/kanban/boards/${geral}/cards`)).json.cards).toEqual([]);
+  });
+
+  it('a sessão remota logada segue escrevendo (quem a trava é o portão, não esta regra)', async () => {
+    const { call, geral, ana } = await exposta();
+    const r = await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'x' }, headers: { 'x-remote': '1', 'x-user': 'ansysar' } });
+    expect(r.status).toBe(201);
+    expect(r.json.card.createdBy).toBe(ana.id);
   });
 });
