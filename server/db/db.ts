@@ -1,6 +1,6 @@
 // Camada fina sobre o SQLite embutido no Node (node:sqlite). Todo acesso ao banco do projeto passa por aqui,
 // para poder trocar de implementação sem mexer no resto.
-import { mkdirSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -28,9 +28,22 @@ export const MIGRATIONS: readonly string[] = [
   )`,
 ];
 
+/**
+ * O banco guarda hashes de senha: só o dono lê. O arquivo nasce 0600 antes da primeira escrita (o SQLite cria o -wal e
+ * o -shm com o modo dele) e um banco antigo 0644 é corrigido. A pasta só ganha 0700 quando é criada aqui: uma já
+ * existente (~/.habblaud) guarda outras coisas e fica como está.
+ */
+function protect(file: string): void {
+  mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
+  writeFileSync(file, '', { flag: 'a', mode: 0o600 });
+  chmodSync(file, 0o600);
+}
+
 export function openDb(file: string): Db {
-  if (file !== ':memory:') mkdirSync(dirname(file), { recursive: true });
+  if (file !== ':memory:') protect(file);
   const raw = new DatabaseSync(file);
+  // sobras de uma abertura anterior, de antes desta proteção
+  if (file !== ':memory:') for (const f of [`${file}-wal`, `${file}-shm`]) if (existsSync(f)) chmodSync(f, 0o600);
   raw.exec('PRAGMA journal_mode = WAL');
   raw.exec('PRAGMA busy_timeout = 5000');
   raw.exec('PRAGMA foreign_keys = ON');

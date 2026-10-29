@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -54,6 +54,36 @@ describe('openDb', () => {
       }),
     ).toThrow('falhou');
     expect(db.get('SELECT id FROM users')).toBeUndefined();
+  });
+
+  it('banco em arquivo (com -wal e -shm) fica 0600 mesmo com umask 022; pasta nova nasce 0700', () => {
+    const pasta = mkdtempSync(join(tmpdir(), 'tower-db-'));
+    pastas.push(pasta);
+    const file = join(pasta, 'sub', 'tower.db');
+    const antes = process.umask(0o022);
+    try {
+      const db = abrir(file);
+      db.run('INSERT INTO users (username, display_name, color, password_hash, created_at) VALUES (?, ?, ?, ?, ?)', 'ana', 'Ana', '#fff', 'h', 1);
+      expect(statSync(file).mode & 0o777).toBe(0o600);
+      expect(statSync(join(pasta, 'sub')).mode & 0o777).toBe(0o700);
+      const extras = [`${file}-wal`, `${file}-shm`].filter((f) => existsSync(f));
+      expect(extras.length).toBeGreaterThan(0);
+      for (const f of extras) expect(statSync(f).mode & 0o777).toBe(0o600);
+    } finally {
+      process.umask(antes);
+    }
+  });
+
+  it('reabrir um banco 0644 o corrige para 0600; pasta já existente não muda', () => {
+    const pasta = mkdtempSync(join(tmpdir(), 'tower-db-'));
+    pastas.push(pasta);
+    chmodSync(pasta, 0o755);
+    const file = join(pasta, 'tower.db');
+    abrir(file).close();
+    chmodSync(file, 0o644);
+    abrir(file);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    expect(statSync(pasta).mode & 0o777).toBe(0o755);
   });
 
   it('get de linha inexistente devolve undefined', () => {
