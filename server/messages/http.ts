@@ -30,10 +30,19 @@ function fail(res: ServerResponse, err: unknown): void {
   else sendJson(res, 500, { error: tr('erro interno') });
 }
 
-export function createMessageRoutes(registry: MessageRegistry): (req: IncomingMessage, res: ServerResponse, path: string) => void {
+/** `sent`: chamado depois que uma mensagem da página é aceita (quem a mandou fica por conta de quem chama; nunca vai ao agente). */
+export function createMessageRoutes(
+  registry: MessageRegistry,
+  opts: { sent?: (req: IncomingMessage, text: string) => void } = {},
+): (req: IncomingMessage, res: ServerResponse, path: string) => void {
   const send = async (req: IncomingMessage, res: ServerResponse) => {
-    const r = registry.send(await readJson(req));
-    if ('message' in r) return sendJson(res, 201, r.message);
+    const body = await readJson(req);
+    const r = registry.send(body);
+    if ('message' in r) {
+      const text = (body as { text?: unknown } | null)?.text;
+      if (typeof text === 'string') opts.sent?.(req, text);
+      return sendJson(res, 201, r.message);
+    }
     switch (r.error) {
       case 'not-found':
         return sendJson(res, 404, { error: tr('agente desconhecido: ele já saiu do escritório?') });

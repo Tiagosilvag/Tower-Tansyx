@@ -4801,6 +4801,18 @@
   color: #f0f3fa;
 }
 
+/* Prompt de um usuário do Tower: degradê leve da cor dele, faixa fina na borda e o nome acima do texto. */
+.ui-term__row--user.has-by {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--by) 20%, transparent) 0%, color-mix(in srgb, var(--by) 3%, transparent) 100%);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--by) 70%, transparent);
+}
+
+.ui-term__by {
+  color: color-mix(in srgb, var(--by) 80%, #f0f3fa);
+  font-size: 0.85em;
+  font-weight: 700;
+}
+
 .ui-term__row--assistant .ui-term__dot {
   color: #f0f3fa;
 }

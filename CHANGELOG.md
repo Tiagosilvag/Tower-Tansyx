@@ -29,6 +29,11 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **O chat mostra quem escreveu cada mensagem.** No modo de usuários, o prompt enviado pela página ganha um degradê
+  leve na cor de quem escreveu, uma faixa fina na borda e o nome acima do texto, o que separa melhor a mensagem da
+  resposta do agente. O servidor guarda só (hora, texto, usuário) por 30 dias e casa isso com o transcript ao montar a
+  conversa: o agente nunca recebe o nome. Mensagens digitadas direto no terminal do computador, ou fora da janela de
+  15 minutos, ficam sem marca.
 - **Kanban do time.** Um quadro **Geral** e um quadro por projeto (colunas Ideias, A fazer, Fazendo e Feito), num botão da
   barra superior (tecla K), no cenário da sala em pixel art: o quadro branco da parede, post-its com fita e uma estante
   retrátil com os projetos. Janela como a do chat: flutua sobre o escritório, arrasta, redimensiona e expande. Tem busca de projetos e de tarefas, e ao criar um projeto o nome é sugerido pelos projetos do Habblaud que combinam com o que se digita, arrastar entre colunas (ou Alt+setas), cartão com

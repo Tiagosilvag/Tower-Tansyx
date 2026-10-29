@@ -665,7 +665,14 @@ function attachResult(refs: ToolRefs, r: ResultEntry, copy: Copier): void {
 function entryRow(e: PlainEntry, now: number, copy: Copier): HTMLElement {
   switch (e.kind) {
     case 'user': {
-      const el = row('user', e.at, now, mark('>'), h('div', { class: 'ui-term__col' }, collapsible(e.text, PROMPT_PREVIEW_LINES, 'ui-term__user-text')));
+      const col = h('div', { class: 'ui-term__col' }, collapsible(e.text, PROMPT_PREVIEW_LINES, 'ui-term__user-text'));
+      const el = row('user', e.at, now, mark('>'), col);
+      // Modo de usuários: degradê leve na cor de quem escreveu e o nome acima do texto.
+      if (e.by && /^#[0-9a-f]{6}$/i.test(e.by.color)) {
+        el.classList.add('has-by');
+        el.style.setProperty('--by', e.by.color);
+        col.prepend(h('div', { class: 'ui-term__by', text: e.by.name, attrs: { 'data-chrome': '' } }));
+      }
       el.append(copy(copyTextOf(e), 'prompt'));
       return el;
     }

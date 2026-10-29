@@ -498,9 +498,15 @@ export interface TerminalImage {
   name: string;
 }
 
+/** Quem escreveu o prompt (modo de usuários): só nome e cor, para a marcação na tela. */
+export interface TerminalSender {
+  name: string;
+  color: string;
+}
+
 export type TerminalEntry =
-  /** Prompt do usuário ou comando de barra (ex.: "/model"). */
-  | { kind: 'user'; id: string; at: number; text: string }
+  /** Prompt do usuário ou comando de barra (ex.: "/model"). `by` = quem mandou pela página (modo de usuários). */
+  | { kind: 'user'; id: string; at: number; text: string; by?: TerminalSender }
   /** Texto da resposta do agente (markdown). */
   | { kind: 'assistant'; id: string; at: number; text: string; images?: TerminalImage[] }
   /** Bloco de raciocínio; `text` ausente quando o transcript só guarda a assinatura. */

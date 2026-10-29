@@ -54,6 +54,8 @@ export interface TerminalOptions {
   createParser?: () => TerminalParser;
   /** Conversa fictícia dos agentes do demo (testes); padrão: demoTerminalEntries. */
   demoEntries?: (agent: AgentInfo, history: Activity[]) => TerminalEntry[];
+  /** Marca de quem escreveu cada prompt (users/senders.ts); só o modo de usuários liga. */
+  annotate?: (e: TerminalEntry) => TerminalEntry;
   maxStreams?: number;
   initTailBytes?: number;
   initEntries?: number;
@@ -269,7 +271,7 @@ export class TerminalStreams {
     res.write('retry: 2000\n\n');
     const s: Stream = { res, timer: null };
     this.streams.add(s);
-    this.write(s, frame('init', init));
+    this.write(s, frame('init', this.marked(init)));
     s.timer = setInterval(() => this.pump(s, source, id), source.intervalMs);
     s.timer.unref?.();
     const drop = () => this.drop(s);
@@ -311,13 +313,22 @@ export class TerminalStreams {
       log.warnOnce(`terminal:${agentId}:${errMsg(err)}`, tr('Terminal de {0}: {1}', [agentId, errMsg(err)]));
       return;
     }
-    if (r.init) this.write(s, frame('init', r.init));
-    if (r.append?.length) this.write(s, frame('append', r.append));
+    if (r.init) this.write(s, frame('init', this.marked(r.init)));
+    if (r.append?.length) this.write(s, frame('append', r.append.map((e) => this.mark(e))));
     // O agente sumiu (demo desligado ou sessão simulada encerrada): o stream fica aberto só com pings.
     if (r.stop && s.timer) {
       clearInterval(s.timer);
       s.timer = null;
     }
+  }
+
+  /** Põe a marca de quem escreveu nos prompts (modo de usuários); sem `annotate`, a entrada segue como veio. */
+  private mark(e: TerminalEntry): TerminalEntry {
+    return this.opts.annotate ? this.opts.annotate(e) : e;
+  }
+
+  private marked(init: TerminalInit): TerminalInit {
+    return this.opts.annotate ? { ...init, entries: init.entries.map((e) => this.mark(e)) } : init;
   }
 
   private write(s: Stream, chunk: string): void {

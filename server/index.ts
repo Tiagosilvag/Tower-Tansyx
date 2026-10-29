@@ -18,6 +18,9 @@ import { KanbanStore } from './kanban/store';
 import { UserAuth, UserSessions, UserThrottle } from './users/auth';
 import { createUsersRoutes } from './users/http';
 import { UserStore } from './users/store';
+import { SenderLog } from './users/senders';
+import { TypedLines } from './users/typing';
+import { userOf } from './users/identity';
 import { Hub } from './http/sse';
 import { createStaticHandler } from './http/static';
 import { TerminalStreams } from './http/terminal';
@@ -209,10 +212,13 @@ if (worldUplink && worldSocial) {
   worldSocial.attach(worldUplink);
   worldUplink.attachOwner(worldSocial);
 }
+// Quem mandou cada mensagem (só no modo de usuários, ligado mais abaixo, junto com o banco).
+let senders: SenderLog | undefined;
+const typed = new TypedLines();
 // Terminal: só existe com bind local (ver terminalOffReason em config.ts).
 // Cada agente com o parser da ferramenta dele (o do Claude Code por padrão).
 const terminals = config.terminal
-  ? new TerminalStreams({ office, transcriptPathOf: (id) => agents.transcriptPathOf(id), parserFor: (id) => agents.parserFor(id) })
+  ? new TerminalStreams({ office, transcriptPathOf: (id) => agents.transcriptPathOf(id), parserFor: (id) => agents.parserFor(id), annotate: (e) => senders?.annotate(e) ?? e })
   : undefined;
 // Histórico do terminal (sessões recentes, abertas ou encerradas, de todas as ferramentas): mesma trava.
 const history = config.terminal
@@ -403,6 +409,7 @@ let userAccounts: { store: UserStore; auth: UserAuth; routes: ReturnType<typeof 
 if (config.remote?.users && db) {
   try {
     const store = new UserStore(db);
+    senders = new SenderLog(db);
     // Revogados num arquivo próprio: os tokens v2 não se misturam com os do usuário único.
     const sessions = new UserSessions(loadSecret(join(config.dataDir, 'remote-secret')), (id) => store.recordById(id), Date.now, join(config.dataDir, 'remote-users-revoked.json'));
     const auth = new UserAuth(store, sessions, new UserThrottle());
@@ -412,6 +419,21 @@ if (config.remote?.users && db) {
     log.warn(tr('   Acesso remoto: desligado, não deu para abrir o banco de usuários {0} ({1}).', [config.dbFile, errMsg(err)]));
   }
 }
+// Marca de quem escreveu: só requisições logadas pela porta remota têm usuário; o resto (porta local) não marca nada.
+const noteSender = (req: http.IncomingMessage, text: string): void => {
+  const user = userOf(req);
+  if (!user || !senders) return;
+  try {
+    senders.record(user.id, text);
+  } catch (err) {
+    log.warnOnce(`senders:${errMsg(err)}`, tr('Não deu para guardar quem mandou a mensagem ({0}).', [errMsg(err)]));
+  }
+};
+const noteTyped = (req: http.IncomingMessage, ptyId: string, data: string): void => {
+  const user = userOf(req);
+  if (!user || !senders) return;
+  for (const line of typed.feed(`${user.id}:${ptyId}`, data)) noteSender(req, line);
+};
 const kanban = db ? createKanbanRoutes({ store: new KanbanStore(db), users: new UserStore(db), readJson: (req) => readJson(req), writable: () => config.terminal }) : undefined;
 
 const api = createApiHandler({
@@ -433,8 +455,8 @@ const api = createApiHandler({
   sessions: history,
   timeline: createTimelineHandler({ dir: timelineDir, recording: !!timeline }),
   permissions: permissions ? createPermissionRoutes(permissions) : undefined,
-  messages: messages ? createMessageRoutes(messages) : undefined,
-  pty: ptys ? createPtyRoutes(ptys, { remoteFull: !!config.remote?.full }) : undefined,
+  messages: messages ? createMessageRoutes(messages, { sent: (req, text) => noteSender(req, text) }) : undefined,
+  pty: ptys ? createPtyRoutes(ptys, { remoteFull: !!config.remote?.full, typed: (req, id, data) => noteTyped(req, id, data) }) : undefined,
   usageRefresh: usageRefresher,
   spawn,
   attachments,

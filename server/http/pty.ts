@@ -58,7 +58,7 @@ export function ptyRequestProblem(req: IncomingMessage, remoteFull = false): str
  */
 export function createPtyRoutes(
   ptys: PtyManager,
-  opts: { remoteFull?: boolean } = {},
+  opts: { remoteFull?: boolean; typed?: (req: IncomingMessage, id: string, data: string) => void } = {},
 ): (req: IncomingMessage, res: ServerResponse, path: string) => void {
   const fail = (res: ServerResponse, err: unknown) => {
     if (res.headersSent) return void res.destroy();
@@ -122,7 +122,10 @@ export function createPtyRoutes(
       return sendJson(res, 201, { path, name: a.name, size: a.data.length });
     }
     const body = (await readJson(req)) as Record<string, unknown>;
-    if (act === 'input') ptys.input(id, body?.data);
+    if (act === 'input') {
+      ptys.input(id, body?.data);
+      if (typeof body?.data === 'string') opts.typed?.(req, id, body.data);
+    }
     else if (act === 'resize') ptys.resize(id, body?.cols, body?.rows);
     else if (act === 'close') ptys.close(id);
     else throw new HttpError(404, tr('rota desconhecida'));

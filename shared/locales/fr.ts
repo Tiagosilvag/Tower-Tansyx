@@ -1555,6 +1555,7 @@ export const FR: Readonly<Record<string, string>> = {
   "o modo demonstração está desligado": "le mode démonstration est désactivé",
   "sem estatísticas para este dia": "pas de statistiques pour ce jour",
 
+  "Não deu para guardar quem mandou a mensagem ({0}).": "Impossible d’enregistrer qui a envoyé le message ({0}).",
   // server/http/terminal.ts
   "Terminal: linha do transcript ignorada ({0}).": "Terminal : ligne du transcript ignorée ({0}).",
   "terminais abertos demais (máximo de {0}); feche algum e tente de novo": "trop de terminaux ouverts (maximum {0}) ; fermez-en un et réessayez",

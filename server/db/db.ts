@@ -64,6 +64,15 @@ export const MIGRATIONS: readonly string[] = [
     detail TEXT NOT NULL
   );
   CREATE INDEX card_events_by_card ON card_events (card_id, at)`,
+  // Quem mandou cada mensagem pelo chat (só texto normalizado e hora): o servidor casa isso com o transcript para marcar a
+  // mensagem na tela. O Claude nunca recebe essa informação. Remover o usuário apaga as marcas dele.
+  `CREATE TABLE message_senders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at INTEGER NOT NULL,
+    text_key TEXT NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX message_senders_by_at ON message_senders (at)`,
 ];
 
 /**

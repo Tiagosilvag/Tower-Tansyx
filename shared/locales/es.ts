@@ -1684,6 +1684,7 @@ export const ES: Readonly<Record<string, string>> = {
 
   // server/http/terminal.ts
   "Terminal: linha do transcript ignorada ({0}).": "Terminal: línea del transcript ignorada ({0}).",
+  "Não deu para guardar quem mandou a mensagem ({0}).": "No se pudo guardar quién envió el mensaje ({0}).",
   "terminais abertos demais (máximo de {0}); feche algum e tente de novo": "demasiadas terminales abiertas (máximo {0}); cierra alguna e inténtalo de nuevo",
   "Terminal de {0}: não foi possível ler o transcript ({1}).": "Terminal de {0}: no se pudo leer el transcript ({1}).",
   "não foi possível ler o transcript": "no se pudo leer el transcript",
