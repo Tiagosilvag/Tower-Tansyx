@@ -127,20 +127,70 @@ export function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(h(a), h(b));
 }
 
+/**
+ * Tokens encerrados por "Sair" antes de vencer, por assinatura -> validade (o cookie apagado não basta: uma cópia valeria
+ * até expirar). Com `file`, a lista sobrevive a reinícios; sem, fica só em memória.
+ */
+export class RevokedTokens {
+  private readonly revoked = new Map<string, number>();
+
+  constructor(
+    private readonly now: () => number,
+    private readonly file?: string,
+  ) {
+    this.load();
+  }
+
+  has(sig: string): boolean {
+    return this.revoked.has(sig);
+  }
+
+  add(sig: string, exp: number): void {
+    const now = this.now();
+    for (const [s, e] of this.revoked) if (e <= now) this.revoked.delete(s);
+    this.revoked.set(sig, exp);
+    this.save();
+  }
+
+  private load(): void {
+    if (!this.file) return;
+    try {
+      const data: unknown = JSON.parse(readFileSync(this.file, 'utf8'));
+      const now = this.now();
+      for (const [sig, exp] of Object.entries(data as Record<string, unknown>)) {
+        if (/^[A-Za-z0-9_-]{43}$/.test(sig) && typeof exp === 'number' && exp > now) this.revoked.set(sig, exp);
+      }
+    } catch {
+      // sem arquivo (ou ilegível): ninguém encerrado ainda
+    }
+  }
+
+  private save(): void {
+    if (!this.file) return;
+    try {
+      mkdirSync(dirname(this.file), { recursive: true });
+      const tmp = `${this.file}.tmp`;
+      writeFileSync(tmp, JSON.stringify(Object.fromEntries(this.revoked)), { mode: 0o600 });
+      renameSync(tmp, this.file);
+    } catch {
+      // segue valendo em memória até o próximo reinício
+    }
+  }
+}
+
 export class RemoteSessions {
   private readonly key: Buffer;
-  /** Assinatura -> validade dos tokens encerrados por "Sair" antes de vencer (o cookie apagado não basta: uma cópia valeria até expirar). */
-  private readonly revoked = new Map<string, number>();
+  private readonly revoked: RevokedTokens;
 
   constructor(
     secret: Buffer,
     cfg: Pick<RemoteConfig, 'user' | 'passwordHashText'>,
     private readonly now: () => number = Date.now,
     /** Onde a lista de tokens encerrados sobrevive a reinícios (ausente = só em memória). */
-    private readonly revokedFile?: string,
+    revokedFile?: string,
   ) {
     this.key = createHmac('sha256', secret).update(`${cfg.user}\0${cfg.passwordHashText}`, 'utf8').digest();
-    this.loadRevoked();
+    this.revoked = new RevokedTokens(now, revokedFile);
   }
 
   private sign(payload: string): string {
@@ -162,10 +212,7 @@ export class RemoteSessions {
   revoke(token: string | undefined): void {
     const parsed = this.parse(token);
     if (!parsed) return;
-    const now = this.now();
-    for (const [sig, exp] of this.revoked) if (exp <= now) this.revoked.delete(sig);
-    this.revoked.set(parsed.sig, parsed.exp);
-    this.saveRevoked();
+    this.revoked.add(parsed.sig, parsed.exp);
   }
 
   private parse(token: string | undefined): { exp: number; sig: string } | undefined {
@@ -177,31 +224,6 @@ export class RemoteSessions {
     const expected = Buffer.from(this.sign(`v1.${m[1]}`));
     const got = Buffer.from(m[2]);
     return expected.length === got.length && timingSafeEqual(expected, got) ? { exp, sig: m[2] } : undefined;
-  }
-
-  private loadRevoked(): void {
-    if (!this.revokedFile) return;
-    try {
-      const data: unknown = JSON.parse(readFileSync(this.revokedFile, 'utf8'));
-      const now = this.now();
-      for (const [sig, exp] of Object.entries(data as Record<string, unknown>)) {
-        if (/^[A-Za-z0-9_-]{43}$/.test(sig) && typeof exp === 'number' && exp > now) this.revoked.set(sig, exp);
-      }
-    } catch {
-      // sem arquivo (ou ilegível): ninguém encerrado ainda
-    }
-  }
-
-  private saveRevoked(): void {
-    if (!this.revokedFile) return;
-    try {
-      mkdirSync(dirname(this.revokedFile), { recursive: true });
-      const tmp = `${this.revokedFile}.tmp`;
-      writeFileSync(tmp, JSON.stringify(Object.fromEntries(this.revoked)), { mode: 0o600 });
-      renameSync(tmp, this.revokedFile);
-    } catch {
-      // segue valendo em memória até o próximo reinício
-    }
   }
 }
 
