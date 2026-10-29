@@ -1558,6 +1558,7 @@ export const FR: Readonly<Record<string, string>> = {
   "{0} e {1}": "{0} et {1}",
   "{0}, {1} e mais {2}": "{0}, {1} et {2} de plus",
   "{0} está digitando…": "{0} est en train d’écrire…",
+  "{0} digitando…": "{0} écrit…",
   "{0} estão digitando…": "{0} sont en train d’écrire…",
   "{0} está aqui": "{0} est ici",
   "{0} estão aqui": "{0} sont ici",

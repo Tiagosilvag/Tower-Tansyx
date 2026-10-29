@@ -13,13 +13,19 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Barra lateral: pílulas com o nome (opção A)
+- **Pedido:** destacar mais que há alguém com o agente; entre 4 exemplos, "gostei da A".
+- **Feito:** a linha do agente mostra uma pílula por pessoa (avatar + nome, na cor dela; "nome digitando…" quando digita),
+  no máximo 2 e "+N", abaixo da linha do nome. Mockup: artifact "Presença na lateral".
+- **Produção:** pendente de deploy.
+
 ### Correção: "digitando" não aparecia
 - **Pedido:** o luciano digitava no chat da Larissa e o tiago não via. O `/api/presence` mostrava o luciano com o agente
   aberto, mas `typing:false`.
 - **Causa:** o aviso extra ao digitar respeitava um intervalo de 2,5 s e era descartado quando caía logo depois de um aviso;
   uma digitada curta só seria enviada no aviso seguinte (até 8 s), quando o "digitando" local (4 s) já tinha vencido.
 - **Feito:** o aviso passa a ser agendado para quando o intervalo passar; a consulta vai de 4 s para 2,5 s.
-- **Produção:** pendente de deploy.
+- **Produção:** no ar desde `d685fe0`.
 
 ### Avatares da presença na barra lateral
 - **Pedido:** "Fazer os avatares na barra lateral também".

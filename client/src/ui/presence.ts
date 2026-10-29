@@ -1,6 +1,7 @@
 // Presença em tempo real (modo de usuários): avisa ao servidor quais agentes estão abertos nesta página e quando você está
 // digitando, e mostra quem mais está com cada agente aberto. Só funciona com login (sem usuário nada é enviado nem aparece).
 import type { UiContext } from './context';
+import { tr } from '../../../shared/i18n';
 import { h, setHidden, setText } from './dom';
 import { othersOf, presenceLabel, type PresentUser } from './presence-model';
 import { avatar } from './users';
@@ -12,6 +13,7 @@ const TYPING_MS = 4_000;
 /** Aviso extra logo após digitar, mas no máximo neste ritmo. */
 const TYPING_BEAT_MS = 2_500;
 const MAX_AVATARS = 3;
+const MAX_PILLS = 2;
 
 let meId: (() => number | undefined) | null = null;
 let watching: () => string[] = () => [];
@@ -86,12 +88,13 @@ export function startPresence(ctx: UiContext, me: () => number | undefined): voi
 }
 
 /**
- * Só os avatares (sem texto) de quem mais está com o agente aberto, para a linha dele na barra lateral. O texto vai no
- * `title`. Chamado a cada quadro: só mexe no DOM quando a lista muda.
+ * Pílulas na linha do agente (barra lateral e gaveta): avatar + nome de quem mais está com ele aberto, na cor da pessoa;
+ * quem está digitando ganha "digitando…". No máximo 2 pílulas e "+N". Chamado a cada quadro: só mexe no DOM quando a
+ * lista muda.
  */
 export function paintPresenceFaces(el: HTMLElement, agentId: string): void {
   const others = othersOf(map[agentId], meId?.());
-  const key = others.map((u) => `${u.id}:${u.color}:${u.typing ? 1 : 0}`).join('|');
+  const key = others.map((u) => `${u.id}:${u.name}:${u.color}:${u.typing ? 1 : 0}`).join('|');
   if (el.dataset.key === key) return;
   el.dataset.key = key;
   setHidden(el, others.length === 0);
@@ -100,9 +103,20 @@ export function paintPresenceFaces(el: HTMLElement, agentId: string): void {
     el.removeAttribute('title');
     return;
   }
-  const faces = others.slice(0, MAX_AVATARS).map((u) => avatar({ color: u.color, displayName: u.name }, `ui-presence__face${u.typing ? ' is-typing' : ''}`));
-  const more = others.length > MAX_AVATARS ? [h('span', { class: 'ui-presence__more', text: `+${others.length - MAX_AVATARS}` })] : [];
-  el.replaceChildren(...faces, ...more);
+  // quem digita vem primeiro: é o que importa ver
+  const sorted = [...others].sort((x, y) => Number(y.typing) - Number(x.typing));
+  const pills = sorted.slice(0, MAX_PILLS).map((u) => {
+    const color = /^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#7cc8ff';
+    const pill = h(
+      'span',
+      { class: `ui-presence__pill${u.typing ? ' is-typing' : ''}`, style: `--c:${color}` },
+      avatar({ color, displayName: u.name }, `ui-presence__face${u.typing ? ' is-typing' : ''}`),
+      h('span', { class: 'ui-presence__name', text: u.typing ? tr('{0} digitando…', [u.name]) : u.name }),
+    );
+    return pill;
+  });
+  const more = sorted.length > MAX_PILLS ? [h('span', { class: 'ui-presence__more', text: `+${sorted.length - MAX_PILLS}` })] : [];
+  el.replaceChildren(...pills, ...more);
   el.title = presenceLabel(others);
 }
 

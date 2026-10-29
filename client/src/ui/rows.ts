@@ -50,7 +50,7 @@ export function createAgentRow(agent: AgentInfo, onPick: (id: string) => void, s
     'button',
     { class: 'ui-agent', type: 'button' },
     avatar,
-    h('span', { class: 'ui-agent__main' }, h('span', { class: 'ui-agent__top' }, name, chip, since, role, faces), task, activity),
+    h('span', { class: 'ui-agent__main' }, h('span', { class: 'ui-agent__top' }, name, chip, since, role), faces, task, activity),
     dot,
   );
   row.dataset.id = agent.id;
