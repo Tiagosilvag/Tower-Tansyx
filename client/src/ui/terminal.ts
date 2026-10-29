@@ -11,6 +11,7 @@
 import type { AgentInfo, Provider, RecentSession, TerminalEntry, TerminalImage, TerminalInit } from '../../../shared/types';
 import { roomTheme } from '../art';
 import { MessageComposer } from './composer';
+import { SessionChips } from './sessionchips';
 import type { UiComponent, UiContext, WindowOptions } from './context';
 import { askQuestionNodes, PermissionCard } from './permission';
 import { copyText, h, iconButton, prefersReducedMotion, setAttr, setHidden, setText, setTitle, setVariant } from './dom';
@@ -779,6 +780,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   private roleEl: HTMLElement;
   private roomEl: HTMLElement;
   private barEl!: HTMLElement;
+  private chips: SessionChips;
   private reconnEl: HTMLElement;
   private findBtn: HTMLButtonElement;
   private alertEl: HTMLElement;
@@ -846,6 +848,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.findBtn = iconButton(ICONS.search, tr('Buscar na conversa ({0})', [findKey]), () => this.toggleSearch(), 'ui-icon-btn--sm ui-term__find');
     setAttr(this.findBtn, 'aria-expanded', 'false');
     const close = iconButton(ICONS.close, tr('Fechar terminal (Esc)'), () => this.close(), 'ui-icon-btn--sm ui-term__close');
+    this.chips = new SessionChips(ctx);
     const bar = h(
       'div',
       { class: 'ui-term__bar' },
@@ -853,6 +856,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
       this.kindEl,
       h('div', { class: 'ui-term__who' }, this.accEl, this.nameEl, this.provEl, this.roleEl, this.roomEl),
       this.reconnEl,
+      this.chips.el,
       this.findBtn,
       ...(this.actions ? [this.actions.el] : []),
       maximizeButton(() => this.movable),
@@ -960,6 +964,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.disconnect();
     this.stopSpinner();
     this.closeSearch(false);
+    this.chips.closeAll();
     const hadFocus = this.el.contains(document.activeElement) || document.activeElement === document.body;
     this.id = null;
     this.session = null;
@@ -1019,6 +1024,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     else this.renderAgentHead();
     const live = this.session ? null : (this.ctx.agent(this.id) ?? null);
     this.actions?.render(live, this.session && !this.session.open ? this.session : null);
+    this.chips.render(live);
     this.tabs.render(live ? live.id : null);
     this.renderFooter();
     this.renderState();

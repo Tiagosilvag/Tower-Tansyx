@@ -29,6 +29,13 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Pausar, modelo e contexto no chat.** Com o agente trabalhando, o botão **Pausar** ao lado de Enviar manda Esc
+  para a sessão (o agente para e espera a sua próxima mensagem). A barra do terminal mostra o **modelo** da sessão
+  (por exemplo, "Opus 5.5") com um menu para trocar (digita `/model` na sessão, com o agente parado) e o botão de
+  **contexto** (anel com a porcentagem) que abre um cartão com os tokens da última resposta, a janela estimada, os
+  totais, o custo, as ferramentas, os subagentes, o modo de permissão, a branch e o tempo da sessão. Pausar e trocar
+  só valem em sessões abertas pelo Habblaud (terminal do Habblaud); nas outras, o botão fica desligado e explica
+  ("Assumir daqui"). O servidor passa a guardar os tokens de entrada da última resposta (`contextTokens`).
 - **O agente que está trabalhando fica destacado na lista.** Antes só quem esperava um shell ganhava cor. Agora a
   linha de quem está trabalhando tem fundo com a cor do status, uma faixa pulsante na lateral e o nome em branco, na
   barra lateral e na gaveta. A faixa para de pulsar com "reduzir movimento" e no modo Mínimo de Desempenho.

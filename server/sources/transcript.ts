@@ -120,6 +120,8 @@ export interface TranscriptState {
   sawTaskReplace: boolean;
   stats: AgentStats;
   costSeen: boolean;
+  /** Tokens de entrada da última resposta (entrada + cache): o tamanho do contexto agora. */
+  contextTokens?: number;
   model?: string;
   gitBranch?: string;
   permissionMode?: string;
@@ -395,6 +397,7 @@ class LineParser {
     const dIn = Math.max(0, tin - prev.tin);
     const dOut = Math.max(0, tout - prev.tout);
     remember(s.usageByMsg, msgId, { tin: Math.max(tin, prev.tin), tout: Math.max(tout, prev.tout) }, 256);
+    if (tin > 0) s.contextTokens = Math.max(tin, prev.tin);
     if (dIn || dOut) {
       s.stats.tokensIn += dIn;
       s.stats.tokensOut += dOut;
@@ -829,6 +832,7 @@ export function mergePrefix(state: TranscriptState, prefix: TranscriptState): vo
   state.aiTitle ??= prefix.aiTitle;
   state.lastPrompt ??= prefix.lastPrompt;
   state.model ??= prefix.model;
+  state.contextTokens ??= prefix.contextTokens;
   state.gitBranch ??= prefix.gitBranch;
   state.permissionMode ??= prefix.permissionMode;
   if (prefix.firstAt !== undefined && (state.firstAt === undefined || prefix.firstAt < state.firstAt)) state.firstAt = prefix.firstAt;

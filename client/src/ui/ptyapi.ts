@@ -35,6 +35,16 @@ export function createPty(cwd: string, account?: string, resume?: string, prompt
   return postPty<PtyInfo>('/api/pty', { cwd, account, ...(resume ? { resume } : {}), ...(prompt ? { prompt } : {}), ...SIZE });
 }
 
+/** O terminal do Habblaud rodando este agente (só com ele dá para mandar teclas: pausar, trocar de modelo). */
+export function ptyOfAgent(store: { snapshot?: { ptys?: PtyInfo[] } | null }, agentId: string): PtyInfo | undefined {
+  return store.snapshot?.ptys?.find((p) => p.agentId === agentId && p.exitedAt === undefined);
+}
+
+/** Digita no terminal interativo (Esc, /model...). */
+export async function sendPtyKeys(ptyId: string, data: string): Promise<void> {
+  await postPty(`/api/pty/${encodeURIComponent(ptyId)}/input`, { data });
+}
+
 /** Encerra a sessão noutro terminal e continua a mesma conversa aqui. */
 export function takeoverAgent(agentId: string): Promise<PtyInfo | undefined> {
   return postPty<PtyInfo>(`/api/agents/${encodeURIComponent(agentId)}/takeover`, SIZE);

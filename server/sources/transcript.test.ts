@@ -48,6 +48,16 @@ describe('parseLine — atividades', () => {
     expect(s.stats.toolCalls).toBe(1);
   });
 
+  it('contexto: guarda a entrada (com cache) da última resposta, não o acumulado', () => {
+    const s = createTranscriptState();
+    feed(s, [
+      L.assistant([L.text('a')], { msgId: 'm1', usage: { input_tokens: 2, output_tokens: 3, cache_read_input_tokens: 1000, cache_creation_input_tokens: 50 } }),
+      L.assistant([L.text('b')], { msgId: 'm2', usage: { input_tokens: 5, output_tokens: 7, cache_read_input_tokens: 2000, cache_creation_input_tokens: 0 } }),
+    ]);
+    expect(s.contextTokens).toBe(2005);
+    expect(s.stats.tokensIn).toBe(1052 + 2005);
+  });
+
   it('ignora meta, comandos locais, lembretes e tipos desconhecidos', () => {
     const s = createTranscriptState();
     const r = feed(s, [

@@ -540,6 +540,7 @@ export class ClaudeWatcher implements AgentSource {
     const title = titleOf(s);
     if (title) summary.title = title;
     if (s.model) summary.model = s.model;
+    if (s.contextTokens) summary.contextTokens = s.contextTokens;
     if (s.gitBranch) summary.gitBranch = s.gitBranch;
     if (s.permissionMode) summary.permissionMode = s.permissionMode;
     if (s.lastAt !== undefined) summary.lastAt = s.lastAt;
@@ -798,6 +799,7 @@ export class ClaudeWatcher implements AgentSource {
     const summary: TranscriptSummary = { tasks: s.tasks, stats: { ...s.stats } };
     if (s.firstAt !== undefined) summary.firstAt = s.firstAt;
     if (s.model) summary.model = s.model;
+    if (s.contextTokens) summary.contextTokens = s.contextTokens;
     if (s.gitBranch) summary.gitBranch = s.gitBranch;
     if (s.permissionMode) summary.permissionMode = s.permissionMode;
     if (s.lastAt !== undefined) summary.lastAt = s.lastAt;

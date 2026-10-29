@@ -26,7 +26,8 @@ import {
 import type { UiContext } from './context';
 import { DictationButton, dictationAvailable, insertDictation } from './dictation';
 import { ICONS } from './icons';
-import { attachToMessage } from './ptyapi';
+import { attachToMessage, ptyOfAgent, sendPtyKeys } from './ptyapi';
+import { PAUSE_KEYS } from './session-info';
 import { h, setAttr, setHidden, setText, setTitle } from './dom';
 import { access } from '../net/access';
 import { tr } from '../../../shared/i18n';
@@ -70,6 +71,8 @@ export class MessageComposer {
   /** Rascunho que recebe o ditado em andamento (o agente pode mudar enquanto o Mac transcreve). */
   private dictKey = '';
   private attachBtn: HTMLButtonElement;
+  /** Só no terminal, com o agente trabalhando: manda Esc para a sessão (precisa do terminal do Habblaud). */
+  private pauseBtn: HTMLButtonElement;
   private fileInput: HTMLInputElement;
   /**
    * A sugestão de próximo prompt do Claude Code (o texto cinza do campo de entrada dele, que o Tab aceita), lida da tela
@@ -165,9 +168,16 @@ export class MessageComposer {
       h('span', { class: 'ui-msg__suggest-key', text: 'Tab', attrs: { 'aria-hidden': 'true' } }),
       this.suggestText,
     );
+    this.pauseBtn = h(
+      'button',
+      { class: 'ui-msg__pause', type: 'button', hidden: true, attrs: { 'aria-label': tr('Pausar o agente') } },
+      h('span', { class: 'ui-msg__pause-bars', attrs: { 'aria-hidden': 'true' } }, h('i'), h('i')),
+      tr('Pausar'),
+    );
+    this.pauseBtn.addEventListener('click', () => void this.pause());
     this.row = h('div', { class: `ui-msg__row${term ? ' ui-term__prompt ui-term__prompt--mic' : ''}` });
     if (term) this.row.append(h('span', { class: 'ui-term__caret', text: '>', attrs: { 'aria-hidden': 'true' } }));
-    this.row.append(this.box, this.attachBtn, this.fileInput, this.dictate.el, this.sendBtn);
+    this.row.append(this.box, this.attachBtn, this.fileInput, this.dictate.el, this.pauseBtn, this.sendBtn);
     // Clique na "linha do prompt" (fora do botão) põe o cursor na caixa, como num terminal.
     this.row.addEventListener('mousedown', (e) => {
       if (e.target === this.row && !this.box.disabled) {
@@ -217,6 +227,11 @@ export class MessageComposer {
     this.row.classList.toggle('is-disabled', !ready);
     setHidden(this.sendBtn, !ready);
     setHidden(this.attachBtn, !ready);
+    // Pausar: só no terminal e com o agente trabalhando; sem terminal do Habblaud na sessão fica desligado.
+    const pty = agent && term ? ptyOfAgent(this.ctx.store, agent.id) : undefined;
+    setHidden(this.pauseBtn, !(term && ready && agent?.status === 'working'));
+    this.pauseBtn.disabled = !pty;
+    setTitle(this.pauseBtn, pty ? tr('Pausar o que o agente está fazendo (manda Esc para a sessão)') : tr('Para pausar, use "Assumir daqui": só dá para pausar sessões abertas pelo Habblaud'));
     // Consulta em cache (30 s): o Mac pode instalar o Whisper ou parar o auxiliar com a página aberta.
     void dictationAvailable().then((ok) => {
       if (ok === this.canDictate) return;
@@ -407,6 +422,17 @@ export class MessageComposer {
     this.states.set(agentId, state);
     if (agentId === this.agentId) this.syncButton();
     this.ctx.invalidate();
+  }
+
+  private async pause(): Promise<void> {
+    const pty = ptyOfAgent(this.ctx.store, this.agentId);
+    if (!pty) return;
+    try {
+      await sendPtyKeys(pty.id, PAUSE_KEYS);
+      this.ctx.announce(tr('Pausa enviada: o agente para e espera a sua próxima mensagem.'));
+    } catch (err) {
+      this.ctx.announce(`${tr('Não deu para pausar')}: ${err instanceof Error ? err.message : ''}`);
+    }
   }
 
   private async send(): Promise<void> {

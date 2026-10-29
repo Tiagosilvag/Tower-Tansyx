@@ -89,6 +89,7 @@ export interface TranscriptSummary {
   tasks: TaskItem[];
   stats: AgentStats;
   model?: string;
+  contextTokens?: number;
   gitBranch?: string;
   permissionMode?: string;
   /** Primeiro evento conhecido (subagentes: o início real, depois de ler o começo do arquivo). */
@@ -672,6 +673,7 @@ export class Office {
     set('tasks', t.tasks.map((x) => ({ ...x })));
     set('stats', { ...t.stats });
     set('model', t.model);
+    set('contextTokens', t.contextTokens);
     set('gitBranch', t.gitBranch);
     set('permissionMode', t.permissionMode);
     if (info.kind === 'sub' && t.firstAt !== undefined && t.firstAt < info.startedAt) {
