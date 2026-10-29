@@ -99,6 +99,10 @@ Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qu
 
 ## 6. Kanban
 
+_Responsável:_ o cartão traz `assigneeName` (login), `assigneeDisplayName` e `assigneeColor` (o avatar do cartão usa a cor). Na
+criação (`server/kanban/http.ts`), sem `assigneeId` o responsável é quem pediu (`actor.userId`, inclusive agente com `--as`);
+`assigneeId: null` explícito deixa sem. Cartões antigos não foram preenchidos.
+
 _Atualização em tempo real:_ o servidor mantém uma revisão (`GET /api/kanban/version`, sobe a cada alteração aceita; começa em
 `Date.now()`). A janela aberta consulta a cada 3 s (`POLL_MS` em `kanban.ts`) e recarrega se mudou, exceto quando a tela está
 ocupada (campo aberto, arrasto, cartão aberto) ou a aba está escondida. Botão ↻ força. Não há push (SSE) por enquanto.

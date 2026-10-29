@@ -70,6 +70,19 @@ describe('rotas /api/kanban', () => {
     expect((await call('POST', '/api/kanban/version', { body: {} })).status).toBe(405);
   });
 
+  it('o cartão novo fica com quem o pediu como responsável; null explícito deixa sem, e o cartão traz nome e cor', async () => {
+    const { call, geral, ana } = await montar();
+    const remoto = { 'x-remote': '1', 'x-user': 'ansysar' };
+    const meu = (await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'meu' }, headers: remoto })).json.card;
+    expect(meu).toMatchObject({ assigneeId: ana.id, assigneeName: 'ansysar', assigneeDisplayName: 'ansysar', assigneeColor: ana.color });
+    const sem = (await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'sem', assigneeId: null }, headers: remoto })).json.card;
+    expect(sem.assigneeId).toBeNull();
+    const agente = (await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'ag', as: 'ansysar' }, headers: AGENTE })).json.card;
+    expect(agente.assigneeId).toBe(ana.id);
+    const anonimo = (await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'anon' } })).json.card;
+    expect(anonimo.assigneeId).toBeNull();
+  });
+
   it('quadros: lista, cria, renomeia e remove (com force)', async () => {
     const { call, geral } = await montar();
     expect((await call('GET', '/api/kanban/boards')).json.boards).toEqual([{ id: geral, kind: 'general', name: 'Geral', openCount: 0 }]);

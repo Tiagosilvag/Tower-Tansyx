@@ -565,6 +565,15 @@ export class KanbanPanel implements UiComponent {
     return section;
   }
 
+  /** Quem é o responsável: avatar na cor dele + nome de exibição; sem responsável, um lembrete discreto. */
+  private assignee(c: KanbanCard): HTMLElement {
+    const name = c.assigneeDisplayName || c.assigneeName;
+    if (!name) return h('span', { class: 'ui-kb__who ui-kb__who--none', text: tr('Sem responsável') });
+    const av = h('span', { class: 'ui-kb__av', text: Array.from(name)[0]?.toUpperCase() ?? '?', attrs: { 'aria-hidden': 'true' } });
+    if (c.assigneeColor && /^#[0-9a-f]{6}$/i.test(c.assigneeColor)) av.style.background = c.assigneeColor;
+    return h('span', { class: 'ui-kb__who', title: tr('Responsável: {0}', [name]) }, av, h('span', { class: 'ui-kb__who-name', text: name }));
+  }
+
   private note(c: KanbanCard): HTMLElement {
     const tag = c.projectId === null ? undefined : this.boards.find((b) => b.id === c.projectId)?.name;
     const meta = h(
@@ -573,7 +582,7 @@ export class KanbanPanel implements UiComponent {
       h('span', { class: `ui-kb__pri ui-kb__pri--${c.priority}`, text: PRIORITY_LABEL[c.priority] }),
       tag ? h('span', { class: 'ui-kb__badge ui-kb__badge--project', text: tag }) : null,
       c.createdVia === 'agent' ? h('span', { class: 'ui-kb__badge ui-kb__badge--agent', text: tr('via agente'), title: tr('Criado por um agente, a pedido do usuário') }) : null,
-      c.assigneeName ? h('span', { class: 'ui-kb__who' }, h('span', { class: 'ui-kb__av', text: Array.from(c.assigneeName)[0]?.toUpperCase() ?? '?', attrs: { 'aria-hidden': 'true' } }), c.assigneeName) : null,
+      this.assignee(c),
     );
     // Com a busca ligada a lista na tela não é a coluna inteira: o arrasto fica desligado (o índice de soltar mentiria).
     const draggable = this.qTask.trim() === '';

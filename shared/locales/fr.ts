@@ -1560,6 +1560,7 @@ export const FR: Readonly<Record<string, string>> = {
   "{0} está digitando…": "{0} est en train d’écrire…",
   "{0} digitando…": "{0} écrit…",
   "Atualizar o Kanban": "Actualiser le Kanban",
+  "Responsável: {0}": "Responsable : {0}",
   "{0} estão digitando…": "{0} sont en train d’écrire…",
   "{0} está aqui": "{0} est ici",
   "{0} estão aqui": "{0} sont ici",

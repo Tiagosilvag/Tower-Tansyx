@@ -31,6 +31,9 @@ export interface KanbanCard {
   assigneeId: number | null;
   /** Nome de usuário do responsável (para mostrar sem precisar da lista de usuários). */
   assigneeName: string | null;
+  /** Nome de exibição e cor do responsável (o cartão mostra o avatar na cor dele). Ausentes sem responsável. */
+  assigneeDisplayName?: string | null;
+  assigneeColor?: string | null;
   /** Etiqueta de projeto (só no Geral). */
   projectId: number | null;
   createdBy: number | null;

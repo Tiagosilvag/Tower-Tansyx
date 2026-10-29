@@ -12422,6 +12422,20 @@ html.is-replay #world {
   margin-left: auto;
 }
 
+.ui-kb__who--none {
+  color: var(--kb-ink);
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.ui-kb__who-name {
+  max-width: 11ch;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-kb__av {
   display: inline-grid;
   place-items: center;

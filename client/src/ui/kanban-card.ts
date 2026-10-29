@@ -126,7 +126,7 @@ export class CardDialog {
       const who = h('select', { class: 'ui-kbc__select', attrs: { 'aria-label': tr('Responsável') } }, option('', tr('Sem responsável'), c.assigneeId === null), ...people.map((u) => option(String(u.id), u.displayName || u.username, u.id === c.assigneeId)));
       who.addEventListener('change', () => void this.patch({ assigneeId: who.value ? Number(who.value) : null }));
       rows.push([tr('Responsável'), who]);
-    } else if (c.assigneeName) rows.push([tr('Responsável'), h('span', { text: c.assigneeName })]);
+    } else if (c.assigneeName) rows.push([tr('Responsável'), h('span', { text: c.assigneeDisplayName || c.assigneeName })]);
 
     const projects = boards.filter((b) => b.kind === 'project');
     if (board?.kind === 'general' && projects.length) {

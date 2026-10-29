@@ -169,6 +169,9 @@ export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessag
       }
       return run(async () => {
         const b = await body();
+        const actor = actorOf(req, b);
+        // Sem responsável informado, o responsável é quem pediu o cartão (um `assigneeId: null` explícito deixa sem).
+        const given = whole(b, 'assigneeId', true);
         const card = store.createCard(
           id,
           {
@@ -176,10 +179,10 @@ export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessag
             description: text(b, 'description'),
             priority: text(b, 'priority') as Priority | undefined,
             column: text(b, 'column') as Column | undefined,
-            assigneeId: whole(b, 'assigneeId', true),
+            assigneeId: given === undefined ? actor.userId : given,
             projectId: whole(b, 'projectId', true),
           },
-          actorOf(req, b),
+          actor,
         );
         send(res, 201, { card });
       });

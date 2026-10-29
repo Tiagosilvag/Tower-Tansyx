@@ -45,6 +45,10 @@ do meio (0.**3**.0).
   1×, sem partículas, sem efeitos de data comemorativa e sem a iluminação suave. **Mínimo** soma a isso a pausa do
   escritório com o terminal em tela cheia, no máximo 150 linhas no chat e nenhuma animação. Uma opção mostra no
   canto da tela os quadros por segundo e as linhas do chat, para comparar. Vale só para o seu navegador.
+- **O cartão do Kanban mostra o responsável.** Um avatar na cor da pessoa e o nome de exibição aparecem no cartão; sem
+  responsável, o cartão diz "Sem responsável". Cartões novos já nascem com quem os criou como responsável (também os
+  criados por um agente a pedido de alguém); dá para trocar ou tirar no cartão. Os cartões antigos sem responsável
+  continuam sem.
 - **O Kanban se atualiza sozinho e ganhou o botão Atualizar.** Com a janela aberta, ela pergunta ao servidor a cada 3 s se
   alguém mexeu (outro usuário ou um agente) e recarrega o quadro quando sim; não recarrega enquanto você digita num campo,
   arrasta um cartão ou tem um cartão aberto, e tenta de novo no ciclo seguinte. O botão ↻ na barra força a atualização.
