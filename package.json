@@ -47,6 +47,7 @@
     "users:add": "tsx scripts/users.ts add",
     "users:passwd": "tsx scripts/users.ts passwd",
     "users:list": "tsx scripts/users.ts list",
+    "kanban": "tsx scripts/kanban.ts",
     "release": "tsx scripts/release.ts"
   },
   "devDependencies": {
