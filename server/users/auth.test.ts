@@ -5,7 +5,7 @@ import { openDb, type Db } from '../db/db';
 import { SESSION_MS } from '../http/remote';
 import { DEFAULT_LOG_N, hashPassword, type PasswordHash } from '../remote/password';
 import { tempDir } from '../test/fixtures';
-import { UserAuth, UserSessions, UserThrottle } from './auth';
+import { UNKNOWN_IP, UserAuth, UserSessions, UserThrottle } from './auth';
 import { UserStore } from './store';
 
 const SECRET = Buffer.alloc(32, 9);
@@ -42,95 +42,110 @@ function verifyFalso() {
 }
 
 describe('UserThrottle', () => {
-  it('(a) 4 falhas liberam, a 5ª bloqueia só aquele usuário por 900 s; sucesso zera', () => {
+  const IP_A = '203.0.113.9';
+  const IP_B = '198.51.100.7';
+
+  it('(a) 4 falhas liberam, a 5ª bloqueia só aquele par (usuário, IP) por 900 s; outro IP do mesmo nome não', () => {
     const clock = { now: T0 };
     const t = new UserThrottle(() => clock.now);
-    for (let i = 0; i < 4; i++) t.fail('tiago');
-    expect(t.retryAfter('tiago')).toBe(0);
-    t.fail(' Tiago ');
-    expect(t.retryAfter('tiago')).toBe(900);
-    expect(t.retryAfter('TIAGO')).toBe(900);
-    expect(t.retryAfter('ana')).toBe(0);
+    for (let i = 0; i < 4; i++) t.fail('tiago', IP_A);
+    expect(t.retryAfter('tiago', IP_A)).toBe(0);
+    t.fail(' Tiago ', IP_A);
+    expect(t.retryAfter('tiago', IP_A)).toBe(900);
+    expect(t.retryAfter('TIAGO', IP_A)).toBe(900);
+    // o dono do nome, de outro IP, segue entrando: o atacante tranca a si mesmo
+    expect(t.retryAfter('tiago', IP_B)).toBe(0);
+    // outro nome do mesmo IP só responde à retaguarda por IP (5 erros < 20)
+    expect(t.retryAfter('ana', IP_A)).toBe(0);
     clock.now += 899_001;
-    expect(t.retryAfter('tiago')).toBe(1);
+    expect(t.retryAfter('tiago', IP_A)).toBe(1);
     clock.now += 1000;
-    expect(t.retryAfter('tiago')).toBe(0);
-
-    for (let i = 0; i < 4; i++) t.fail('ana');
-    t.succeed('ANA');
-    for (let i = 0; i < 4; i++) t.fail('ana');
-    expect(t.retryAfter('ana')).toBe(0);
+    expect(t.retryAfter('tiago', IP_A)).toBe(0);
   });
 
-  it('(b) mais de 20 falhas em 60 s, de usuários variados, bloqueiam todos até a janela baixar de 20', () => {
+  it('(b, contra trancar todo mundo) mais de 20 falhas em 60 s de UM IP bloqueiam só aquele IP; de outro IP a senha certa entra', async () => {
     const clock = { now: T0 };
-    const t = new UserThrottle(() => clock.now);
+    const now = () => clock.now;
+    const db = openDb(':memory:');
+    abertos.push(db);
+    const store = new UserStore(db, now);
+    store.create({ username: 'tiago', passwordHash: HASH_A });
+    const t = new UserThrottle(now);
+    const auth = new UserAuth(store, new UserSessions(SECRET, (id) => store.recordById(id), now), t, verifyFalso().fn);
     for (let i = 0; i < 20; i++) {
-      t.fail(`chute${i}`);
+      t.fail(`chute${i}`, IP_A);
       clock.now += 1000;
     }
     // 20 falhas em 60 s ainda passam
-    expect(t.retryAfter('qualquer')).toBe(0);
-    t.fail('chute20'); // em T0 + 20 s; a mais antiga (T0) sai da janela em T0 + 60 s
-    expect(t.retryAfter('qualquer')).toBe(40);
-    expect(t.retryAfter('chute3')).toBe(40);
+    expect(t.retryAfter('qualquer', IP_A)).toBe(0);
+    t.fail('chute20', IP_A); // em T0 + 20 s; a mais antiga (T0) sai da janela em T0 + 60 s
+    expect(t.retryAfter('qualquer', IP_A)).toBe(40);
+    expect(t.retryAfter('tiago', IP_A)).toBe(40);
+    expect(await auth.login('tiago', 'senha-certa', IP_A)).toEqual({ ok: false, status: 429, retryAfter: 40 });
+    // quem vem de outro IP não sente nada
+    expect(t.retryAfter('tiago', IP_B)).toBe(0);
+    expect((await auth.login('tiago', 'senha-certa', IP_B)).ok).toBe(true);
     clock.now = T0 + 59_500;
-    expect(t.retryAfter('ana')).toBe(1);
+    expect(t.retryAfter('ana', IP_A)).toBe(1);
     clock.now = T0 + 60_000;
-    expect(t.retryAfter('ana')).toBe(0);
+    expect(t.retryAfter('ana', IP_A)).toBe(0);
   });
 
-  it('(b2) a retaguarda é por cliente: um anônimo estourando 20 erros não segura quem vem de outro IP', () => {
+  it('(c) teto folgado: mais de 100 falhas em 1 h para um nome, de muitos IPs, seguram só aquele nome', () => {
     const clock = { now: T0 };
     const t = new UserThrottle(() => clock.now);
-    for (let i = 0; i < 21; i++) t.fail(`chute${i}`, '203.0.113.9');
-    expect(t.retryAfter('chute3', '203.0.113.9')).toBeGreaterThan(0);
-    expect(t.retryAfter('tiago', '203.0.113.9')).toBeGreaterThan(0);
-    expect(t.retryAfter('tiago', '198.51.100.7')).toBe(0);
-  });
-
-  it('(b3) o bloqueio de 5 erros é do par cliente+nome: o atacante tranca a si mesmo, não o dono do nome', () => {
-    const clock = { now: T0 };
-    const t = new UserThrottle(() => clock.now);
-    for (let i = 0; i < 5; i++) t.fail('tiago', '203.0.113.9');
-    expect(t.retryAfter('tiago', '203.0.113.9')).toBe(900);
-    expect(t.retryAfter('tiago', '198.51.100.7')).toBe(0);
-    t.succeed('tiago', '198.51.100.7');
-    expect(t.retryAfter('tiago', '203.0.113.9')).toBe(900);
-  });
-
-  it('(b4) chute distribuído: mais de 50 erros em 1 h, de IPs variados, seguram o nome (teto folgado)', () => {
-    const clock = { now: T0 };
-    const t = new UserThrottle(() => clock.now);
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 100; i++) {
       t.fail('tiago', `10.0.${i}.1`);
       clock.now += 1000;
     }
+    // 100 em 1 h ainda passam, de um IP novo
     expect(t.retryAfter('tiago', '192.0.2.1')).toBe(0);
-    t.fail('tiago', '10.0.99.1');
-    expect(t.retryAfter('tiago', '192.0.2.1')).toBeGreaterThan(3000);
+    t.fail('tiago', '10.0.200.1'); // em T0 + 100 s; a mais antiga (T0) sai da janela em T0 + 1 h
+    expect(t.retryAfter('tiago', '192.0.2.1')).toBe(3500);
+    expect(t.retryAfter('Tiago', '10.0.3.1')).toBe(3500);
+    // os outros nomes, inclusive dos mesmos IPs, seguem livres
     expect(t.retryAfter('ana', '192.0.2.1')).toBe(0);
+    expect(t.retryAfter('ana', '10.0.3.1')).toBe(0);
+    clock.now = T0 + 60 * 60_000;
+    expect(t.retryAfter('tiago', '192.0.2.1')).toBe(0);
   });
 
-  it('nomes desconhecidos contam igual, mas o mapa tem teto e nenhum bloqueio cai por enchente de nomes', () => {
+  it('(d) sucesso zera o contador do par (usuário, IP), e só dele', () => {
     const clock = { now: T0 };
     const t = new UserThrottle(() => clock.now);
-    for (let i = 0; i < 5; i++) t.fail('alvo');
+    for (let i = 0; i < 4; i++) t.fail('ana', IP_A);
+    for (let i = 0; i < 4; i++) t.fail('ana', IP_B);
+    t.succeed('ANA', IP_A);
+    for (let i = 0; i < 4; i++) t.fail('ana', IP_A);
+    expect(t.retryAfter('ana', IP_A)).toBe(0);
+    // o acerto de A não zera o par de B
+    t.fail('ana', IP_B);
+    expect(t.retryAfter('ana', IP_B)).toBe(900);
+  });
+
+  it('(e) memória com teto nos três mapas; nenhum bloqueio cai por enchente de nomes', () => {
+    const clock = { now: T0 };
+    const t = new UserThrottle(() => clock.now);
+    for (let i = 0; i < 5; i++) t.fail('alvo', IP_A);
     for (let i = 0; i < 3000; i++) {
       clock.now += 1;
-      t.fail(`aleatorio${i}`);
+      // nomes e IPs novos a cada erro: enche os três mapas
+      t.fail(`aleatorio${i}`, `10.${i >> 8}.${i & 255}.1`);
     }
-    expect(t['users'].size).toBeLessThanOrEqual(1000);
-    clock.now = T0 + 60_000 + 3000; // a janela global já esvaziou
-    expect(t.retryAfter('alvo')).toBeGreaterThan(0);
-    expect(t.retryAfter('aleatorio2999')).toBe(0);
+    expect(t['pairs'].size).toBeLessThanOrEqual(1000);
+    expect(t['byIp'].size).toBeLessThanOrEqual(1000);
+    expect(t['byName'].size).toBeLessThanOrEqual(1000);
+    clock.now = T0 + 60_000 + 3000; // as janelas por IP já esvaziaram
+    expect(t.retryAfter('alvo', IP_A)).toBeGreaterThan(0);
+    expect(t.retryAfter('aleatorio2999', '10.11.183.1')).toBe(0);
     // vencidas saem: depois de 15 min sem falhas o mapa esvazia na próxima entrada nova
     clock.now += 16 * 60_000;
-    expect(t.retryAfter('alvo')).toBe(0);
-    for (let i = 0; i < 1000; i++) t.fail(`novo${i}`);
-    expect(t['users'].has('alvo')).toBe(false);
-    expect(t['users'].has('aleatorio2999')).toBe(false);
-    expect(t['users'].size).toBeLessThanOrEqual(1000);
+    expect(t.retryAfter('alvo', IP_A)).toBe(0);
+    for (let i = 0; i < 1000; i++) t.fail(`novo${i}`, `172.16.${i >> 8}.${i & 255}`);
+    expect(t['pairs'].has(`${IP_A}\nalvo`)).toBe(false);
+    expect(t['pairs'].size).toBeLessThanOrEqual(1000);
+    expect(t['byIp'].size).toBeLessThanOrEqual(1000);
+    expect(t['byName'].size).toBeLessThanOrEqual(1000);
   });
 });
 
@@ -211,7 +226,7 @@ describe('UserAuth', () => {
     const { auth, throttle } = montar(v.fn);
     await expect(auth.warm()).resolves.toBeUndefined();
     expect(v.calls).toHaveLength(0);
-    expect(throttle.retryAfter('fulano')).toBe(0);
+    expect(throttle.retryAfter('fulano', UNKNOWN_IP)).toBe(0);
     expect(await auth.login('fulano', 'senha-certa')).toEqual({ ok: false, status: 401 });
     expect(v.calls[0]!.hash.logN).toBe(DEFAULT_LOG_N);
   });
@@ -261,6 +276,45 @@ describe('UserAuth', () => {
     ]);
     expect(pico).toBe(1);
     expect(results.map((r) => (r.ok ? 200 : r.status))).toEqual([401, 401, 200, 401]);
+  });
+
+  it('o IP do login chega ao freio: 5 erros de um IP freiam aquele IP; nome inexistente conta igual a um real', async () => {
+    const v = verifyFalso();
+    const { store, auth, throttle } = montar(v.fn);
+    store.create({ username: 'tiago', passwordHash: HASH_A });
+    for (let i = 0; i < 5; i++) {
+      expect(await auth.login('tiago', 'errada', '203.0.113.9')).toEqual({ ok: false, status: 401 });
+      expect(await auth.login('fulano', 'errada', '203.0.113.9')).toEqual({ ok: false, status: 401 });
+    }
+    expect(throttle.retryAfter('tiago', '203.0.113.9')).toBe(900);
+    expect(throttle.retryAfter('fulano', '203.0.113.9')).toBe(900);
+    expect(await auth.login('tiago', 'senha-certa', '203.0.113.9')).toEqual({ ok: false, status: 429, retryAfter: 900 });
+    expect((await auth.login('tiago', 'senha-certa', '198.51.100.7')).ok).toBe(true);
+    // sem IP: cai na chave UNKNOWN_IP, sem quebrar
+    expect((await auth.login('tiago', 'senha-certa')).ok).toBe(true);
+    expect(v.calls).toHaveLength(12);
+  });
+
+  it('fila com teto: o 51º login pendente recebe 429 (retryAfter 1) na hora, sem verify e sem contar erro', async () => {
+    let soltar!: () => void;
+    const portao = new Promise<void>((ok) => (soltar = ok));
+    let chamadas = 0;
+    const verify = async (password: string) => {
+      chamadas++;
+      await portao;
+      return password === 'senha-certa';
+    };
+    const { store, auth, throttle } = montar(verify);
+    store.create({ username: 'tiago', passwordHash: HASH_A });
+    const pendentes = Array.from({ length: 50 }, (_, i) => auth.login(`nome${i}`, 'x', `10.0.0.${i}`));
+    expect(await auth.login('tiago', 'senha-certa', '192.0.2.1')).toEqual({ ok: false, status: 429, retryAfter: 1 });
+    expect(throttle.retryAfter('tiago', '192.0.2.1')).toBe(0);
+    soltar();
+    const results = await Promise.all(pendentes);
+    expect(results.every((r) => !r.ok && r.status === 401)).toBe(true);
+    expect(chamadas).toBe(50);
+    // a fila esvaziou: entra de novo
+    expect((await auth.login('tiago', 'senha-certa', '192.0.2.1')).ok).toBe(true);
   });
 
   it('um verify que falha conta como erro (401) e não trava a fila', async () => {

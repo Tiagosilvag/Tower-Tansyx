@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openDb } from '../db/db';
 import { readJson } from '../http/app';
+import { clientIp } from '../http/remote';
 import { hashPassword } from '../remote/password';
 import { UserAuth, UserSessions, UserThrottle } from './auth';
 import { createUsersRoutes } from './http';
@@ -36,6 +37,7 @@ async function montar() {
     readJson: (req: IncomingMessage) => readJson(req),
     hash: barato,
     setCookie: (_req, token, maxAgeS) => `t=${token}; Max-Age=${maxAgeS}`,
+    clientIp: (req) => clientIp(req, true),
   });
   const server: Server = http.createServer((req, res) => {
     const token = /(?:^|; )t=([^;]+)/.exec(req.headers.cookie ?? '')?.[1];
@@ -49,10 +51,14 @@ async function montar() {
   await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok));
   limpar.push(() => server.close(), () => db.close());
   const port = (server.address() as AddressInfo).port;
-  const call = async (method: string, path: string, opts: { token?: string; body?: unknown } = {}) => {
+  const call = async (method: string, path: string, opts: { token?: string; body?: unknown; ip?: string } = {}) => {
     const r = await fetch(`http://127.0.0.1:${port}${path}`, {
       method,
-      headers: { ...(opts.token ? { Cookie: `t=${opts.token}` } : {}), ...(opts.body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+      headers: {
+        ...(opts.token ? { Cookie: `t=${opts.token}` } : {}),
+        ...(opts.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(opts.ip ? { 'CF-Connecting-IP': opts.ip } : {}),
+      },
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
     });
     const text = await r.text();
@@ -168,14 +174,18 @@ describe('troca de senha', () => {
     expect((await auth.login('ana', SENHA_ANA)).ok).toBe(false);
   });
 
-  it('senha atual errada conta no freio por usuário: depois de 5 erros, 429 com Retry-After', async () => {
-    const { call, ana, tokenDe } = await montar();
+  it('senha atual errada conta no freio por usuário e IP: depois de 5 erros, 429 com Retry-After só para aquele IP', async () => {
+    const { call, auth, ana, tokenDe } = await montar();
     const token = tokenDe(ana.id);
     const body = { currentPassword: 'senha-errada-xx', password: 'senha-nova-da-ana' };
-    for (let i = 0; i < 5; i++) expect((await call('POST', '/api/me/password', { token, body })).status).toBe(403);
-    const r = await call('POST', '/api/me/password', { token, body: { ...body, currentPassword: SENHA_ANA } });
+    const ip = '203.0.113.9';
+    for (let i = 0; i < 5; i++) expect((await call('POST', '/api/me/password', { token, body, ip })).status).toBe(403);
+    const r = await call('POST', '/api/me/password', { token, body: { ...body, currentPassword: SENHA_ANA }, ip });
     expect(r.status).toBe(429);
     expect(Number(r.headers.get('retry-after'))).toBeGreaterThan(0);
+    // o mesmo IP que o portão usaria: o login dali também está freado; de outro IP, não
+    expect(await auth.login('ana', SENHA_ANA, ip)).toEqual({ ok: false, status: 429, retryAfter: 900 });
+    expect((await auth.login('ana', SENHA_ANA, '198.51.100.7')).ok).toBe(true);
   });
 });
 

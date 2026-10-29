@@ -21,7 +21,7 @@ afterEach(async () => {
   while (closers.length) await closers.pop()!();
 });
 
-async function start(opts: { secure?: RemoteGateDeps['secure']; auth?: (a: UserAuth) => UserAuth } = {}) {
+async function start(opts: { secure?: RemoteGateDeps['secure']; auth?: (a: UserAuth) => UserAuth; trustProxy?: boolean } = {}) {
   const tmp = tempDir('habblaud-gate-');
   const clock = { now: T0 };
   const now = () => clock.now;
@@ -33,7 +33,7 @@ async function start(opts: { secure?: RemoteGateDeps['secure']; auth?: (a: UserA
   const sessions = new UserSessions(SECRET, (id) => store.recordById(id), now, join(tmp.dir, 'remote-users-revoked.json'));
   const real = new UserAuth(store, sessions, new UserThrottle(now));
   const users = opts.auth ? opts.auth(real) : real;
-  const gate = createRemoteGate({ users, secure: opts.secure ?? false });
+  const gate = createRemoteGate({ users, secure: opts.secure ?? false, trustProxy: opts.trustProxy });
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://x');
     if (gate(req, res, url)) return;
@@ -131,6 +131,29 @@ describe('portão com usuários', () => {
     expect(JSON.parse(r.body)).toEqual({ error: 'Muitas tentativas. Tente de novo em 900 s.' });
     expect(r.headers['set-cookie']).toBeUndefined();
     expect((await tryLogin(s.base, 'bia', 'senha-da-bia')).status).toBe(200);
+  });
+
+  it('atrás do proxy local (trustProxyProto) o CF-Connecting-IP decide o IP: dois valores são freados à parte', async () => {
+    const s = await start({ trustProxy: true });
+    const a = { 'CF-Connecting-IP': '203.0.113.9' };
+    const b = { 'CF-Connecting-IP': '198.51.100.7' };
+    for (let i = 0; i < 5; i++) expect((await tryLogin(s.base, 'ana', `chute${i}`, a)).status).toBe(401);
+    expect((await tryLogin(s.base, 'ana', 'senha-da-ana', a)).status).toBe(429);
+    // mesmo nome, outro IP: entra; a forma ::ffff: do primeiro IP é o mesmo cliente
+    expect((await tryLogin(s.base, 'ana', 'senha-da-ana', b)).status).toBe(200);
+    expect((await tryLogin(s.base, 'ana', 'senha-da-ana', { 'CF-Connecting-IP': '::ffff:203.0.113.9' })).status).toBe(429);
+    // sem cabeçalho (ou com lixo) vale o socket (127.0.0.1), que não errou nada
+    expect((await tryLogin(s.base, 'ana', 'senha-da-ana', { 'CF-Connecting-IP': 'lixo' })).status).toBe(200);
+  });
+
+  it('sem trustProxyProto o CF-Connecting-IP é ignorado: forjar o cabeçalho não escapa do freio nem joga o freio em outro IP', async () => {
+    const s = await start({ trustProxy: false });
+    // erros com cabeçalhos variados contam todos no socket (127.0.0.1)
+    for (let i = 0; i < 5; i++) {
+      expect((await tryLogin(s.base, 'ana', `chute${i}`, { 'CF-Connecting-IP': `10.0.0.${i}` })).status).toBe(401);
+    }
+    expect((await tryLogin(s.base, 'ana', 'senha-da-ana')).status).toBe(429);
+    expect((await tryLogin(s.base, 'ana', 'senha-da-ana', { 'CF-Connecting-IP': '198.51.100.7' })).status).toBe(429);
   });
 
   it('sem login: a API é 401 e a página vira /login (tela do Tower Tansyx)', async () => {

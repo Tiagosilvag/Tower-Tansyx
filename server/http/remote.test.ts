@@ -17,7 +17,7 @@ import {
   loadSecret,
   LoginThrottle,
   parseAllow,
-  clientOf,
+  clientIp,
   parseRemoteConfig,
   readCookie,
   RemoteSessions,
@@ -72,8 +72,9 @@ describe('parseRemoteConfig', () => {
     expect(parseRemoteConfig(env, false, TLS_FILES).config).toMatchObject({ port: 9999, host: '10.0.0.1' });
   });
   it('modo de usuários liga sem usuário nem hash, com full desligado', () => {
-    const { config } = parseRemoteConfig({ HABBLAUD_REMOTE_USERS: '1', HABBLAUD_REMOTE_INSECURE_HTTP: '1' }, false, () => false);
-    expect(config).toMatchObject({ users: true, full: false, trustProxyProto: false });
+    const { config } = parseRemoteConfig({ HABBLAUD_REMOTE_USERS: '1', HABBLAUD_REMOTE_INSECURE_HTTP: '1', HABBLAUD_REMOTE_HOST: '127.0.0.1' }, false, () => false);
+    expect(config).toMatchObject({ users: true, full: false, trustProxyProto: true });
+    expect(parseRemoteConfig({ HABBLAUD_REMOTE_USERS: '1' }, false, TLS_FILES).config).toMatchObject({ users: true, trustProxyProto: false });
     expect(config?.user).toBeUndefined();
     expect(config?.passwordHash).toBeUndefined();
     expect(config?.passwordHashText).toBeUndefined();
@@ -84,24 +85,44 @@ describe('parseRemoteConfig', () => {
     expect(parseRemoteConfig({ ...env, HABBLAUD_REMOTE_HOST: '::1' }, false, () => false).config?.trustProxyProto).toBe(true);
     expect(parseRemoteConfig(env, false, TLS_FILES).config?.trustProxyProto).toBe(false);
   });
-  it('acesso total sem HTTPS próprio só liga com a porta no loopback (senão senha e cookie iriam em texto puro na rede)', () => {
-    const env = { HABBLAUD_REMOTE_USERS: '1', HABBLAUD_REMOTE_INSECURE_HTTP: '1', HABBLAUD_REMOTE_FULL: '1' };
-    for (const host of [undefined, '0.0.0.0', '192.168.1.5']) {
-      const r = parseRemoteConfig({ ...env, ...(host ? { HABBLAUD_REMOTE_HOST: host } : {}) }, false, () => false);
+  it('sem HTTPS próprio, modo de usuários e acesso total só ligam com a porta no loopback (senão senha e cookie iriam em texto puro na rede)', () => {
+    const recusa = /sem HTTPS, o modo de usuários e o acesso total só valem com HABBLAUD_REMOTE_HOST=127\.0\.0\.1/;
+    const users = { HABBLAUD_REMOTE_USERS: '1', HABBLAUD_REMOTE_INSECURE_HTTP: '1' };
+    const full = { ...base, HABBLAUD_REMOTE_INSECURE_HTTP: '1', HABBLAUD_REMOTE_FULL: '1' };
+    const casos: NodeJS.ProcessEnv[] = [
+      users, // host padrão (0.0.0.0)
+      { ...users, HABBLAUD_REMOTE_FULL: '1', HABBLAUD_REMOTE_HOST: '192.168.1.5' },
+      { ...full, HABBLAUD_REMOTE_HOST: '0.0.0.0' }, // acesso total no usuário único também
+      { ...users, HABBLAUD_REMOTE_HOST: 'localhost' }, // nome não conta: só os literais de loopback
+    ];
+    for (const env of casos) {
+      const r = parseRemoteConfig(env, false, () => false);
       expect(r.config).toBeUndefined();
-      expect(r.warning).toMatch(/acesso total sem HTTPS/);
+      expect(r.warning).toMatch(recusa);
     }
-    // com TLS próprio, ou sem acesso total, a interface de rede segue permitida
-    expect(parseRemoteConfig(env, false, TLS_FILES).config).toMatchObject({ full: true });
-    expect(parseRemoteConfig({ ...env, HABBLAUD_REMOTE_FULL: '' }, false, () => false).config).toMatchObject({ full: false });
+    // no Docker o host é sempre 0.0.0.0: sem TLS, também recusa
+    expect(parseRemoteConfig({ ...users, HABBLAUD_REMOTE_HOST: '127.0.0.1' }, true, () => false).warning).toMatch(recusa);
+    // ::1 e 127.0.0.1 valem; com TLS próprio, a interface de rede segue permitida
+    expect(parseRemoteConfig({ ...users, HABBLAUD_REMOTE_HOST: '::1' }, false, () => false).config).toMatchObject({ users: true, host: '::1' });
+    expect(parseRemoteConfig({ ...full, HABBLAUD_REMOTE_HOST: '127.0.0.1' }, false, () => false).config).toMatchObject({ full: true });
+    expect(parseRemoteConfig({ ...users, HABBLAUD_REMOTE_FULL: '1' }, false, TLS_FILES).config).toMatchObject({ users: true, full: true });
+    // o modo de usuário único sem acesso total segue como no upstream: HTTP puro em qualquer interface
+    expect(parseRemoteConfig({ ...base, HABBLAUD_REMOTE_INSECURE_HTTP: '1' }, false, () => false).config).toMatchObject({ host: '0.0.0.0', full: false });
   });
-  it('clientOf: CF-Connecting-IP só vale atrás de proxy local; senão, o IP do socket', () => {
-    const req = (ip?: string) => ({ headers: ip === undefined ? {} : { 'cf-connecting-ip': ip }, socket: { remoteAddress: '127.0.0.1' } }) as never;
-    expect(clientOf(req('203.0.113.9'), true)).toBe('203.0.113.9');
-    expect(clientOf(req('2001:DB8::1'), true)).toBe('2001:db8::1');
-    expect(clientOf(req('203.0.113.9'), false)).toBe('127.0.0.1');
-    expect(clientOf(req(), true)).toBe('127.0.0.1');
-    expect(clientOf(req('lixo; drop'), true)).toBe('127.0.0.1');
+  it('clientIp: CF-Connecting-IP só vale atrás de proxy local e se for IP literal; senão, o IP do socket', () => {
+    const req = (ip?: string | string[], socket = '127.0.0.1') =>
+      ({ headers: ip === undefined ? {} : { 'cf-connecting-ip': ip }, socket: { remoteAddress: socket } }) as never;
+    expect(clientIp(req('203.0.113.9'), true)).toBe('203.0.113.9');
+    expect(clientIp(req(' 2001:DB8::1 '), true)).toBe('2001:db8::1');
+    expect(clientIp(req('::ffff:203.0.113.9'), true)).toBe('203.0.113.9');
+    // repetido: vale o primeiro
+    expect(clientIp(req('203.0.113.9, 198.51.100.7'), true)).toBe('203.0.113.9');
+    expect(clientIp(req(['203.0.113.9', '198.51.100.7']), true)).toBe('203.0.113.9');
+    expect(clientIp(req('203.0.113.9'), false)).toBe('127.0.0.1');
+    expect(clientIp(req(), true)).toBe('127.0.0.1');
+    expect(clientIp(req('lixo; drop'), true)).toBe('127.0.0.1');
+    expect(clientIp(req('999.1.1.1'), true)).toBe('127.0.0.1');
+    expect(clientIp(req(undefined, '::ffff:192.168.0.4'), false)).toBe('192.168.0.4');
   });
   it('modo de usuários também exige HTTPS sem HABBLAUD_REMOTE_INSECURE_HTTP', () => {
     const r = parseRemoteConfig({ HABBLAUD_REMOTE_USERS: '1' }, false, () => false);

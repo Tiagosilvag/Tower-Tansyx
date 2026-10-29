@@ -2433,7 +2433,7 @@ export const FR: Readonly<Record<string, string>> = {
   "esperado {id, name}": "attendu {id, name}",
 
   // server/http/remote.ts
-  "acesso remoto desligado: acesso total sem HTTPS próprio só com HABBLAUD_REMOTE_HOST=127.0.0.1 (atrás de um proxy local); em outra interface senha e cookie trafegariam em texto puro": "accès distant désactivé : l'accès total sans HTTPS propre ne fonctionne qu'avec HABBLAUD_REMOTE_HOST=127.0.0.1 (derrière un proxy local) ; sur une autre interface le mot de passe et le cookie circuleraient en clair",
+  "acesso remoto desligado: sem HTTPS, o modo de usuários e o acesso total só valem com HABBLAUD_REMOTE_HOST=127.0.0.1 (túnel local)": "accès distant désactivé : sans HTTPS, le mode utilisateurs et l'accès total ne fonctionnent qu'avec HABBLAUD_REMOTE_HOST=127.0.0.1 (tunnel local)",
   "a descrição passa de {0} caracteres": "la description dépasse {0} caractères",
   "a etiqueta precisa ser um projeto": "l'étiquette doit être un projet",
   "cartão não encontrado": "carte introuvable",

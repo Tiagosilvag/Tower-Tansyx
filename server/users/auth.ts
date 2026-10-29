@@ -1,4 +1,4 @@
-// Login do modo de usuários: sessão que sabe quem é o usuário, freio por usuário e a conferência da senha.
+// Login do modo de usuários: sessão que sabe quem é o usuário, freio por usuário e IP, e a conferência da senha.
 //
 // Token `v2.<id>.<validade>.<assinatura>`. A chave da assinatura mistura o segredo do servidor com o id e o hash da senha
 // do usuário, lido a cada verify: trocar a senha ou remover o usuário derruba as sessões dele na hora, sem lista negra.
@@ -67,11 +67,15 @@ export class UserSessions {
 
 const MAX_FAILURES = 5;
 const LOCK_MS = 15 * 60_000;
-const GLOBAL_WINDOW_MS = 60_000;
-const GLOBAL_MAX = 20;
+const IP_WINDOW_MS = 60_000;
+const IP_MAX = 20;
 const NAME_WINDOW_MS = 60 * 60_000;
-const NAME_MAX = 50;
+const NAME_MAX = 100;
 const MAX_TRACKED = 1000;
+/** Logins esperando a vez na fila: além disso, 429 na hora (a fila não cresce sem limite). */
+const MAX_PENDING = 50;
+/** IP de quem não se sabe de onde veio: ainda conta, só que todos juntos. */
+export const UNKNOWN_IP = 'unknown';
 
 interface Strikes {
   failures: number;
@@ -90,52 +94,61 @@ function windowWait(times: number[] | undefined, now: number, windowMs: number, 
   return inWindow.length > max ? inWindow[inWindow.length - max - 1]! + windowMs - now : 0;
 }
 
-function pushWindow(map: Map<string, number[]>, key: string, now: number, max: number): void {
-  const times = map.get(key) ?? [];
+function pushWindow(map: Map<string, number[]>, key: string, now: number, windowMs: number, max: number): void {
+  const times = (map.get(key) ?? []).filter((t) => t > now - windowMs);
   times.push(now);
   if (times.length > max + 1) times.shift();
-  // reinsere no fim: a ordem do Map vira "mais antigo primeiro" para o despejo
+  // reinsere no fim: a ordem do Map vira "erro mais recente por último" para o despejo
   map.delete(key);
   map.set(key, times);
+  if (map.size <= MAX_TRACKED) return;
+  // teto: saem primeiro as janelas já vazias; se ainda não couber, a do erro mais antigo
+  for (const [k, ts] of map) if (ts[ts.length - 1]! <= now - windowMs) map.delete(k);
   if (map.size > MAX_TRACKED) map.delete(map.keys().next().value!);
 }
 
+// \n não aparece num nome válido nem num IP: a chave não colide
+function pairKey(name: string, ip: string): string {
+  return `${ip}\n${name}`;
+}
+
 /**
- * Freio de tentativas. `client` é quem está tentando (IP; vazio quando não se sabe): sem ele, um anônimo errando senhas
- * trancaria a equipe toda, que é justamente o que o freio existe para evitar.
- *  - 5 erros seguidos do MESMO cliente num nome bloqueiam aquele par por 15 min; nomes que não existem contam igual
- *    (o freio não revela quem existe);
- *  - retaguarda por cliente: mais de 20 erros em 60 s, de quaisquer nomes, fazem aquele cliente esperar;
- *  - teto folgado por nome: mais de 50 erros em 1 h, de todos os clientes juntos, seguram o nome (contra chute distribuído).
+ * Freio de tentativas, chaveado por quem tenta (o IP do cliente): sem isso, um anônimo errando senhas trancaria a
+ * equipe toda, que é justamente o que o freio existe para evitar.
+ *  - 5 erros seguidos do MESMO IP num nome bloqueiam aquele par (nome, IP) por 15 min; nomes que não existem contam
+ *    igual (o freio não revela quem existe);
+ *  - retaguarda por IP: mais de 20 erros em 60 s, de quaisquer nomes, fazem só aquele IP esperar;
+ *  - teto folgado por nome: mais de 100 erros em 1 h, de todos os IPs juntos, seguram só aquele nome (contra chute
+ *    distribuído; é o único freio que atravessa IPs).
  */
 export class UserThrottle {
-  private readonly users = new Map<string, Strikes>();
-  /** Erros recentes por cliente e por nome: bastam os últimos `max + 1` para saber quando a janela baixa do teto. */
-  private readonly byClient = new Map<string, number[]>();
+  private readonly pairs = new Map<string, Strikes>();
+  /** Erros recentes por IP e por nome: bastam os últimos `max + 1` para saber quando a janela baixa do teto. */
+  private readonly byIp = new Map<string, number[]>();
   private readonly byName = new Map<string, number[]>();
 
   constructor(private readonly now: () => number = Date.now) {}
 
-  /** Segundos inteiros até este nome, vindo deste cliente, poder tentar de novo (0 = pode). */
-  retryAfter(username: string, client = ''): number {
+  /** Segundos inteiros até este nome, vindo deste IP, poder tentar de novo (0 = pode). */
+  retryAfter(username: string, ip: string): number {
     const now = this.now();
     const name = norm(username);
-    const s = this.users.get(`${client}\n${name}`);
+    const s = this.pairs.get(pairKey(name, ip));
     const wait = Math.max(
       s ? s.lockedUntil - now : 0,
-      windowWait(this.byClient.get(client), now, GLOBAL_WINDOW_MS, GLOBAL_MAX),
+      windowWait(this.byIp.get(ip), now, IP_WINDOW_MS, IP_MAX),
       windowWait(this.byName.get(name), now, NAME_WINDOW_MS, NAME_MAX),
     );
     return wait > 0 ? Math.ceil(wait / 1000) : 0;
   }
 
-  fail(username: string, client = ''): void {
+  fail(username: string, ip: string): void {
     const now = this.now();
     const name = norm(username);
-    const key = `${client}\n${name}`;
-    pushWindow(this.byClient, client, now, GLOBAL_MAX);
-    pushWindow(this.byName, name, now, NAME_MAX);
-    let s = this.users.get(key);
+    const key = pairKey(name, ip);
+    pushWindow(this.byIp, ip, now, IP_WINDOW_MS, IP_MAX);
+    pushWindow(this.byName, name, now, NAME_WINDOW_MS, NAME_MAX);
+    let s = this.pairs.get(key);
     if (s && this.expired(s, now)) s = undefined;
     if (!s) this.makeRoom(now);
     s ??= { failures: 0, lockedUntil: 0, last: 0 };
@@ -145,12 +158,13 @@ export class UserThrottle {
       s.lockedUntil = now + LOCK_MS;
       s.failures = 0;
     }
-    this.users.delete(key);
-    this.users.set(key, s);
+    this.pairs.delete(key);
+    this.pairs.set(key, s);
   }
 
-  succeed(username: string, client = ''): void {
-    this.users.delete(`${client}\n${norm(username)}`);
+  /** Acertou: zera o par. As janelas por IP e por nome ficam, senão um acerto apagaria os erros de outra pessoa. */
+  succeed(username: string, ip: string): void {
+    this.pairs.delete(pairKey(norm(username), ip));
   }
 
   /** Erros esquecidos 15 min depois do último, e o bloqueio quando vence. */
@@ -160,21 +174,21 @@ export class UserThrottle {
 
   /**
    * Abre espaço para um par novo no teto de 1000: primeiro saem os vencidos, depois o mais antigo não bloqueado. Um
-   * bloqueado só sai se todos estiverem bloqueados, e para bloquear 1000 pares a retaguarda por cliente (20 por minuto)
+   * bloqueado só sai se todos estiverem bloqueados, e para bloquear 1000 pares a retaguarda por IP (20 por minuto)
    * faz esperar bem mais que os 15 min: inundar o mapa de um IP só não solta o bloqueio de ninguém.
    */
   private makeRoom(now: number): void {
-    if (this.users.size < MAX_TRACKED) return;
-    for (const [name, s] of this.users) if (this.expired(s, now)) this.users.delete(name);
-    if (this.users.size < MAX_TRACKED) return;
-    for (const [name, s] of this.users) {
+    if (this.pairs.size < MAX_TRACKED) return;
+    for (const [key, s] of this.pairs) if (this.expired(s, now)) this.pairs.delete(key);
+    if (this.pairs.size < MAX_TRACKED) return;
+    for (const [key, s] of this.pairs) {
       if (s.lockedUntil <= now) {
-        this.users.delete(name);
+        this.pairs.delete(key);
         return;
       }
     }
-    const oldest = this.users.keys().next();
-    if (!oldest.done) this.users.delete(oldest.value);
+    const oldest = this.pairs.keys().next();
+    if (!oldest.done) this.pairs.delete(oldest.value);
   }
 }
 
@@ -194,6 +208,7 @@ function decoyHash(): Promise<PasswordHash> {
 export class UserAuth {
   /** Uma conferência por vez: scrypts em paralelo multiplicariam memória e CPU, e furariam o freio enquanto rodam. */
   private queue: Promise<unknown> = Promise.resolve();
+  private pending = 0;
 
   constructor(
     private readonly store: UserStore,
@@ -202,17 +217,22 @@ export class UserAuth {
     private readonly verify: (password: string, hash: PasswordHash) => Promise<boolean> = verifyPassword,
   ) {}
 
-  login(username: unknown, password: unknown, client = ''): Promise<LoginResult> {
+  /** `ip` é quem tenta (ver clientIp em http/remote.ts); o freio é por (nome, IP), por IP e, folgado, por nome. */
+  login(username: unknown, password: unknown, ip?: string): Promise<LoginResult> {
+    // fila cheia: recusa sem enfileirar nem contar erro (é carga, não chute de senha)
+    if (this.pending >= MAX_PENDING) return Promise.resolve({ ok: false, status: 429, retryAfter: 1 });
     const name = typeof username === 'string' ? norm(username) : '';
     const pass = typeof password === 'string' ? password : '';
-    const run = this.queue.then(() => this.attempt(name, pass, client));
+    const from = ip || UNKNOWN_IP;
+    this.pending++;
+    const run = this.queue.then(() => this.attempt(name, pass, from)).finally(() => this.pending--);
     this.queue = run.catch(() => undefined);
     return run;
   }
 
-  private async attempt(name: string, password: string, client: string): Promise<LoginResult> {
+  private async attempt(name: string, password: string, ip: string): Promise<LoginResult> {
     // conferido dentro da fila: os erros de quem estava na frente já contam
-    const retryAfter = this.throttle.retryAfter(name, client);
+    const retryAfter = this.throttle.retryAfter(name, ip);
     if (retryAfter > 0) return { ok: false, status: 429, retryAfter };
     const record = name ? this.store.record(name) : undefined;
     const real = record && parsePasswordHash(record.passwordHash);
@@ -224,10 +244,10 @@ export class UserAuth {
       ok = false;
     }
     if (!ok || !record || !real) {
-      this.throttle.fail(name, client);
+      this.throttle.fail(name, ip);
       return { ok: false, status: 401 };
     }
-    this.throttle.succeed(name, client);
+    this.throttle.succeed(name, ip);
     this.store.touchLogin(record.id);
     const { token, maxAgeS } = this.sessions.issue(record.id);
     return { ok: true, token, maxAgeS, user: this.store.get(record.id)! };

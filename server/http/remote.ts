@@ -106,8 +106,10 @@ export function parseRemoteConfig(
   const port = inDocker ? DEFAULT_REMOTE_PORT : Number.isInteger(rawPort) && rawPort > 0 && rawPort < 65536 ? rawPort : DEFAULT_REMOTE_PORT;
   const host = inDocker ? '0.0.0.0' : env.HABBLAUD_REMOTE_HOST?.trim() || '0.0.0.0';
   const loopback = host === '127.0.0.1' || host === '::1';
-  if (truthy(env.HABBLAUD_REMOTE_FULL) && !hasTls && !loopback) {
-    return { warning: tr('acesso remoto desligado: acesso total sem HTTPS próprio só com HABBLAUD_REMOTE_HOST=127.0.0.1 (atrás de um proxy local); em outra interface senha e cookie trafegariam em texto puro') };
+  // Sem TLS próprio, só o proxy local (túnel) pode falar com a porta: numa interface de rede, senhas e cookies dos
+  // usuários (e o acesso total) trafegariam em texto puro. O modo de usuário único antigo segue como no upstream.
+  if ((users || truthy(env.HABBLAUD_REMOTE_FULL)) && !hasTls && !loopback) {
+    return { warning: tr('acesso remoto desligado: sem HTTPS, o modo de usuários e o acesso total só valem com HABBLAUD_REMOTE_HOST=127.0.0.1 (túnel local)') };
   }
   const base = {
     port,
@@ -516,13 +518,27 @@ export function cookieHeader(value: string, maxAgeS: number, secure: boolean): s
   return `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeS}${secure ? '; Secure' : ''}`;
 }
 
-/** Quem está tentando o login: o IP do CF-Connecting-IP só vale atrás de proxy local; senão, o do socket. */
-export function clientOf(req: IncomingMessage, trustProxy = false): string {
-  const header = req.headers['cf-connecting-ip'];
-  const forwarded = typeof header === 'string' ? header.trim() : '';
-  // formato de IP (v4 ou v6), sem lixo: o valor vira chave de mapa
-  if (trustProxy && /^[0-9a-fA-F:.]{2,45}$/.test(forwarded)) return forwarded.toLowerCase();
-  return req.socket.remoteAddress ?? '';
+/** IP em forma única: minúsculas e sem o prefixo `::ffff:` do IPv4 mapeado (o mesmo cliente não vira duas chaves). */
+function normIp(ip: string): string {
+  const lower = ip.toLowerCase();
+  return lower.startsWith('::ffff:') && net.isIPv4(lower.slice(7)) ? lower.slice(7) : lower;
+}
+
+/**
+ * IP de quem está tentando o login (chave do freio). O CF-Connecting-IP só vale com `trustProxy` (trustProxyProto: sem
+ * TLS e a porta só no loopback, então quem conecta é o cloudflared local, que sobrescreve esse cabeçalho); senão um
+ * cabeçalho forjado escaparia do freio ou o jogaria em cima de outro IP, e vale o endereço do socket.
+ */
+export function clientIp(req: IncomingMessage, trustProxy: boolean): string {
+  if (trustProxy) {
+    const raw = req.headers['cf-connecting-ip'];
+    // repetido: o Node junta com vírgula (ou vem em lista); vale o primeiro
+    const first = (Array.isArray(raw) ? raw[0] : raw)?.split(',')[0]?.trim() ?? '';
+    // só um IP literal vira chave de mapa: lixo cai no endereço do socket
+    if (net.isIP(first)) return normIp(first);
+  }
+  const socketIp = req.socket.remoteAddress;
+  return socketIp ? normIp(socketIp) : '';
 }
 
 /**
@@ -537,7 +553,7 @@ export interface RemoteGateDeps {
   /** Arquivo da CA pública servido em /remote/ca.crt (ausente = sem download). */
   caFile?: string;
   throttle?: LoginThrottle;
-  /** Atrás de proxy local (cloudflared): o cliente do freio de login vem do CF-Connecting-IP. */
+  /** Atrás de proxy local (cloudflared; = trustProxyProto): o IP do freio de login vem do CF-Connecting-IP. */
   trustProxy?: boolean;
   /** Conferência da senha (injetável nos testes; padrão: scrypt). */
   verify?: (password: string, hash: PasswordHash) => Promise<boolean>;
@@ -570,7 +586,7 @@ export function createRemoteGate(deps: RemoteGateDeps): (req: IncomingMessage, r
         sendJson(res, 405, { error: tr('método não permitido') }, { Allow: 'POST' });
         return true;
       }
-      // O freio e a fila de conferências ficam no UserAuth (por usuário, então precisa do nome que vem no corpo).
+      // O freio e a fila de conferências ficam no UserAuth (por usuário e IP, então precisa do nome que vem no corpo).
       readBody(req)
         .then(async (raw) => {
           let body: { user?: unknown; password?: unknown } = {};
@@ -582,7 +598,7 @@ export function createRemoteGate(deps: RemoteGateDeps): (req: IncomingMessage, r
           }
           let result: LoginResult;
           try {
-            result = await users.login(body.user, body.password, clientOf(req, deps.trustProxy));
+            result = await users.login(body.user, body.password, clientIp(req, !!deps.trustProxy));
           } catch {
             // falha do armazém depois da senha certa: resposta genérica, sem cookie e sem a mensagem de dentro
             return sendJson(res, 500, { error: tr('erro interno') });

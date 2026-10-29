@@ -11,7 +11,7 @@ import { AccountsService } from './accounts/service';
 import { isTruthy, loadConfig, messagesOffReason, terminalOffReason, worldSocketUrl } from './config';
 import { createApiHandler, readJson, sendJson } from './http/app';
 import { createRequestGuard, isLoopbackHost } from './http/guard';
-import { cookieHeader, createRemoteGate, isRemoteRequest, loadSecret, RemoteSessions, startRemoteListener, type RemoteConfig, type RemoteListener, type SingleUserCreds } from './http/remote';
+import { clientIp, cookieHeader, createRemoteGate, isRemoteRequest, loadSecret, RemoteSessions, startRemoteListener, type RemoteConfig, type RemoteListener, type SingleUserCreds } from './http/remote';
 import { openDb, type Db } from './db/db';
 import { createKanbanRoutes } from './kanban/http';
 import { KanbanStore } from './kanban/store';
@@ -384,6 +384,8 @@ const ticker = setInterval(() => {
 // Cookie da porta remota com Secure: HTTPS próprio, ou proxy local que terminou o TLS e avisou pelo X-Forwarded-Proto.
 const remoteSecure = (req: http.IncomingMessage): boolean =>
   !!config.remote?.tls || (!!config.remote?.trustProxyProto && req.headers['x-forwarded-proto'] === 'https');
+// IP do freio de login, o mesmo no portão e na troca da própria senha: CF-Connecting-IP só atrás do proxy local.
+const remoteClientIp = (req: http.IncomingMessage): string => clientIp(req, !!config.remote?.trustProxyProto);
 // Banco SQLite (usuários e Kanban). Sem ele o Kanban fica desligado e o modo de usuários também (a porta remota não sobe).
 let db: Db | undefined;
 try {
@@ -404,7 +406,7 @@ if (config.remote?.users && db) {
     // Revogados num arquivo próprio: os tokens v2 não se misturam com os do usuário único.
     const sessions = new UserSessions(loadSecret(join(config.dataDir, 'remote-secret')), (id) => store.recordById(id), Date.now, join(config.dataDir, 'remote-users-revoked.json'));
     const auth = new UserAuth(store, sessions, new UserThrottle());
-    const routes = createUsersRoutes({ store, auth, readJson: (req) => readJson(req), setCookie: (req, token, maxAgeS) => cookieHeader(token, maxAgeS, remoteSecure(req)) });
+    const routes = createUsersRoutes({ store, auth, readJson: (req) => readJson(req), setCookie: (req, token, maxAgeS) => cookieHeader(token, maxAgeS, remoteSecure(req)), clientIp: remoteClientIp });
     userAccounts = { store, auth, routes };
   } catch (err) {
     log.warn(tr('   Acesso remoto: desligado, não deu para abrir o banco de usuários {0} ({1}).', [config.dbFile, errMsg(err)]));

@@ -8,6 +8,7 @@
 //   store, auth     o armazém e o login da Tarefa 2/3
 //   readJson        o leitor de corpo JSON de http/app.ts (injetado, não há outro)
 //   setCookie       o valor completo do Set-Cookie da sessão (a lógica do portão; `secure` se decide por requisição)
+//   clientIp        o IP de quem pede, igual ao do portão (clientIp de http/remote.ts): o freio da senha atual é o do login
 //   hash            opcional; o padrão é o scrypt de custo normal. Custo menor revelaria usuários reais pelo tempo da
 //                   resposta, então só os testes injetam um hash barato.
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -32,6 +33,7 @@ export interface UsersRoutesDeps {
   auth: UserAuth;
   readJson: (req: IncomingMessage) => Promise<unknown>;
   setCookie: (req: IncomingMessage, token: string, maxAgeS: number) => string;
+  clientIp: (req: IncomingMessage) => string;
   hash?: (password: string) => Promise<string>;
 }
 
@@ -120,8 +122,8 @@ export function createUsersRoutes(deps: UsersRoutesDeps): (req: IncomingMessage,
   async function changeOwn(req: IncomingMessage, res: ServerResponse, me: User): Promise<void> {
     const b = asObject(await readJson(req));
     const password = checkPassword(b.password);
-    // a conferência é o próprio login: usa a fila, o freio por usuário e o scrypt que roda sempre
-    const check = await auth.login(me.username, b.currentPassword);
+    // a conferência é o próprio login: usa a fila, o freio por usuário e IP e o scrypt que roda sempre
+    const check = await auth.login(me.username, b.currentPassword, deps.clientIp(req));
     if (!check.ok) {
       if (check.status === 429) {
         const wait = check.retryAfter ?? 1;
