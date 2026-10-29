@@ -33,6 +33,8 @@ do meio (0.**3**.0).
 - **O chat mostra a página que o agente publica e os links de artefato.** Quando o agente publica um mockup com a
   ferramenta Artifact, a mensagem ganha "Ver a prévia": um quadro isolado (sem scripts, só HTML e CSS) com a
   página, ou "Abrir em outra aba". Links `claude.ai/artifact/…` na resposta viram o cartão "Abrir artefato".
+  Imagem e prévia aparecem também em "Só prompts" e "Sem ferramentas" (só o resultado, sem a chamada), e a
+  miniatura de uma imagem recém-gravada tenta de novo até o arquivo existir.
 
 - **O chat mostra a pergunta do agente e a sua resposta em todos os filtros.** Com "Sem ferramentas" ou "Só prompts", o
   `AskUserQuestion` (a pergunta com a resposta que você deu) sumia junto com as outras ferramentas e parecia que a

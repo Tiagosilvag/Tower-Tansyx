@@ -28,6 +28,7 @@ import {
   finalAnswerKeys,
   foldQuery,
   globalIndex,
+  hasMedia,
   highlightHits,
   itemVisible,
   refAt,
@@ -479,6 +480,7 @@ function expander(label: string, cls: string, detail: string, detailCls: string)
 }
 
 const IMAGE_ID = /^[a-f0-9]{8,64}$/;
+const IMAGE_RETRIES = 4;
 
 /** Miniaturas das imagens que o agente citou ou gravou; um toque abre a imagem grande. */
 function imageStrip(images: TerminalImage[] | undefined): HTMLElement | null {
@@ -488,10 +490,16 @@ function imageStrip(images: TerminalImage[] | undefined): HTMLElement | null {
   for (const i of ok) {
     const url = `/api/chat-image/${i.id}`;
     const img = h('img', { class: 'ui-term__img', attrs: { src: url, alt: i.name, loading: 'lazy', decoding: 'async' } });
+    // A chamada da ferramenta chega ao chat antes de o arquivo existir: tenta de novo algumas vezes antes de desistir.
+    let tries = 0;
     const btn = h('button', { class: 'ui-term__img-btn', attrs: { type: 'button', title: i.name, 'aria-label': tr('Ver a imagem {0}', [i.name]) } }, img);
     btn.addEventListener('click', () => openImage(url, i.name));
     // Arquivo que sumiu ou mudou de lugar: tira a miniatura quebrada.
-    img.addEventListener('error', () => btn.remove());
+    img.addEventListener('error', () => {
+      if (tries >= IMAGE_RETRIES) return btn.remove();
+      tries++;
+      setTimeout(() => img.setAttribute('src', `${url}?r=${tries}`), 1_000 * tries);
+    });
     strip.append(btn);
   }
   return strip;
@@ -1309,6 +1317,8 @@ export class TerminalPanel implements UiComponent, TerminalControl {
       if (!el) continue;
       const show = itemVisible(item, this.filter, finals);
       el.classList.toggle('is-filtered', !show);
+      // Fora do "Tudo", a ferramenta com imagem ou página mostra só o resultado (sem a chamada nem a saída).
+      el.classList.toggle('is-media-only', show && this.filter !== 'all' && hasMedia(item));
       if (show) visible++;
     }
     this.visibleRows = visible;

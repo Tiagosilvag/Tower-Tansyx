@@ -142,3 +142,12 @@ describe('copiar', () => {
     expect(copyTextOf({ kind: 'thinking', id: 'x', at: 0 })).toBe('');
   });
 });
+
+describe('itemVisible com imagem ou página', () => {
+  it('a ferramenta que gravou uma imagem ou publicou uma página aparece em todos os filtros', () => {
+    const media: TerminalItem = { type: 'tool', key: 'tool:m', tool: { kind: 'tool', id: 'm', at: 1, tool: 'Artifact', title: 'Artifact(a.html)', previews: [{ id: 'abcdef1234', name: 'a.html' }] } };
+    const plain: TerminalItem = { type: 'tool', key: 'tool:p', tool: { kind: 'tool', id: 'p', at: 1, tool: 'Bash', title: 'Bash(ls)' } };
+    for (const f of ['all', 'prompts', 'noTools'] as const) expect(itemVisible(media, f, new Set())).toBe(true);
+    expect(itemVisible(plain, 'noTools', new Set())).toBe(false);
+  });
+});

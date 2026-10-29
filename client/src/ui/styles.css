@@ -5613,6 +5613,12 @@ button.ui-term__think:hover,
   display: none;
 }
 
+/* Ferramenta com imagem ou página fora do filtro "Tudo": só o resultado, sem a chamada nem a saída. */
+.ui-term__row.is-media-only .ui-term__call,
+.ui-term__row.is-media-only .ui-term__slot {
+  display: none;
+}
+
 /* Corte no meio de uma linha comprida (o resto fica no DOM, escondido, para a busca). */
 .ui-term__dots {
   color: var(--term-dim);

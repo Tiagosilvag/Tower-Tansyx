@@ -246,6 +246,12 @@ export function tokenizeInline(src: string): MdInline[] {
       continue;
     }
 
+    // Imagem em markdown (![alt](caminho)): o chat mostra a miniatura à parte; aqui fica só o link, sem o "!".
+    if (ch === '!' && /^!\[[^\]]*\]\(/.test(src.slice(i, i + 400))) {
+      i++;
+      continue;
+    }
+
     if (ch === '[') {
       const close = src.indexOf(']', i + 1);
       if (close > i + 1 && src[close + 1] === '(') {
