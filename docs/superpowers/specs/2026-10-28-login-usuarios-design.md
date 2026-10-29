@@ -102,9 +102,35 @@ Você escolheu a 1.
   existe.
 - **Remover:** ninguém remove a si mesmo nem o último usuário. Remover derruba as sessões do removido.
 - **Quem pode o quê no acesso remoto:** a sessão de qualquer usuário recebe `permissions,messages,terminal,spawn`
-  (`HABBLAUD_REMOTE_ALLOW`), já que todos podem tudo.
-- **Compatibilidade:** com usuários no banco, valem eles; se não houver nenhum, o modo antigo de usuário único por
-  variável de ambiente continua funcionando como hoje (não regride quem usa o upstream).
+  (`HABBLAUD_REMOTE_ALLOW`) **e o acesso total** descrito na próxima seção, já que todos podem tudo.
+- **Ligar o modo de usuários:** explícito, por `HABBLAUD_REMOTE_USERS=1`. Sem essa variável, o modo antigo de usuário único
+  (`HABBLAUD_REMOTE_USER` e `HABBLAUD_REMOTE_PASSWORD_HASH`) continua exatamente como hoje, então quem usa o upstream não
+  regride. Com ela e **nenhum usuário no banco**, a porta não sobe e o servidor avisa para rodar `npm run users:add`.
+
+## Acesso total do usuário logado (achado ao ler o código)
+
+O design inicial supunha que bastava liberar as funções em `HABBLAUD_REMOTE_ALLOW`. Não basta: pela porta remota, mesmo
+logado e com tudo liberado, o upstream recusa (403) **de propósito** o terminal interativo (`/api/pty*`, assumir e encerrar
+agentes, anexos, sugestão do chat, sessões no tmux, projeto novo pelo terminal), atualizar o uso, renomear salas, editar o
+personagem e as rotas de hooks, plugins, Codex e auxiliar do host (o teste `server/http/remote.test.ts`, "porta remota",
+fixa isso). Hoje tudo isso funciona para vocês só porque o Caddy reescreve o `Host` para `localhost`. Sem o Caddy e sem
+tratar isso, vocês perderiam a maior parte do que usam.
+
+Decisão (sua): um modo **opt-in**, `HABBLAUD_REMOTE_FULL=1` (desligado por padrão), em que a sessão **logada pela porta
+remota** conta como o próprio computador para:
+
+- terminal interativo e tudo em `/api/pty*` (criar, entrada, fechar, anexar, sugestão, fluxo), `/api/agents/:id/stop` e
+  `/api/agents/:id/takeover`;
+- Novo agente e Projeto novo (`/api/spawn*`), mensagens, permissões e o terminal de leitura;
+- atualizar o uso (`/api/usage/refresh`), renomear salas, editar o personagem.
+
+Continuam **só da máquina**, nunca abertos a uma sessão remota, nem com o modo total e nem com `Host: localhost` forjado:
+as rotas dos hooks e plugins (`/api/permissions` POST e `/wait`, `/api/mod/inbox*`), do Codex (`/api/codex/*`), do auxiliar
+do host (`/api/host/*`) e o Habblaud World (`/api/world/*`).
+
+Segurança, dita com todas as letras: neste modo, **quem passa pelo login tem um shell root** na máquina (hoje é o mesmo
+com a senha do Caddy). Por isso o modo é opt-in, o terminal exige a conexão vir do próprio computador (o `cloudflared`;
+`HABBLAUD_REMOTE_HOST=127.0.0.1`), o `Origin` precisa ser o mesmo do `Host` e o freio por usuário vale.
 - **Troca do túnel:** o túnel passa a apontar para `http://127.0.0.1:4748`. Entre o `cloudflared` e o servidor o tráfego é
   HTTP puro dentro da própria máquina (`HABBLAUD_REMOTE_INSECURE_HTTP=1`, que o servidor já aceita para esse caso). Para o
   cookie sair `Secure` atrás do túnel, a porta remota confia no `X-Forwarded-Proto: https` **só quando escuta em
@@ -121,7 +147,9 @@ Você escolheu a 1.
 1. Construir e testar com o Caddy ainda de pé.
 2. Criar os usuários por `npm run users:add`. As senhas do Caddy são hashes bcrypt e não servem aqui: cada pessoa recebe
    uma senha nova.
-3. Subir a porta remota em `127.0.0.1:4748` e testar o login pelo endereço de testes, sem mexer no túnel.
+3. Subir a porta remota em `127.0.0.1:4748` (com `HABBLAUD_REMOTE_USERS=1`, `HABBLAUD_REMOTE_FULL=1`,
+   `HABBLAUD_REMOTE_INSECURE_HTTP=1`, `HABBLAUD_REMOTE_HOST=127.0.0.1` e `HABBLAUD_REMOTE_ALLOW=permissions,messages,terminal,spawn`)
+   e testar o login pelo próprio servidor (`curl`), sem mexer no túnel.
 4. Trocar o destino do túnel de `localhost:8080` para `localhost:4748`. O túnel é gerenciado remotamente (o
    `cloudflared` roda com `--token-file`), então isso é feito **por você no painel Zero Trust** (hostname público do
    `towertansyx`), não por arquivo no servidor.
