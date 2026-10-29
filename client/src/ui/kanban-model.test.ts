@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { KanbanBoard, KanbanCard } from '../../../shared/kanban';
-import { dropTarget, filterBoards, filterCards, groupByColumn, loadShelf, saveShelf, SHELF_KEY } from './kanban-model';
+import type { KanbanEvent } from '../../../shared/kanban';
+import { applyMove, describeEvent, dropTarget, filterBoards, filterCards, groupByColumn, loadShelf, saveShelf, SHELF_KEY } from './kanban-model';
 
 const card = (id: number, column: KanbanCard['column'], position: number, over: Partial<KanbanCard> = {}): KanbanCard => ({
   id, boardId: 1, column, position, title: `c${id}`, description: '', priority: 'media', assigneeId: null, assigneeName: null, projectId: null,
@@ -85,5 +86,44 @@ describe('estante lembrada', () => {
   it('salvar não lança sem armazenamento nem com armazenamento que lança', () => {
     expect(() => saveShelf({ collapsed: true, boardId: null }, null)).not.toThrow();
     expect(() => saveShelf({ collapsed: true, boardId: null }, { setItem: () => { throw new Error('cheio'); } })).not.toThrow();
+  });
+});
+
+describe('applyMove', () => {
+  const cards = [card(1, 'ideias', 0), card(2, 'ideias', 1), card(3, 'ideias', 2), card(4, 'fazendo', 0)];
+  const view = (list: KanbanCard[]) => list.map((c) => `${c.id}:${c.column}:${c.position}`).sort();
+
+  it('reordena dentro da coluna renumerando 0..n-1', () => {
+    expect(view(applyMove(cards, 3, 'ideias', 0))).toEqual(['1:ideias:1', '2:ideias:2', '3:ideias:0', '4:fazendo:0']);
+  });
+  it('troca de coluna e renumera a de origem e a de destino', () => {
+    expect(view(applyMove(cards, 1, 'fazendo', 0))).toEqual(['1:fazendo:0', '2:ideias:0', '3:ideias:1', '4:fazendo:1']);
+    expect(view(applyMove(cards, 2, 'feito', 5))).toEqual(['1:ideias:0', '2:feito:0', '3:ideias:1', '4:fazendo:0']);
+  });
+  it('não muda o original e ignora id desconhecido', () => {
+    applyMove(cards, 1, 'feito', 0);
+    expect(cards[0]).toMatchObject({ column: 'ideias', position: 0 });
+    expect(applyMove(cards, 99, 'feito', 0)).toEqual(cards);
+  });
+});
+
+describe('describeEvent', () => {
+  const ev = (kind: KanbanEvent['kind'], detail: string): KanbanEvent => ({ id: 1, cardId: 1, at: 1, actorId: null, actorName: null, via: 'user', kind, detail });
+  it('descreve cada tipo em português, com colunas e prioridades por extenso', () => {
+    expect(describeEvent(ev('created', 'Título')).text).toBe('criou o cartão');
+    expect(describeEvent(ev('moved', 'ideias→a_fazer')).text).toBe('moveu de Ideias para A fazer');
+    expect(describeEvent(ev('priority', 'baixa→media')).text).toBe('mudou a prioridade de baixa para média');
+    expect(describeEvent(ev('edited', 'title,description')).text).toBe('editou o título e a descrição');
+    expect(describeEvent(ev('edited', 'description')).text).toBe('editou a descrição');
+    expect(describeEvent(ev('assigned', 'tiago')).text).toBe('passou o cartão para tiago');
+    expect(describeEvent(ev('assigned', '—')).text).toBe('tirou o responsável');
+    expect(describeEvent(ev('tagged', 'Tower Tansyx')).text).toBe('etiquetou com o projeto Tower Tansyx');
+    expect(describeEvent(ev('tagged', '—')).text).toBe('tirou a etiqueta de projeto');
+    expect(describeEvent(ev('moved_board', 'Geral→P')).text).toBe('moveu do quadro Geral para P');
+  });
+  it('comentário traz o texto à parte; tipo ou detalhe estranho não quebra', () => {
+    expect(describeEvent(ev('comment', 'dá para usar push'))).toEqual({ text: 'comentou', quote: 'dá para usar push' });
+    expect(describeEvent(ev('moved', 'lixo')).text).toBe('moveu o cartão');
+    expect(describeEvent(ev('priority', 'x→y')).text).toBe('mudou a prioridade de x para y');
   });
 });

@@ -49,6 +49,13 @@ describe('kanbanApi', () => {
     expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual(['DELETE /api/kanban/boards/2', 'DELETE /api/kanban/boards/2?force=1', 'DELETE /api/kanban/cards/9']);
   });
 
+  it('todo pedido que não é GET leva Content-Type JSON, até o DELETE sem corpo (o guard do servidor devolve 415 sem isso)', async () => {
+    const calls = fakeFetch(204, undefined);
+    await kanbanApi.deleteCard(9);
+    await kanbanApi.deleteBoard(2, true);
+    for (const c of calls) expect((c.init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+  });
+
   it('erro do servidor vira Error com a mensagem dele', async () => {
     fakeFetch(409, { error: 'já existe um projeto com esse nome' });
     await expect(kanbanApi.createBoard('P')).rejects.toThrow('já existe um projeto com esse nome');

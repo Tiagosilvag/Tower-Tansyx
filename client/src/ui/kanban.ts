@@ -1,16 +1,15 @@
 // Kanban do time: o quadro branco da parede da sala, com uma estante de projetos ao lado (retrátil) e post-its nas colunas.
 // Dados de /api/kanban/* (net/kanban.ts). Tudo que o usuário escreve entra como texto (h/setText), nunca como HTML.
-// Aqui: ver quadros e cartões, as duas buscas, criar projeto e cartão. Abrir, editar e arrastar cartões vêm na etapa seguinte.
+// Quadros e cartões, as duas buscas, criar projeto e cartão, arrastar (mouse) e mover pelo teclado (Alt+setas). Abrir um cartão: ui/kanban-card.ts.
 import { tr } from '../../../shared/i18n';
 import { COLUMNS, MAX_BOARD_NAME, MAX_TITLE, type Column, type KanbanBoard, type KanbanCard } from '../../../shared/kanban';
 import { kanbanApi } from '../net/kanban';
 import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
-import { filterBoards, filterCards, groupByColumn, loadShelf, saveShelf, type ShelfState } from './kanban-model';
+import { CardDialog } from './kanban-card';
+import { applyMove, COLUMN_LABEL, dropTarget, filterBoards, filterCards, groupByColumn, loadShelf, PRIORITY_LABEL, saveShelf, type ShelfState } from './kanban-model';
 
-const COLUMN_LABEL: Record<Column, string> = { ideias: tr('Ideias'), a_fazer: tr('A fazer'), fazendo: tr('Fazendo'), feito: tr('Feito') };
-const PRIORITY_LABEL = { alta: tr('alta'), media: tr('média'), baixa: tr('baixa') } as const;
 /** Cores dos post-its e das lombadas, em rodízio. */
 const TINTS = ['y', 'p', 'm', 'b'] as const;
 
@@ -28,7 +27,8 @@ export class KanbanPanel implements UiComponent {
   private seq = 0;
   private addingCard: Column | null = null;
   private addingProject = false;
-  private selectedId: number | null = null;
+  private dragId: number | null = null;
+  private readonly cardDialog: CardDialog;
   private opener: HTMLElement | null = null;
 
   private readonly shelfEl: HTMLElement;
@@ -48,6 +48,7 @@ export class KanbanPanel implements UiComponent {
     private readonly ctx: UiContext,
     private readonly button: HTMLElement,
   ) {
+    this.cardDialog = new CardDialog({ boards: () => this.boards, changed: () => void this.refresh() });
     this.shelf = loadShelf();
     // Em tela estreita a estante nasce recolhida (e essa escolha não é gravada: só o toque do usuário grava).
     this.collapsed = this.shelf.collapsed || ctx.isNarrow();
@@ -101,6 +102,7 @@ export class KanbanPanel implements UiComponent {
           h('div', { class: 'ui-kb__layout' }, this.shelfEl, h('div', { class: 'ui-kb__main' }, this.statusEl, this.emptyEl, this.cols)),
         ),
       ),
+      this.cardDialog.el,
     );
     // Clique no fundo fecha; o teclado fica dentro da janela (os atalhos do escritório não disparam por baixo).
     this.el.addEventListener('click', (e) => {
@@ -194,7 +196,6 @@ export class KanbanPanel implements UiComponent {
     this.qTask = '';
     this.searchTask.value = '';
     this.addingCard = null;
-    this.selectedId = null;
     this.cards = [];
     this.renderAll();
     void this.refresh();
@@ -308,13 +309,15 @@ export class KanbanPanel implements UiComponent {
       this.addingCard === column
         ? this.inlineInput(tr('Título do cartão'), MAX_TITLE, (title) => void this.createCard(column, title), () => ((this.addingCard = null), this.renderBoard()))
         : h('button', { class: 'ui-kb__adder', type: 'button', text: tr('+ post-it'), on: { click: () => ((this.addingCard = column), this.renderBoard()) } });
-    return h(
+    const section = h(
       'section',
       { class: `ui-kb__col ui-kb__col--${column}`, attrs: { 'aria-label': COLUMN_LABEL[column] } },
       h('header', { class: 'ui-kb__col-head' }, h('span', { text: COLUMN_LABEL[column] }), h('i', { text: String(cards.length) })),
       ...cards.map((c) => this.note(c)),
       adder,
     );
+    this.wireDrop(section, column);
+    return section;
   }
 
   private note(c: KanbanCard): HTMLElement {
@@ -327,19 +330,98 @@ export class KanbanPanel implements UiComponent {
       c.createdVia === 'agent' ? h('span', { class: 'ui-kb__badge ui-kb__badge--agent', text: tr('via agente'), title: tr('Criado por um agente, a pedido do usuário') }) : null,
       c.assigneeName ? h('span', { class: 'ui-kb__who' }, h('span', { class: 'ui-kb__av', text: Array.from(c.assigneeName)[0]?.toUpperCase() ?? '?', attrs: { 'aria-hidden': 'true' } }), c.assigneeName) : null,
     );
-    const note = h('div', { class: `ui-kb__note ui-kb__note--${TINTS[c.id % TINTS.length]}${c.id === this.selectedId ? ' is-selected' : ''}`, tabIndex: 0, role: 'button', attrs: { 'aria-pressed': c.id === this.selectedId } }, h('p', { class: 'ui-kb__note-title', text: c.title }), meta);
-    const select = () => {
-      this.selectedId = c.id === this.selectedId ? null : c.id;
-      this.renderBoard();
-    };
-    note.addEventListener('click', select);
-    note.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        select();
-      }
+    // Com a busca ligada a lista na tela não é a coluna inteira: o arrasto fica desligado (o índice de soltar mentiria).
+    const draggable = this.qTask.trim() === '';
+    const note = h(
+      'div',
+      { class: `ui-kb__note ui-kb__note--${TINTS[c.id % TINTS.length]}`, tabIndex: 0, role: 'button', attrs: { 'data-id': c.id, draggable: draggable ? 'true' : undefined, 'aria-keyshortcuts': 'Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown' } },
+      h('p', { class: 'ui-kb__note-title', text: c.title }),
+      meta,
+    );
+    note.addEventListener('click', () => void this.cardDialog.open(c.id, note));
+    note.addEventListener('keydown', (e) => this.noteKey(e, c, note));
+    note.addEventListener('dragstart', (e) => {
+      this.dragId = c.id;
+      e.dataTransfer?.setData('text/plain', String(c.id));
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+      note.classList.add('is-dragging');
+    });
+    note.addEventListener('dragend', () => {
+      this.dragId = null;
+      this.clearDrop();
+      note.classList.remove('is-dragging');
     });
     return note;
+  }
+
+  /** Enter ou espaço abrem; Alt+setas movem sem arrastar (esquerda e direita trocam de coluna, cima e baixo reordenam). */
+  private noteKey(e: KeyboardEvent, c: KanbanCard, note: HTMLElement): void {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      void this.cardDialog.open(c.id, note);
+      return;
+    }
+    if (!e.altKey) return;
+    const idx = COLUMNS.indexOf(c.column);
+    let to: { column: Column; position: number } | null = null;
+    if (e.key === 'ArrowLeft' && idx > 0) to = { column: COLUMNS[idx - 1]!, position: Number.MAX_SAFE_INTEGER };
+    else if (e.key === 'ArrowRight' && idx < COLUMNS.length - 1) to = { column: COLUMNS[idx + 1]!, position: Number.MAX_SAFE_INTEGER };
+    else if (e.key === 'ArrowUp' && c.position > 0 && this.qTask.trim() === '') to = { column: c.column, position: c.position - 1 };
+    else if (e.key === 'ArrowDown' && this.qTask.trim() === '') to = { column: c.column, position: c.position + 1 };
+    if (!to) return;
+    e.preventDefault();
+    void this.move(c.id, to.column, to.position).then(() => this.cols.querySelector<HTMLElement>(`[data-id="${c.id}"]`)?.focus());
+    this.ctx.announce(tr('Movido para {0}', [COLUMN_LABEL[to.column]]));
+  }
+
+  /** Move na tela na hora e confirma no servidor; se o servidor recusar, a tela volta ao que ele tem. */
+  private async move(id: number, column: Column, position: number): Promise<void> {
+    this.cards = applyMove(this.cards, id, column, position);
+    this.renderBoard();
+    try {
+      const target = this.cards.find((c) => c.id === id);
+      await kanbanApi.moveCard(id, { column, position: target?.position ?? position });
+      await this.refresh();
+    } catch (err) {
+      this.say((err as Error).message);
+      await this.refresh();
+    }
+  }
+
+  // ---------------------------------------------------------------- arrastar
+
+  private clearDrop(): void {
+    this.cols.querySelectorAll('.is-drop-before, .is-drop-end, .is-drop').forEach((el) => el.classList.remove('is-drop-before', 'is-drop-end', 'is-drop'));
+  }
+
+  /** Índice de soltar numa coluna: antes do primeiro cartão cujo meio está abaixo do ponteiro (n = no fim). */
+  private dropIndex(col: HTMLElement, clientY: number): number {
+    const notes = [...col.querySelectorAll<HTMLElement>('.ui-kb__note')];
+    const i = notes.findIndex((n) => clientY < n.getBoundingClientRect().top + n.getBoundingClientRect().height / 2);
+    return i === -1 ? notes.length : i;
+  }
+
+  private wireDrop(col: HTMLElement, column: Column): void {
+    col.addEventListener('dragover', (e) => {
+      if (this.dragId === null) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      this.clearDrop();
+      col.classList.add('is-drop');
+      const notes = col.querySelectorAll<HTMLElement>('.ui-kb__note');
+      const i = this.dropIndex(col, e.clientY);
+      if (i < notes.length) notes[i]!.classList.add('is-drop-before');
+      else col.classList.add('is-drop-end');
+    });
+    col.addEventListener('drop', (e) => {
+      if (this.dragId === null) return;
+      e.preventDefault();
+      const id = this.dragId;
+      const t = dropTarget(this.cards, id, column, this.dropIndex(col, e.clientY));
+      this.dragId = null;
+      this.clearDrop();
+      void this.move(id, t.column, t.position);
+    });
   }
 
   /** Campo de uma linha: Enter confirma, Esc ou sair do campo vazio cancela. */

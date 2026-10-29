@@ -12248,3 +12248,215 @@ html.is-replay #world {
   .ui-kb--collapsed .ui-kb__layout { grid-template-columns: 66px minmax(0, 1fr); }
   .ui-kb__room { padding-inline: 12px; }
 }
+
+/* Kanban: arrastar cartões e o cartão aberto (ui/kanban-card.ts). As cores --kb-* vêm do .ui-kb, que contém este diálogo. */
+.ui-kb__note[draggable='true'] {
+  cursor: grab;
+}
+
+.ui-kb__note.is-dragging {
+  opacity: 0.45;
+}
+
+.ui-kb__col.is-drop {
+  background: rgba(74, 120, 184, 0.1);
+  outline: 2px dashed var(--kb-blue);
+  outline-offset: 4px;
+}
+
+/* o traço azul mostra onde o cartão vai cair: antes de um cartão, ou no fim da coluna */
+.ui-kb__note.is-drop-before {
+  box-shadow: 0 -8px 0 -2px var(--kb-blue), 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink), 3px 3px 0 0 rgba(43, 34, 32, 0.4);
+}
+
+.ui-kb__col.is-drop-end .ui-kb__adder {
+  border-color: var(--kb-blue);
+  border-style: solid;
+}
+
+.ui-dialog.ui-kbc {
+  width: min(580px, calc(100vw - 24px));
+  max-height: min(90dvh, 840px);
+  border: 0;
+  border-radius: 0;
+  background: #ffe9a6;
+  color: var(--kb-ink);
+  font: 14px/1.4 var(--font-ui);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink), 6px 8px 0 0 rgba(5, 7, 12, 0.5);
+}
+
+.ui-kbc[open] {
+  overflow: auto;
+}
+
+.ui-kbc__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 0;
+}
+
+.ui-kbc__tag {
+  color: var(--kb-soft);
+  font: 12px/1 var(--font-px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ui-kbc__head .ui-icon-btn {
+  color: var(--kb-ink);
+}
+
+.ui-kbc__status {
+  margin: 8px 16px 0;
+  padding: 6px 10px;
+  background: #fff8e6;
+  color: var(--kb-hi);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+}
+
+.ui-kbc__body {
+  display: grid;
+  gap: 12px;
+  padding: 12px 16px 18px;
+}
+
+.ui-kbc :is(.ui-kbc__title, .ui-kbc__desc, .ui-kbc__select) {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 2px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 0;
+  background: #fff8e6;
+  color: var(--kb-ink);
+  font: 14px var(--font-ui);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+}
+
+.ui-kbc :is(.ui-kbc__title, .ui-kbc__desc, .ui-kbc__select):focus-visible {
+  outline: 3px solid var(--kb-blue);
+  outline-offset: 3px;
+}
+
+.ui-kbc__title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ui-kbc__desc {
+  resize: vertical;
+  min-height: 3.2em;
+}
+
+.ui-kbc__fields {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  margin: 0;
+}
+
+.ui-kbc__fields dt {
+  color: var(--kb-soft);
+  font: 13px var(--font-px);
+}
+
+.ui-kbc__fields dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.ui-kbc__stack {
+  display: grid;
+  gap: 4px;
+}
+
+.ui-kbc__stack small,
+.ui-kbc__by small,
+.ui-kbc__log small {
+  color: var(--kb-soft);
+}
+
+.ui-kbc__by {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ui-kbc__comment {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.ui-kbc__btn {
+  all: unset;
+  box-sizing: border-box;
+  margin: 2px;
+  padding: 4px 12px;
+  background: var(--kb-green);
+  color: #fff;
+  font: 600 14px var(--font-px);
+  cursor: pointer;
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink), 3px 3px 0 0 rgba(43, 34, 32, 0.45);
+}
+
+.ui-kbc__btn--danger {
+  background: var(--kb-hi);
+}
+
+.ui-kbc__btn:focus-visible,
+.ui-kbc__link:focus-visible {
+  outline: 3px solid var(--kb-blue);
+  outline-offset: 3px;
+}
+
+.ui-kbc__link {
+  all: unset;
+  justify-self: start;
+  color: var(--kb-hi);
+  font: 13px var(--font-px);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ui-kbc__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-kbc__h {
+  margin: 4px 0 0;
+  padding-top: 10px;
+  border-top: 2px dashed rgba(43, 34, 32, 0.45);
+  font: 700 14px var(--font-px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ui-kbc__log {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.ui-kbc__quote {
+  margin: 4px 0 0;
+  padding: 2px 0 2px 10px;
+  border-left: 4px solid var(--kb-agent);
+  color: var(--kb-soft);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .ui-kbc__fields { grid-template-columns: 1fr; gap: 2px; }
+  .ui-kbc__fields dd { margin-bottom: 8px; }
+}

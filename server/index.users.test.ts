@@ -132,7 +132,12 @@ describe('Kanban na subida real', () => {
       body: JSON.stringify({ title: 'do agente', as: 'ninguem' }),
     });
     expect(r.status).toBe(201);
-    expect((await r.json()).card).toMatchObject({ title: 'do agente', createdBy: null, createdVia: 'agent' });
+    const card = (await r.json()).card;
+    expect(card).toMatchObject({ title: 'do agente', createdBy: null, createdVia: 'agent' });
+    // O guard do servidor exige JSON em todo pedido que não é GET: o DELETE da página manda `{}` e passa; sem isso é 415.
+    const del = (headers: Record<string, string>) => fetch(`${base}/api/kanban/cards/${card.id}`, { method: 'DELETE', headers, body: Object.keys(headers).length ? '{}' : undefined });
+    expect((await del({})).status).toBe(415);
+    expect((await del({ 'Content-Type': 'application/json' })).status).toBe(204);
   }, 30_000);
 
   it('sem banco (não abre) o Kanban fica desligado: 404 e o servidor segue de pé', async () => {

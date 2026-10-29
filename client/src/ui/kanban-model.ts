@@ -1,6 +1,11 @@
 // Funções puras do Kanban da página (ui/kanban.ts): busca, agrupamento por coluna, onde cai um cartão solto e a estante
 // lembrada. Testadas em kanban-model.test.ts.
-import { COLUMNS, normalizeText, type Column, type KanbanBoard, type KanbanCard } from '../../../shared/kanban';
+import { tr } from '../../../shared/i18n';
+import { COLUMNS, normalizeText, type Column, type KanbanBoard, type KanbanCard, type KanbanEvent, type Priority } from '../../../shared/kanban';
+
+export const COLUMN_LABEL: Record<Column, string> = { ideias: tr('Ideias'), a_fazer: tr('A fazer'), fazendo: tr('Fazendo'), feito: tr('Feito') };
+export const PRIORITY_LABEL: Record<Priority, string> = { alta: tr('alta'), media: tr('média'), baixa: tr('baixa') };
+
 
 /** Projetos pelo nome; o Geral nunca sai da lista. Busca vazia devolve tudo. */
 export function filterBoards(boards: KanbanBoard[], q: string): KanbanBoard[] {
@@ -33,6 +38,55 @@ export function dropTarget(cards: KanbanCard[], id: number, column: Column, inde
   const sameColumn = dragged?.column === column;
   const shifted = sameColumn && dragged!.position < index ? index - 1 : index;
   return { column, position: Math.min(Math.max(shifted, 0), inColumn) };
+}
+
+/**
+ * O resultado de mover um cartão, aplicado na cópia local (o arrasto aparece na hora, antes do servidor responder). Faz o mesmo
+ * que o servidor: tira o cartão, põe na posição (cortada ao tamanho da coluna) e renumera origem e destino como 0..n-1.
+ */
+export function applyMove(cards: KanbanCard[], id: number, column: Column, position: number): KanbanCard[] {
+  const moved = cards.find((c) => c.id === id);
+  if (!moved) return cards;
+  const order = (col: Column) => cards.filter((c) => c.column === col && c.id !== id).sort((a, b) => a.position - b.position);
+  const dest = order(column);
+  dest.splice(Math.min(Math.max(Math.trunc(position), 0), dest.length), 0, { ...moved, column });
+  const renumbered = new Map<number, KanbanCard>();
+  dest.forEach((c, i) => renumbered.set(c.id, { ...c, position: i }));
+  if (moved.column !== column) order(moved.column).forEach((c, i) => renumbered.set(c.id, { ...c, position: i }));
+  return cards.map((c) => renumbered.get(c.id) ?? c);
+}
+
+const FIELD_LABEL: Record<string, string> = { title: tr('o título'), description: tr('a descrição') };
+
+const isColumn = (v: string | undefined): v is Column => (COLUMNS as readonly string[]).includes(v ?? '');
+
+/** Uma linha do histórico em palavras. `quote` é o texto do comentário, mostrado à parte. */
+export function describeEvent(e: KanbanEvent): { text: string; quote?: string } {
+  const [from, to] = e.detail.split('→');
+  switch (e.kind) {
+    case 'created':
+      return { text: tr('criou o cartão') };
+    case 'edited': {
+      const fields = e.detail.split(',').map((f) => FIELD_LABEL[f]).filter((f): f is string => !!f);
+      return { text: fields.length ? tr('editou {0}', [fields.join(tr(' e '))]) : tr('editou o cartão') };
+    }
+    case 'moved':
+      return { text: isColumn(from) && isColumn(to) ? tr('moveu de {0} para {1}', [COLUMN_LABEL[from], COLUMN_LABEL[to]]) : tr('moveu o cartão') };
+    case 'priority': {
+      const name = (p: string | undefined) => PRIORITY_LABEL[p as Priority] ?? p ?? '';
+      return { text: tr('mudou a prioridade de {0} para {1}', [name(from), name(to)]) };
+    }
+    case 'assigned':
+      return { text: e.detail === '—' ? tr('tirou o responsável') : tr('passou o cartão para {0}', [e.detail]) };
+    case 'tagged':
+      return { text: e.detail === '—' ? tr('tirou a etiqueta de projeto') : tr('etiquetou com o projeto {0}', [e.detail]) };
+    case 'moved_board':
+      return { text: tr('moveu do quadro {0} para {1}', [from ?? '', to ?? '']) };
+    case 'comment':
+      return { text: tr('comentou'), quote: e.detail };
+    default:
+      return { text: e.kind };
+  }
 }
 
 export const SHELF_KEY = 'habblaud:kanban-shelf';
