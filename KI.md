@@ -58,6 +58,9 @@ segurança ficam fora do repositório. Código em `server/users/` e `client/src/
 - **Entregas:** só arquivos que o próprio agente entregou, nunca algo com cara de segredo. Visualiza imagem, PDF, vídeo, HTML (quadro
   isolado) e texto (md formatado, sql, json, yaml, código comum). Word, PowerPoint, Excel e zip só baixam.
   Código em `server/deliveries/` e `client/src/ui/deliveries.ts`.
+- **Documento citado no chat:** caminho de `.md` escrito como código na resposta é clicável e abre formatado (`client/src/ui/docviewer.ts`,
+  `server/deliveries/docs.ts`). O texto do chat vem de fora, então o servidor só serve markdown de pasta de projeto conhecida, sem
+  nome de segredo, e ignora o cache (o agente reescreve o arquivo). Texto solto, sem crase, não vira link.
 - **Novo agente / projeto novo:** lista de projetos recentes com pesquisa (a partir de 5 pastas), sem pastas inexistentes nem a
   home; "+ Projeto novo" cria a pasta, inicia o git e abre a primeira sessão com a ideia (`server/spawn/`, `client/src/ui/spawn.ts`).
 - **Perguntas do agente:** cartão com as opções e a resposta no chat, inclusive com várias perguntas (`termtools.ts`, `termask.ts`).

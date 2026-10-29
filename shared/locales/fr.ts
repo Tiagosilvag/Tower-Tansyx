@@ -652,6 +652,11 @@ export const FR: Readonly<Record<string, string>> = {
   "{0} ganhos trabalhando": "{0} gagnés en travaillant",
   "Bordão: “{0}”": "Réplique culte : « {0} »",
   "Retrospecto contra {0}: {1}": "Bilan contre {0} : {1}",
+  "Abrir {0}": "Ouvrir {0}",
+  "Documento": "Document",
+  "só markdown abre aqui": "seul le markdown s'ouvre ici",
+  "arquivo fora das pastas de projeto conhecidas": "fichier hors des dossiers de projet connus",
+  "os documentos do chat só abrem pelo próprio computador (http://localhost)": "les documents du chat ne s'ouvrent que depuis l'ordinateur lui-même (http://localhost)",
   "Ver {0}": "Voir {0}",
 
   // client/src/ui/terminal.ts

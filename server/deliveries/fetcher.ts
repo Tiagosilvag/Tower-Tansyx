@@ -49,8 +49,9 @@ export class FileFetcher {
     return this.host.present();
   }
 
-  async get(path: string): Promise<FetchResult> {
-    const hit = this.cache.get(path);
+  /** `fresh`: ignora o cache (documento que o agente reescreve). */
+  async get(path: string, fresh = false): Promise<FetchResult> {
+    const hit = fresh ? undefined : this.cache.get(path);
     if (hit) {
       this.cache.delete(path);
       this.cache.set(path, hit);

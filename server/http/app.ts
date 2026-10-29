@@ -24,6 +24,7 @@ import { AUDIO_BODY_MAX, type DictationService } from '../dictation/dictation';
 import { chatImage } from '../deliveries/chatimages';
 import type { DeliveryIndex } from '../deliveries/deliveries';
 import type { FileFetcher } from '../deliveries/fetcher';
+import { resolveDoc, type DocFolders } from '../deliveries/docs';
 import { HOST_WAIT_MS } from '../host-wait';
 
 export interface ApiDeps {
@@ -82,6 +83,8 @@ export interface ApiDeps {
   deliveries?: DeliveryIndex;
   /** Quem lê os arquivos das entregas (e, para o auxiliar do host, /api/host/files/*; deliveries/fetcher.ts). */
   files?: FileFetcher;
+  /** Onde os documentos citados no chat podem estar (GET /api/doc; deliveries/docs.ts). */
+  docFolders?: DocFolders;
   /** Renomeia a sala (POST /api/rooms/rename {id, name}; vazio volta ao padrão). Devolve o nome em uso, ou undefined se a sala não existe. */
   renameRoom?: (id: string, name: string) => string | undefined;
   /** Estatísticas do "Meu dia" (GET /api/stats, http/stats.ts). */
@@ -192,7 +195,7 @@ export function sendJson(res: ServerResponse, status: number, body: unknown): vo
  * PDF e imagens podem abrir dentro do modal (mesma origem).
  */
 export function sendFile(res: ServerResponse, data: Buffer, type: string, name: string): void {
-  const active = /^text\/html|^image\/svg/.test(type);
+  const active = /^text\/html|^text\/markdown|^image\/svg/.test(type);
   res.writeHead(200, {
     'Content-Type': type,
     'Content-Length': data.length,
@@ -654,6 +657,23 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
           (r) => ('data' in r ? sendFile(res, r.data, img.type, img.path.split('/').pop() ?? 'imagem') : sendJson(res, r.status, { error: r.error })),
           (err) => fail(res, err),
         );
+      return true;
+    }
+    if (path === '/api/doc') {
+      // Markdown citado no chat (o texto vem do transcript): mesma trava do terminal, só .md em pasta de projeto conhecida.
+      const docFolders = deps.docFolders;
+      if (!isRead) methodNotAllowed(res, 'GET');
+      else if (!trusted(req, 'terminal')) sendJson(res, 403, { error: denied(req, tr('os documentos do chat só abrem pelo próprio computador (http://localhost)')) });
+      else if (!docFolders || !deps.files) sendJson(res, 404, { error: tr('arquivos desligados') });
+      else {
+        const r = resolveDoc(url.searchParams.get('project') ?? '', url.searchParams.get('path') ?? '', docFolders);
+        if ('error' in r) sendJson(res, 403, { error: r.error });
+        else
+          deps.files.get(r.path, true).then(
+            (f) => ('data' in f ? sendFile(res, f.data, 'text/markdown; charset=utf-8', r.path.split('/').pop() ?? 'documento.md') : sendJson(res, f.status, { error: f.error })),
+            (err) => fail(res, err),
+          );
+      }
       return true;
     }
     if (path === '/api/deliveries' || path.startsWith('/api/deliveries/')) {

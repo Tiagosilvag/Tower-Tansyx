@@ -467,6 +467,7 @@ const api = createApiHandler({
   dictation,
   deliveries,
   files: deliveryFiles,
+  docFolders: { accountDirs: config.claudeDirs, textOnly: config.inDocker },
   spawnFolders: async () => {
     const hidden = hiddenFolders(process.env.HABBLAUD_HIDE_FOLDERS);
     const snap = hub.current();

@@ -10,6 +10,11 @@ Formato: **data · título** — o que foi feito; pendências e próximos passos
 
 ## 2026-10-29
 
+**Chat: clicar num `.md` citado abre o documento.** Caminho de markdown escrito como código na resposta fica clicável e abre o
+arquivo formatado numa janela cheia (mesmo visual das Entregas). Decisões: só markdown, só de pasta de projeto conhecida, nunca
+arquivo com cara de segredo, e sempre relido do disco (o agente reescreve o documento). Pendente: deploy (aguarda aprovação);
+caminhos escritos fora de código (texto solto) ainda não são clicáveis.
+
 **Diretrizes globais de memória.** Adotadas as diretrizes de `KI.md`/`DIARIO.md` (o diário passou a se chamar `DIARIO.md`). O que
 estava nesses arquivos e é proibido por elas (infraestrutura, estrutura sensível, nomes de pessoas) foi retirado; o repositório é
 público e o histórico do git ainda contém a versão anterior. Pendente: avaliar os arquivos de `docs/` e o `RESUMO-DO-TRABALHO.md`,

@@ -22,6 +22,7 @@ import { maximizeButton, Movable } from './movable';
 import type { PtyControl } from './pty';
 import { TermActions } from './termactions';
 import { TermTabs } from './termtabs';
+import { markDocPaths, openDoc } from './docviewer';
 import { renderMarkdown } from './markdown';
 import { roleLabel, shellWaitIn } from './model';
 import { providerOf } from './provider';
@@ -727,6 +728,7 @@ function entryRow(e: PlainEntry, now: number, copy: Copier): HTMLElement {
     case 'assistant': {
       const body = h('div', { class: 'ui-term__col ui-md' });
       body.append(renderMarkdown(e.text));
+      markDocPaths(body);
       const pics = imageStrip(e.images);
       if (pics) body.append(pics);
       const links = artifactLinks(e.text);
@@ -966,6 +968,15 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.placeholder = h('p', { class: 'ui-term__placeholder' });
     this.scroll = h('div', { class: 'ui-term__scroll', tabIndex: 0, attrs: { 'aria-label': tr('Conversa da sessão') } }, this.note, this.earlierBtn, this.list, this.placeholder);
     this.scroll.addEventListener('scroll', () => this.onScroll(), { passive: true });
+    // Caminho de .md citado na resposta: clique (ou Enter) abre o documento formatado.
+    const openCited = (e: Event): void => {
+      const code = (e.target as HTMLElement | null)?.closest<HTMLElement>('code[data-doc]');
+      if (code?.dataset.doc) openDoc(this.projectPath(), code.dataset.doc);
+    };
+    this.scroll.addEventListener('click', openCited);
+    this.scroll.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') openCited(e);
+    });
     this.newBtn = h('button', { class: 'ui-term__new', type: 'button', hidden: true, on: { click: () => this.jumpToEnd() } });
 
     this.glyph = h('span', { class: 'ui-term__glyph', attrs: { 'aria-hidden': 'true' } });
@@ -1050,6 +1061,12 @@ export class TerminalPanel implements UiComponent, TerminalControl {
    * pedido no escritório (plugin ausente), as perguntas aparecem só para ler. Antes, a conversa não mostrava nada
    * disso e só dava para responder no terminal de onde a sessão roda.
    */
+  /** Pasta do projeto desta conversa (agente aberto ou sessão do histórico); vazia se não se sabe. */
+  private projectPath(): string {
+    if (this.session) return this.session.project ?? '';
+    return this.last ? (this.ctx.store.room(this.last.roomId)?.path ?? '') : '';
+  }
+
   private renderAsk(live: AgentInfo | null): void {
     this.perm.render(live ?? undefined);
     // Esperando você e sem o cartão (o pedido não chegou ao Habblaud, ou "Responder no terminal" o soltou): o diálogo

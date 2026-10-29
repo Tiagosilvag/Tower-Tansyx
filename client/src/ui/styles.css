@@ -5446,6 +5446,17 @@ button.ui-term__think:hover,
   color: #b9b4ff;
 }
 
+.ui-md__code.is-doc {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.ui-md__code.is-doc:hover,
+.ui-md__code.is-doc:focus-visible {
+  color: var(--ui-accent);
+}
+
 .ui-md__link {
   color: var(--ui-accent);
   text-decoration: underline dotted;
