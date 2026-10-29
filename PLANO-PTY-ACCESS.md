@@ -61,7 +61,7 @@ Rode como o **mesmo usuário** que vai ser dono das sessões do Claude Code (no 
 que o Habblaud vai ler `~/.claude` e executar o `claude`.
 
 ```bash
-# Node 22.12+ e ferramentas de build (o node-pty é módulo nativo)
+# Node 22.13+ e ferramentas de build (o node-pty é módulo nativo)
 node --version
 apt-get install -y build-essential python3 git
 

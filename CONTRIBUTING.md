@@ -10,7 +10,7 @@ Obrigado por querer contribuir com o Habblaud! Relatos de bugs, ideias e melhori
 
 ## Preparar o ambiente
 
-O Habblaud requer Node.js 22.12 ou mais recente e npm. Depois de clonar o repositório:
+O Habblaud requer Node.js 22.13 ou mais recente e npm. Depois de clonar o repositório:
 
 ```sh
 npm install

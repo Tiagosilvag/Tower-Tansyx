@@ -12,7 +12,7 @@
 <p align="center"><b>English</b> · <a href="README.pt-BR.md">Português</a> · <a href="README.es.md">Español</a> · <a href="README.fr.md">Français</a></p>
 
 <p align="center">
-  <img alt="Node.js 22.12+" src="https://img.shields.io/badge/node-%E2%89%A522.12-5fa04e?logo=node.js&logoColor=white" />
+  <img alt="Node.js 22.13+" src="https://img.shields.io/badge/node-%E2%89%A522.13-5fa04e?logo=node.js&logoColor=white" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-7-3178c6?logo=typescript&logoColor=white" />
   <img alt="Docker" src="https://img.shields.io/badge/Docker-ready-2496ed?logo=docker&logoColor=white" />
   <img alt="Zero runtime dependencies" src="https://img.shields.io/badge/runtime%20dependencies-0-f08a3c" />
@@ -129,7 +129,7 @@ shrinks on its own.
 
 - **macOS** (tested) or Linux.
 - **[Claude Code](https://code.claude.com)** installed, with one or more accounts (2.1.287 or newer for the mod).
-- **Node.js 22.12+** and **npm** (developed with Node 24; Docker already uses Node 24).
+- **Node.js 22.13+** and **npm** (developed with Node 24; Docker already uses Node 24).
 - **Docker Desktop** (or Docker Engine with Compose v2), if you're going to run it in a container.
 
 ### 1. Get the project

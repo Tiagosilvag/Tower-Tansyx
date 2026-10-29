@@ -12,7 +12,7 @@
 <p align="center"><a href="README.md">English</a> · <a href="README.pt-BR.md">Português</a> · <a href="README.es.md">Español</a> · <b>Français</b></p>
 
 <p align="center">
-  <img alt="Node.js 22.12+" src="https://img.shields.io/badge/node-%E2%89%A522.12-5fa04e?logo=node.js&logoColor=white" />
+  <img alt="Node.js 22.13+" src="https://img.shields.io/badge/node-%E2%89%A522.13-5fa04e?logo=node.js&logoColor=white" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-7-3178c6?logo=typescript&logoColor=white" />
   <img alt="Docker" src="https://img.shields.io/badge/Docker-pr%C3%AAt-2496ed?logo=docker&logoColor=white" />
   <img alt="Zéro dépendance d'exécution" src="https://img.shields.io/badge/d%C3%A9pendances%20runtime-0-f08a3c" />
@@ -133,7 +133,7 @@ l'immeuble ne garde pas de trous et rétrécit tout seul.
 
 - **macOS** (testé) ou Linux.
 - **[Claude Code](https://code.claude.com)** installé, avec un ou plusieurs comptes (2.1.287 ou plus récent pour le mod).
-- **Node.js 22.12+** et **npm** (développé avec Node 24 ; l'image Docker utilise déjà Node 24).
+- **Node.js 22.13+** et **npm** (développé avec Node 24 ; l'image Docker utilise déjà Node 24).
 - **Docker Desktop** (ou Docker Engine avec Compose v2), si vous voulez le faire tourner dans un conteneur.
 
 ### 1. Téléchargez le projet

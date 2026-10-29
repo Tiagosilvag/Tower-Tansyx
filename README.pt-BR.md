@@ -12,7 +12,7 @@
 <p align="center"><a href="README.md">English</a> · <b>Português</b> · <a href="README.es.md">Español</a> · <a href="README.fr.md">Français</a></p>
 
 <p align="center">
-  <img alt="Node.js 22.12+" src="https://img.shields.io/badge/node-%E2%89%A522.12-5fa04e?logo=node.js&logoColor=white" />
+  <img alt="Node.js 22.13+" src="https://img.shields.io/badge/node-%E2%89%A522.13-5fa04e?logo=node.js&logoColor=white" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-7-3178c6?logo=typescript&logoColor=white" />
   <img alt="Docker" src="https://img.shields.io/badge/Docker-pronto-2496ed?logo=docker&logoColor=white" />
   <img alt="Zero dependências de runtime" src="https://img.shields.io/badge/depend%C3%AAncias%20de%20runtime-0-f08a3c" />
@@ -127,7 +127,7 @@ ela, e o endereço antigo apaga e é desmontado. Assim o prédio não fica com b
 
 - **macOS** (testado) ou Linux.
 - **[Claude Code](https://code.claude.com)** instalado, com uma ou mais contas (2.1.287 ou mais novo para o mod).
-- **Node.js 22.12+** e **npm** (desenvolvido com o Node 24; o Docker já usa o Node 24).
+- **Node.js 22.13+** e **npm** (desenvolvido com o Node 24; o Docker já usa o Node 24).
 - **Docker Desktop** (ou Docker Engine com Compose v2), se for rodar em container.
 
 ### 1. Baixe o projeto

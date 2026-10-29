@@ -9,7 +9,7 @@ acrescentado é este ficheiro e `coolify/docker-compose.coolify.yml`.
 O prompt de habblaud.com é um **instalador para a tua máquina pessoal**, não para um servidor. Ele:
 
 1. deteta o sistema (macOS / Linux / Windows+WSL2) e **quais agentes tu usas** (Claude Code, Codex);
-2. instala `git`, Node 22.12+, Docker e atualiza o Claude Code / Codex;
+2. instala `git`, Node 22.13+, Docker e atualiza o Claude Code / Codex;
 3. faz `git clone` para `~/habblaud` e `npm install`;
 4. corre `npm run docker:up` — este é o passo central: um script (`scripts/docker-up.ts`) que
    **procura as contas do Claude Code e as pastas do Codex no teu computador**, gera um

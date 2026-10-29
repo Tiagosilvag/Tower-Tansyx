@@ -12,7 +12,7 @@
 <p align="center"><a href="README.md">English</a> · <a href="README.pt-BR.md">Português</a> · <b>Español</b> · <a href="README.fr.md">Français</a></p>
 
 <p align="center">
-  <img alt="Node.js 22.12+" src="https://img.shields.io/badge/node-%E2%89%A522.12-5fa04e?logo=node.js&logoColor=white" />
+  <img alt="Node.js 22.13+" src="https://img.shields.io/badge/node-%E2%89%A522.13-5fa04e?logo=node.js&logoColor=white" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-7-3178c6?logo=typescript&logoColor=white" />
   <img alt="Docker" src="https://img.shields.io/badge/Docker-listo-2496ed?logo=docker&logoColor=white" />
   <img alt="Cero dependencias de runtime" src="https://img.shields.io/badge/dependencias%20de%20runtime-0-f08a3c" />
@@ -131,7 +131,7 @@ solo.
 
 - **macOS** (probado) o Linux.
 - **[Claude Code](https://code.claude.com)** instalado, con una o más cuentas (2.1.287 o más reciente para el mod).
-- **Node.js 22.12+** y **npm** (desarrollado con Node 24; Docker ya usa Node 24).
+- **Node.js 22.13+** y **npm** (desarrollado con Node 24; Docker ya usa Node 24).
 - **Docker Desktop** (o Docker Engine con Compose v2), si lo vas a ejecutar en un contenedor.
 
 ### 1. Descarga el proyecto
