@@ -313,11 +313,16 @@ npm run users:list
   padrão. Mínimo de 10 caracteres.
 - **Tela de administração:** depois de entrar, o menu do seu chip de usuário › **Usuários** lista, cria, edita e remove
   usuários e troca senhas. Todos têm o mesmo acesso: não há papéis.
-- **Bloqueio:** 5 senhas erradas seguidas, do mesmo IP num usuário, bloqueiam aquele par por 15 minutos; mais de 20 erros
-  em 60 s de um IP seguram só esse IP; e mais de 50 erros em 1 h num mesmo usuário (de todos os IPs) seguram o nome.
-  Atrás do cloudflared o IP vem do `CF-Connecting-IP` (só confiado no modo de túnel abaixo); sem ele, todos chegam como
-  `127.0.0.1` e o bloqueio vira global: um anônimo errando senhas pode atrasar o login de todos (sessões já abertas não
-  caem).
+- **Bloqueio:** contado por **(usuário, IP do cliente)**: 5 senhas erradas seguidas bloqueiam aquele usuário **vindo
+  daquele IP** por 15 minutos (o mesmo usuário, de outro IP, continua entrando); mais de 20 erros em 60 s de um IP, em
+  quaisquer nomes, seguram só esse IP. O único limite que atravessa IPs é um teto folgado por usuário: mais de 100 erros
+  em 1 hora no mesmo usuário (de qualquer IP) seguram só esse usuário, até a hora baixar de novo para 100. Nomes que não
+  existem contam igual aos reais. Atrás do túnel o IP vem do `CF-Connecting-IP`, só confiado na configuração de túnel
+  abaixo (sem TLS próprio e com a porta no loopback); em qualquer outra o cabeçalho é ignorado e vale o endereço da
+  conexão. Mais de 50 logins esperando a vez recebem 429 na hora. **Pior caso que resta:** um atacante com muitos IPs
+  diferentes (escala de botnet) consegue manter **um usuário específico** bloqueado errando 100 vezes por hora; as
+  sessões já abertas continuam valendo, os outros usuários não são afetados e o console local
+  (`http://localhost:4747`) sempre funciona.
 - **Sessão:** 30 dias; trocar a senha de um usuário encerra as sessões dele.
 - **Banco:** SQLite embutido no Node (por isso Node 22.13 ou mais novo), em `HABBLAUD_DB` (padrão
   `<dataDir>/habblaud.db`, ou seja, `~/.habblaud/habblaud.db`), criado com modo 600 (a pasta, 700). Guarda os hashes das
@@ -326,17 +331,32 @@ npm run users:list
   diferente do do container (os dados ficam no volume `habblaud-data`, em `/data`). A imagem só traz o servidor
   (`dist/server/index.js`), não esses comandos: rode-os num checkout com `HABBLAUD_DB` apontando para o arquivo do
   banco dentro desse volume (`docker volume inspect habblaud-data` mostra a pasta), ou num container que tenha o código
-  do projeto e monte o volume. Reinicie o container depois.
-- **Atrás de um túnel (ex.: cloudflared):** deixe o túnel terminar o HTTPS e falar com o Habblaud no loopback:
-  `HABBLAUD_REMOTE_HOST=127.0.0.1` + `HABBLAUD_REMOTE_INSECURE_HTTP=1` (sem certificado próprio), e aponte o túnel para
-  `http://127.0.0.1:4748` (não `localhost`, que pode resolver para `::1` primeiro). Só nesse caso (sem TLS e com a porta escutando no loopback) o Habblaud confia no
-  `X-Forwarded-Proto: https` e marca o cookie como `Secure`. Com a porta na rede e sem TLS, o cabeçalho é ignorado.
-  Ponha o domínio público em `HABBLAUD_ALLOWED_HOSTS` (o cloudflared repassa o `Host` público; sem isso toda requisição
-  recebe "Host não permitido"), e use `HABBLAUD_PTY=1` para o terminal. Rode `npm run users:*` com o mesmo usuário do
-  sistema e o mesmo `HABBLAUD_DATA_DIR`/`HABBLAUD_DB` do serviço. Teste antes de trocar o túnel:
-  `curl -H 'Host: <dominio>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login`.
-  `HABBLAUD_REMOTE_FULL=1` sem HTTPS próprio só liga com `HABBLAUD_REMOTE_HOST=127.0.0.1` (ou `::1`); em outra interface a
-  porta remota não sobe.
+  do projeto e monte o volume. Reinicie o container depois. Sem certificado próprio o container escuta sempre em
+  `0.0.0.0`, então o modo de usuários em HTTP puro não sobe no Docker (veja o próximo item).
+- **Sem HTTPS, só no loopback:** sem certificado próprio (`HABBLAUD_REMOTE_INSECURE_HTTP=1`), o modo de usuários e o
+  `HABBLAUD_REMOTE_FULL=1` só ligam com `HABBLAUD_REMOTE_HOST=127.0.0.1` (ou `::1`); em outra interface a porta remota
+  fica desligada com um aviso, porque senhas e cookies trafegariam em texto puro na rede. O modo de usuário único sem
+  `HABBLAUD_REMOTE_FULL` segue como antes.
+- **Atrás de um túnel (ex.: cloudflared), no modo Node:** o túnel termina o HTTPS e fala com o Habblaud no loopback.
+  1. No ambiente do serviço: `HABBLAUD_REMOTE_USERS=1`, `HABBLAUD_REMOTE_HOST=127.0.0.1`,
+     `HABBLAUD_REMOTE_INSECURE_HTTP=1` (sem certificado próprio), `HABBLAUD_ALLOWED_HOSTS=<domínio público>` (lista
+     separada por vírgula, se houver mais de um nome; o cloudflared repassa o `Host` público, e sem isso toda
+     requisição, inclusive `/login`, recebe "Host não permitido") e `HABBLAUD_PTY=1` (o terminal interativo precisa).
+     Se quiser, `HABBLAUD_REMOTE_FULL=1` (leia o aviso abaixo).
+  2. Crie os usuários com `npm run users:add` **com o mesmo usuário do sistema que roda o serviço e o mesmo
+     `HABBLAUD_DATA_DIR`/`HABBLAUD_DB`**: senão o comando cria outro banco, ou um arquivo com modo 600 que o serviço não
+     consegue abrir, e a porta remota fica desligada.
+  3. Reinicie o serviço depois de criar o primeiro usuário (sem usuários a porta não sobe).
+  4. Teste **antes** de trocar o túnel (um `curl` sem o cabeçalho `Host` não prova nada: IP como `Host` é sempre
+     aceito): `curl -i -H 'Host: <domínio>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login` tem de devolver
+     200 com o HTML da tela de login; `curl -i -H 'Host: <domínio>' -H 'X-Forwarded-Proto: https' -H 'Content-Type:
+     application/json' -d '{"user":"<usuário>","password":"errada"}' http://127.0.0.1:4748/api/remote/login` tem de
+     devolver 401 sem `Set-Cookie` (com a senha certa: 200 e um `Set-Cookie` com `Secure`).
+  5. Aponte o túnel para `http://127.0.0.1:4748` (não `localhost`, que pode resolver para `::1` primeiro).
+
+  Só nessa configuração (sem TLS e com a porta escutando no loopback) o Habblaud confia no `X-Forwarded-Proto: https`
+  (para marcar o cookie como `Secure`) e no `CF-Connecting-IP` (o IP do bloqueio). Com a porta na rede, os dois
+  cabeçalhos são ignorados.
 
 > ⚠️ **`HABBLAUD_REMOTE_FULL=1` dá um shell root na máquina a quem passa pelo login.** É opt-in (desligado por padrão).
 > Com ele, uma sessão remota logada conta como o próprio computador para o terminal interativo, os agentes, o **Novo
@@ -817,7 +837,10 @@ Tudo funciona sem configurar nada. Se precisar ajustar, use variáveis de ambien
 `npm run docker:down` (para) e `npm run docker:logs` (acompanha os logs).
 
 `HABBLAUD_REMOTE_USERS` e `HABBLAUD_REMOTE_FULL` passam pelo `docker-compose.yml`, mas o terminal interativo continua
-exigindo conexão por loopback, então `HABBLAUD_REMOTE_FULL` não o abre numa porta publicada do Docker.
+exigindo conexão por loopback, então `HABBLAUD_REMOTE_FULL` não o abre numa porta publicada do Docker. No Docker o
+`HABBLAUD_REMOTE_HOST` é ignorado (o container escuta sempre em `0.0.0.0`), então o modo de usuários e o acesso total
+precisam do certificado próprio (`remote:setup`); a receita do túnel em
+[Acesso por usuários](#acesso-por-usuários-vários-logins) é do modo Node.
 
 ## Habblaud World
 

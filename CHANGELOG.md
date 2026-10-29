@@ -15,10 +15,6 @@ do meio (0.**3**.0).
 - **A prévia de página do Artifact no chat mostrava a versão antiga.** Quando o agente republicava a mesma página, o
   navegador reaproveitava por 5 minutos a cópia anterior, porque o endereço da prévia não muda. Páginas HTML e SVG agora
   são conferidas de novo a cada abertura; imagens comuns continuam no cache.
-- **No acesso por usuários, um anônimo errando senhas não tranca mais a equipe toda, e o acesso total não liga em
-  HTTP na rede.** O freio de login passa a ser por IP (o `CF-Connecting-IP` atrás do túnel) e usuário, com um teto
-  folgado por nome contra chute distribuído; `HABBLAUD_REMOTE_FULL=1` sem HTTPS próprio só sobe no loopback. A receita
-  do túnel agora lista `HABBLAUD_ALLOWED_HOSTS`, `HABBLAUD_PTY=1` e o teste com `curl`.
 - **A conversa somia da janela quando o agente entrava num git worktree.** Clicar no agente abria o terminal
   com "Nenhuma mensagem nesta sessão ainda", embora o escritório mostrasse a atividade e o histórico
   mostrasse a conversa inteira. O Claude Code leva o transcript para a pasta do worktree ao entrar num
@@ -43,12 +39,16 @@ do meio (0.**3**.0).
   usuário no banco, a porta não sobe). Os usuários nascem por `npm run users:add -- <usuario> [--name "Nome"]
   [--color #rrggbb]` (a senha é pedida duas vezes, escondida, ou lida com `--password-stdin`; mínimo de 10 caracteres),
   e `users:passwd` e `users:list` completam o conjunto. Depois de entrar, o menu do chip de usuário › **Usuários**
-  abre a tela de administração: criar, editar, remover e trocar senhas. Todos têm o mesmo acesso. Cada usuário tem o
-  seu freio: 5 senhas erradas seguidas o bloqueiam por 15 minutos; a sessão dura 30 dias e trocar a senha encerra as
-  sessões daquele usuário. As contas ficam num banco SQLite (`HABBLAUD_DB`, padrão `~/.habblaud/habblaud.db`) com modo
-  600 (a pasta, 700), só com os hashes scrypt. Atrás de um túnel que termina o HTTPS (cloudflared), use
-  `HABBLAUD_REMOTE_HOST=127.0.0.1` com `HABBLAUD_REMOTE_INSECURE_HTTP=1`: nesse caso, e só nele, o cookie vira `Secure`
-  pelo `X-Forwarded-Proto: https`.
+  abre a tela de administração: criar, editar, remover e trocar senhas. Todos têm o mesmo acesso. O freio é por usuário
+  e IP: 5 senhas erradas seguidas bloqueiam aquele usuário, vindo daquele IP, por 15 minutos (de outro IP ele segue
+  entrando); mais de 20 erros em 60 s seguram só o IP que errou; e mais de 100 erros em 1 hora num mesmo usuário, de
+  qualquer IP, seguram só esse usuário. A sessão dura 30 dias e trocar a senha encerra as sessões daquele usuário. As
+  contas ficam num banco SQLite (`HABBLAUD_DB`, padrão `~/.habblaud/habblaud.db`) com modo 600 (a pasta, 700), só com os
+  hashes scrypt. Atrás de um túnel que termina o HTTPS (cloudflared), use `HABBLAUD_REMOTE_HOST=127.0.0.1` com
+  `HABBLAUD_REMOTE_INSECURE_HTTP=1`: nesse caso, e só nele, o cookie vira `Secure` pelo `X-Forwarded-Proto: https` e o
+  IP do freio vem do `CF-Connecting-IP`. Sem HTTPS próprio, o modo de usuários e o acesso total recusam subir (com um
+  aviso) em qualquer host que não seja `127.0.0.1`/`::1`, para senha e cookie não trafegarem em texto puro na rede. A
+  receita completa do túnel (com `HABBLAUD_ALLOWED_HOSTS`, `HABBLAUD_PTY=1` e o teste com `curl`) está no README.
 - **Acesso total opt-in para a sessão logada.** Com `HABBLAUD_REMOTE_FULL=1`, quem passa pelo login remoto conta como
   o próprio computador para o terminal interativo, os agentes, o Novo agente e o Projeto novo, o ditado, a atualização
   do uso, o renomear sala e a edição de personagem. Hooks, plugins, Codex, o auxiliar do host e o Habblaud World

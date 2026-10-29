@@ -96,10 +96,13 @@ Você escolheu a 1.
 - **Sessão:** o token passa a levar o id do usuário (`v2.<id>.<expiração>.<assinatura>`); a chave de cada usuário mistura o
   segredo do servidor com o hash da senha dele, então **trocar a senha derruba as sessões daquele usuário**. 30 dias,
   como hoje. "Sair" continua revogando o token.
-- **Freio de tentativas:** por usuário (5 erros seguidos bloqueiam aquele usuário por 15 minutos) mais um freio global
-  mais folgado como retaguarda contra quem chuta muitos usuários. O bloqueio é por usuário para um atacante não conseguir
-  trancar a equipe toda errando senhas de nomes aleatórios. O scrypt roda sempre, sem atalho que revele se o usuário
-  existe.
+- **Freio de tentativas:** por usuário e IP do cliente (5 erros seguidos bloqueiam aquele usuário, vindo daquele IP, por
+  15 minutos), uma retaguarda por IP (mais de 20 erros em 60 s seguram só aquele IP) e um teto folgado por usuário (mais
+  de 100 erros em 1 hora, de qualquer IP, seguram só aquele usuário). Revisado na revisão final: o freio global de antes
+  deixava um anônimo trancar a equipe toda com ~21 pedidos por minuto. Atrás do túnel o IP vem do `CF-Connecting-IP`,
+  confiado só com a porta no loopback e sem TLS próprio. Pior caso que resta: um atacante com muitos IPs mantém um
+  usuário específico bloqueado; as sessões abertas e o console local seguem valendo. O scrypt roda sempre, sem atalho
+  que revele se o usuário existe.
 - **Remover:** ninguém remove a si mesmo nem o último usuário. Remover derruba as sessões do removido.
 - **Quem pode o quê no acesso remoto:** a sessão de qualquer usuário recebe `permissions,messages,terminal,spawn`
   (`HABBLAUD_REMOTE_ALLOW`) **e o acesso total** descrito na próxima seção, já que todos podem tudo.
@@ -148,9 +151,18 @@ com a senha do Caddy). Por isso o modo é opt-in, o terminal exige a conexão vi
 2. Criar os usuários por `npm run users:add`. As senhas do Caddy são hashes bcrypt e não servem aqui: cada pessoa recebe
    uma senha nova.
 3. Subir a porta remota em `127.0.0.1:4748` (com `HABBLAUD_REMOTE_USERS=1`, `HABBLAUD_REMOTE_FULL=1`,
-   `HABBLAUD_REMOTE_INSECURE_HTTP=1`, `HABBLAUD_REMOTE_HOST=127.0.0.1` e `HABBLAUD_REMOTE_ALLOW=permissions,messages,terminal,spawn`)
-   e testar o login pelo próprio servidor (`curl`), sem mexer no túnel.
-4. Trocar o destino do túnel de `localhost:8080` para `localhost:4748`. O túnel é gerenciado remotamente (o
+   `HABBLAUD_REMOTE_INSECURE_HTTP=1`, `HABBLAUD_REMOTE_HOST=127.0.0.1`, `HABBLAUD_REMOTE_ALLOW=permissions,messages,terminal,spawn`,
+   `HABBLAUD_ALLOWED_HOSTS=<domínio público>` (lista separada por vírgula; o cloudflared repassa o `Host` público e,
+   sem ele na lista, toda requisição recebe "Host não permitido") e `HABBLAUD_PTY=1` (o terminal interativo precisa))
+   e testar o login pelo próprio servidor (`curl`), sem mexer no túnel. Os usuários do passo 2 são criados com o
+   **mesmo usuário do sistema que roda o serviço e o mesmo `HABBLAUD_DATA_DIR`/`HABBLAUD_DB`** (senão nasce outro banco,
+   ou um arquivo 600 que o serviço não abre, e a porta fica desligada), e o serviço é reiniciado depois do primeiro
+   usuário. O teste manda o `Host` público (IP como `Host` é sempre aceito, então sem ele o teste não pega a falta do
+   `HABBLAUD_ALLOWED_HOSTS`): `curl -i -H 'Host: <domínio>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login`
+   devolve 200 com o HTML; `POST /api/remote/login` com os mesmos cabeçalhos, `Content-Type: application/json` e senha
+   errada devolve 401 sem `Set-Cookie`, e com a senha certa devolve 200 com `Set-Cookie` marcado `Secure`.
+4. Trocar o destino do túnel de `localhost:8080` para `http://127.0.0.1:4748` (não `localhost`, para não resolver
+   primeiro para `::1`). O túnel é gerenciado remotamente (o
    `cloudflared` roda com `--token-file`), então isso é feito **por você no painel Zero Trust** (hostname público do
    `towertansyx`), não por arquivo no servidor.
 5. Com o login provado em uso real, desligar o Caddy. **Volta:** apontar o túnel de volta para `8080` (o Caddy só é

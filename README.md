@@ -315,11 +315,15 @@ npm run users:list
   instead. At least 10 characters.
 - **Admin screen:** once logged in, the menu on your user chip › **Users** lists, adds, edits and removes users and
   changes passwords. Everyone has the same access: there are no roles.
-- **Lockout:** 5 wrong passwords in a row from the same IP for a user lock that pair for 15 minutes; more than 20
-  failures in 60 s from one IP hold only that IP; and more than 50 failures in 1 h on one user (from all IPs) hold the
-  name. Behind cloudflared the IP comes from `CF-Connecting-IP` (trusted only in the tunnel mode below); without it
-  everyone arrives as `127.0.0.1` and the lock becomes global: an anonymous attacker guessing passwords can delay
-  everyone's login (open sessions are not affected).
+- **Lockout:** counted per **(user, client IP)**: 5 wrong passwords in a row lock that user **from that IP** for 15
+  minutes (the same user from another IP keeps logging in); more than 20 failures in 60 s from one IP, on any names,
+  hold only that IP. The only limit across IPs is a loose one per user: more than 100 failures in 1 hour on the same
+  user (from any IP) hold only that user until the hour drops back to 100. Unknown usernames count exactly like real
+  ones. Behind the tunnel the IP comes from `CF-Connecting-IP`, trusted only in the tunnel setup below (no TLS of its
+  own and the port on loopback); in any other setup the header is ignored and the connection's address is used. More
+  than 50 logins waiting their turn get 429 right away. **Remaining worst case:** an attacker with many distinct IPs
+  (botnet scale) can keep **one specific** user locked by guessing wrong 100 times an hour; sessions already open keep
+  working, the other users are not affected, and the local console (`http://localhost:4747`) always works.
 - **Sessions:** last 30 days; changing a user's password ends that user's sessions.
 - **Database:** SQLite built into Node (hence Node 22.13 or newer), at `HABBLAUD_DB` (default
   `<dataDir>/habblaud.db`, i.e. `~/.habblaud/habblaud.db`), created with mode 600 (the folder, 700). It holds the
@@ -328,17 +332,33 @@ npm run users:list
   create a different database from the container's (the data lives in the `habblaud-data` volume, at `/data`). The
   image only ships the server (`dist/server/index.js`), not these commands: run them in a checkout with `HABBLAUD_DB`
   pointing at the database file inside that volume (`docker volume inspect habblaud-data` shows the folder), or from
-  a container that has the project's code and mounts the volume. Restart the container afterwards.
-- **Behind a tunnel (e.g. cloudflared):** let the tunnel terminate HTTPS and talk to Habblaud on loopback:
-  `HABBLAUD_REMOTE_HOST=127.0.0.1` + `HABBLAUD_REMOTE_INSECURE_HTTP=1` (no certificate of its own), and point the
-  tunnel to `http://127.0.0.1:4748` (not `localhost`, which may resolve to `::1` first). Only in this case (no TLS and the port listening on loopback) does Habblaud trust
-  `X-Forwarded-Proto: https` and mark the cookie `Secure`. If the port is on the network without TLS, the header is
-  ignored. Put the public domain in `HABBLAUD_ALLOWED_HOSTS` (cloudflared forwards the public `Host`; without it every
-  request gets "Host não permitido"), and set `HABBLAUD_PTY=1` for the terminal. Run `npm run users:*` as the service's
-  OS user with the same `HABBLAUD_DATA_DIR`/`HABBLAUD_DB`. Test before switching the tunnel:
-  `curl -H 'Host: <domain>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login`.
-  `HABBLAUD_REMOTE_FULL=1` without TLS of its own only starts with `HABBLAUD_REMOTE_HOST=127.0.0.1` (or `::1`); on any
-  other interface the remote port stays off.
+  a container that has the project's code and mounts the volume. Restart the container afterwards. Without a
+  certificate of its own the container always listens on `0.0.0.0`, so users mode over plain HTTP does not start in
+  Docker (see the next item).
+- **Without HTTPS, only on loopback:** with no certificate of its own (`HABBLAUD_REMOTE_INSECURE_HTTP=1`), users mode
+  and `HABBLAUD_REMOTE_FULL=1` only start with `HABBLAUD_REMOTE_HOST=127.0.0.1` (or `::1`); on any other interface the
+  remote port stays off with a warning, because passwords and cookies would travel in the clear on the network. The
+  single-user mode without `HABBLAUD_REMOTE_FULL` keeps the old behavior.
+- **Behind a tunnel (e.g. cloudflared), in Node mode:** the tunnel terminates HTTPS and talks to Habblaud on loopback.
+  1. In the service environment: `HABBLAUD_REMOTE_USERS=1`, `HABBLAUD_REMOTE_HOST=127.0.0.1`,
+     `HABBLAUD_REMOTE_INSECURE_HTTP=1` (no certificate of its own), `HABBLAUD_ALLOWED_HOSTS=<public domain>`
+     (comma-separated list for more than one name; cloudflared forwards the public `Host`, and without it every
+     request, `/login` included, gets "Host não permitido") and `HABBLAUD_PTY=1` (the interactive terminal needs it).
+     Optionally `HABBLAUD_REMOTE_FULL=1` (read the warning below).
+  2. Create the users with `npm run users:add` **as the same OS user as the service and with the same
+     `HABBLAUD_DATA_DIR`/`HABBLAUD_DB`**: otherwise the command creates a different database, or a mode 600 file the
+     service cannot open, and the remote port stays off.
+  3. Restart the service after creating the first user (with no users the port does not start).
+  4. Test **before** switching the tunnel (a `curl` without the `Host` header proves nothing: an IP as `Host` is always
+     accepted): `curl -i -H 'Host: <domain>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login` must return
+     200 with the login page's HTML; `curl -i -H 'Host: <domain>' -H 'X-Forwarded-Proto: https' -H 'Content-Type:
+     application/json' -d '{"user":"<user>","password":"wrong"}' http://127.0.0.1:4748/api/remote/login` must return
+     401 with no `Set-Cookie` (with the right password: 200 and a `Set-Cookie` with `Secure`).
+  5. Point the tunnel to `http://127.0.0.1:4748` (not `localhost`, which may resolve to `::1` first).
+
+  Only in this setup (no TLS and the port listening on loopback) does Habblaud trust `X-Forwarded-Proto: https` (to
+  mark the cookie `Secure`) and `CF-Connecting-IP` (the IP for the lockout). If the port is on the network, both
+  headers are ignored.
 
 > ⚠️ **`HABBLAUD_REMOTE_FULL=1` gives a root shell on the machine to whoever passes the login.** It is opt-in (off by
 > default). With it, a logged-in remote session counts as the computer itself for the interactive terminal, agents,
@@ -819,7 +839,10 @@ Everything works without configuring anything. If you need to adjust something, 
 `npm run docker:down` (stops) and `npm run docker:logs` (follows the logs).
 
 `HABBLAUD_REMOTE_USERS` and `HABBLAUD_REMOTE_FULL` are passed through `docker-compose.yml`, but the interactive terminal
-still requires a loopback connection, so `HABBLAUD_REMOTE_FULL` does not open it on a published Docker port.
+still requires a loopback connection, so `HABBLAUD_REMOTE_FULL` does not open it on a published Docker port. In Docker
+`HABBLAUD_REMOTE_HOST` is ignored (the container always listens on `0.0.0.0`), so users mode and full access need the
+certificate of their own (`remote:setup`); the tunnel recipe in [Access by users](#access-by-users-several-logins) is
+for Node mode.
 
 ## Habblaud World
 

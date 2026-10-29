@@ -260,15 +260,26 @@ criá-la.
 
 - **Arquitetura:** contas num SQLite (`node:sqlite`, `HABBLAUD_DB`, padrão `<dataDir>/habblaud.db`, modo 600) com
   hashes scrypt (`server/db/`, `server/users/`); a porta remota 4748 confere o login com `HABBLAUD_REMOTE_USERS=1`,
-  com freio de 5 erros/15 min por IP+usuário (IP do `CF-Connecting-IP` atrás do túnel) e sessão de 30 dias;
+  com freio de 5 erros/15 min por (usuário, IP), retaguarda de 20 erros/60 s por IP e teto folgado de 100 erros/hora
+  por usuário (IP do `CF-Connecting-IP`, confiado só com a porta no loopback sem TLS próprio) e sessão de 30 dias; sem
+  HTTPS próprio, o modo de usuários e o acesso total só sobem com `HABBLAUD_REMOTE_HOST=127.0.0.1`/`::1`;
   `HABBLAUD_REMOTE_FULL=1` faz a sessão logada valer como o próprio computador (terminal, agentes, Novo agente), sem abrir
   hooks, plugins, Codex, auxiliar do host nem o Habblaud World; CLI `npm run users:add|passwd|list` (num terminal de verdade:
   a senha é pedida escondida) e tela **Usuários** no chip do usuário. Detalhes no README ("Acesso por usuários").
 - **Configuração do serviço:** `/etc/systemd/system/habblaud.service.d/remote-users.conf` com `HABBLAUD_REMOTE_USERS=1`,
   `HABBLAUD_REMOTE_FULL=1`, `HABBLAUD_REMOTE_INSECURE_HTTP=1` e `HABBLAUD_REMOTE_HOST=127.0.0.1`; `HABBLAUD_PTY=1` e
   `HABBLAUD_ALLOWED_HOSTS=towertansyx.coffetech.com.br` já estavam no serviço. O código roda de `/root/habblaud`, que é um
-  clone separado: o deploy é `git fetch /root/projetos/Tower-Tansyx <branch>` + `git merge --ff-only FETCH_HEAD` +
+  clone separado: o deploy é `git fetch /root/projetos/Tower-Tansyx <branch com o código>` + `git merge --ff-only FETCH_HEAD` +
   `npm ci --include=dev` (o shell tem `NODE_ENV=production`) + `npm run build` + `systemctl restart habblaud`.
+- **Receita do corte (para refazer ou conferir):** (1) no ambiente do serviço, além das variáveis acima,
+  `HABBLAUD_ALLOWED_HOSTS=<domínio público>` (lista por vírgula; o cloudflared repassa o `Host` público e, sem ele,
+  tudo responde "Host não permitido") e `HABBLAUD_PTY=1`; (2) `npm run users:add` como o **mesmo usuário do sistema do
+  serviço** e com o mesmo `HABBLAUD_DATA_DIR`/`HABBLAUD_DB` (senão nasce outro banco, ou um arquivo 600 que o serviço
+  não abre, e a porta 4748 fica desligada); (3) reiniciar o serviço depois do primeiro usuário; (4) antes de mexer no
+  túnel, `curl -i -H 'Host: <domínio>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login` deve dar 200 com HTML
+  (sem o `Host` público o teste não prova nada: IP como `Host` é sempre aceito), e um `POST /api/remote/login` com os
+  mesmos cabeçalhos, `Content-Type: application/json` e senha errada deve dar 401 sem `Set-Cookie` (senha certa: 200 e
+  `Set-Cookie` com `Secure`); (5) apontar o túnel para `http://127.0.0.1:4748` (não `localhost`).
 - **Aviso:** com `HABBLAUD_REMOTE_FULL=1`, o login é a única barreira de um shell root.
 - Spec: `docs/superpowers/specs/2026-10-28-login-usuarios-design.md`; plano:
   `docs/superpowers/plans/2026-10-28-login-usuarios.md`.
