@@ -396,8 +396,13 @@ export interface AccessInfo {
    * com Host local. Ausente em servidores antigos.
    */
   world?: boolean;
-  /** Pode atualizar o uso das contas (POST /api/usage/refresh): só pelo próprio computador. Ausente em servidores antigos. */
+  /**
+   * Pode atualizar o uso das contas (POST /api/usage/refresh): só pelo próprio computador (ou no acesso total). Ausente em
+   * servidores antigos.
+   */
   usageRefresh?: boolean;
+  /** Sessão remota logada com o acesso total (HABBLAUD_REMOTE_FULL): conta como o próprio computador. Ausente fora dele. */
+  full?: boolean;
 }
 
 export interface FeedItem {

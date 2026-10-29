@@ -393,7 +393,7 @@ const api = createApiHandler({
   timeline: createTimelineHandler({ dir: timelineDir, recording: !!timeline }),
   permissions: permissions ? createPermissionRoutes(permissions) : undefined,
   messages: messages ? createMessageRoutes(messages) : undefined,
-  pty: ptys ? createPtyRoutes(ptys) : undefined,
+  pty: ptys ? createPtyRoutes(ptys, { remoteFull: !!config.remote?.full }) : undefined,
   usageRefresh: usageRefresher,
   spawn,
   attachments,
@@ -412,7 +412,7 @@ const api = createApiHandler({
   codexLive,
   stats,
   updates,
-  remote: config.remote ? { is: isRemoteRequest, allows: (f) => config.remote!.allow.has(f) } : undefined,
+  remote: config.remote ? { is: isRemoteRequest, allows: (f) => config.remote!.allow.has(f), full: config.remote.full } : undefined,
   world: world ? createWorldRoutes(world, worldViewer, worldSocial) : undefined,
 });
 

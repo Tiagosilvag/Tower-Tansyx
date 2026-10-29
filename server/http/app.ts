@@ -93,9 +93,11 @@ export interface ApiDeps {
   };
   /**
    * Porta remota com login (http/remote.ts): `is` diz se a requisição chegou por ela (já autenticada); `allows`, o que
-   * HABBLAUD_REMOTE_ALLOW libera. Requisição remota nunca vale pelo Host: só pelo que `allows` liberar.
+   * HABBLAUD_REMOTE_ALLOW libera. Requisição remota nunca vale pelo Host: só pelo que `allows` liberar. `full`
+   * (HABBLAUD_REMOTE_FULL): a sessão logada conta como o próprio computador, menos nas rotas só da máquina
+   * (isLocalOnlyPath), no Habblaud World e no modo demonstração.
    */
-  remote?: { is(req: IncomingMessage): boolean; allows(feature: RemoteFeature): boolean };
+  remote?: { is(req: IncomingMessage): boolean; allows(feature: RemoteFeature): boolean; full: boolean };
   /**
    * Rotas do Habblaud World (/api/world/*, server/world/http.ts). Ausente = HABBLAUD_WORLD=0: 404 em todas. Só pela porta
    * local com Host local: pela porta do celular, nem com login (403 `local_only`).
@@ -277,12 +279,15 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
   const terminals = deps.terminal ? deps.terminals : undefined;
 
   const isRemote = (req: IncomingMessage): boolean => !!deps.remote?.is(req);
+  /** Sessão logada pela porta remota com o acesso total (HABBLAUD_REMOTE_FULL). */
+  const isRemoteFull = (req: IncomingMessage): boolean => isRemote(req) && !!deps.remote?.full;
   /**
    * A trava "pelo próprio computador": na porta local, o Host precisa ser loopback (como antes); na porta remota, só o
-   * que HABBLAUD_REMOTE_ALLOW liberar (`feature` ausente = nunca pela porta remota).
+   * que HABBLAUD_REMOTE_ALLOW liberar (`feature` ausente = nunca pela porta remota), ou tudo no acesso total. As rotas
+   * só da máquina e o Habblaud World são barrados antes, no topo do roteador, e não passam por aqui.
    */
   const trusted = (req: IncomingMessage, feature?: RemoteFeature): boolean =>
-    isRemote(req) ? !!feature && !!deps.remote?.allows(feature) : isLoopbackHost(req.headers.host);
+    isRemote(req) ? isRemoteFull(req) || (!!feature && !!deps.remote?.allows(feature)) : isLoopbackHost(req.headers.host);
   const denied = (req: IncomingMessage, localMessage: string): string =>
     isRemote(req) ? tr('não liberado no acesso remoto (veja HABBLAUD_REMOTE_ALLOW)') : localMessage;
 
@@ -387,8 +392,8 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
           remote,
           terminal: !!terminals && (!remote || trusted(req, 'terminal')),
           permissions: !!deps.permissions && (!remote || trusted(req, 'permissions')),
-          // O terminal interativo (pty) nunca vale pela porta remota.
-          pty: !!deps.pty && !remote,
+          // O terminal interativo (pty) só vale pela porta remota no acesso total.
+          pty: !!deps.pty && (!remote || isRemoteFull(req)),
           messages: !!deps.messages && (!remote || trusted(req, 'messages')),
           codexEvents: !!deps.codexLive,
           updates: updatesSummary(deps.updates?.status()),
@@ -414,7 +419,8 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
           terminal: !!terminals && trusted(req, 'terminal'),
           spawn: !!deps.spawn && trusted(req, 'spawn'),
           world: !!deps.world && !!deps.terminal && !remote && isLoopbackHost(req.headers.host),
-          usageRefresh: !!deps.usageRefresh && !remote && isLoopbackHost(req.headers.host),
+          usageRefresh: !!deps.usageRefresh && (remote ? isRemoteFull(req) : isLoopbackHost(req.headers.host)),
+          ...(isRemoteFull(req) ? { full: true } : {}),
         };
         sendJson(res, 200, access);
       }
@@ -482,9 +488,10 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       return true;
     }
     if (path === '/api/pty' || path.startsWith('/api/pty/') || AGENT_ACTION_ROUTE.test(path)) {
-      // Executa comandos na máquina: nunca pela porta remota, nem com login (o Host e o endereço de quem conecta não
-      // bastam: o Tailscale chega pelo loopback e o Host se imita).
-      if (isRemote(req)) sendJson(res, 403, { error: tr('o terminal interativo só pode ser usado no próprio computador') });
+      // Executa comandos na máquina: pela porta remota, só a sessão logada no acesso total (o Host e o endereço de quem
+      // conecta não bastam: o Tailscale chega pelo loopback e o Host se imita). As travas de socket e origem seguem no
+      // ptyRequestProblem.
+      if (isRemote(req) && !isRemoteFull(req)) sendJson(res, 403, { error: tr('o terminal interativo só pode ser usado no próprio computador') });
       else if (!deps.pty) sendJson(res, 403, { error: tr('terminal interativo desligado (veja o log do servidor)') });
       else deps.pty(req, res, path);
       return true;

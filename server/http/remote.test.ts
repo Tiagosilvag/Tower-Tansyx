@@ -26,6 +26,9 @@ import {
 import { Hub } from './sse';
 import { hashPassword, parsePasswordHash } from '../remote/password';
 import { SpawnService } from '../spawn/spawn';
+import type { PtyManager } from '../pty/manager';
+import type { UsageRefresher } from '../accounts/usage-refresh';
+import { createPtyRoutes, ptyRequestProblem } from './pty';
 
 setQuiet(true);
 
@@ -196,8 +199,16 @@ afterEach(async () => {
   while (closers.length) await closers.pop()!();
 });
 
-/** Uma porta local (sem login) e uma remota (com login), sobre a MESMA API, como no server/index.ts. */
-async function start(allow: RemoteFeature[] = ['permissions']): Promise<Harness> {
+/** Nome de fora (o do túnel) aceito pelo guard no modo total: prova que o terminal não depende do Host local. */
+const TUNNEL_HOST = 'tower.example';
+
+/**
+ * Uma porta local (sem login) e uma remota (com login), sobre a MESMA API, como no server/index.ts. Com `full`, liga o
+ * acesso total e usa as rotas de verdade do terminal interativo (com um PtyManager falso), para valer o
+ * ptyRequestProblem.
+ */
+async function start(allow: RemoteFeature[] = ['permissions'], opts: { full?: boolean } = {}): Promise<Harness> {
+  const full = !!opts.full;
   const tmp = tempDir();
   const dir = join(tmp.dir, '.claude');
   mkdirSync(join(dir, 'sessions'), { recursive: true });
@@ -221,6 +232,17 @@ async function start(allow: RemoteFeature[] = ['permissions']): Promise<Harness>
   const ptyCalls: string[] = [];
   const worldCalls: string[] = [];
   const spawn = new SpawnService();
+  const fakePtys = {
+    status: () => 'ok',
+    list: () => [],
+    stop: async (id: string) => void ptyCalls.push(`stop ${id}`),
+    takeover: async (id: string) => (ptyCalls.push(`takeover ${id}`), { id }),
+  } as unknown as PtyManager;
+  const fakePty = (req: http.IncomingMessage, res: http.ServerResponse, path: string) => {
+    req.resume();
+    ptyCalls.push(`${req.method} ${path}`);
+    sendJson(res, 200, { ok: true });
+  };
   const api = createApiHandler({
     office,
     hub,
@@ -239,21 +261,18 @@ async function start(allow: RemoteFeature[] = ['permissions']): Promise<Harness>
       req.resume();
       sendJson(res, 200, { ok: true });
     },
-    pty: (req, res, path) => {
-      req.resume();
-      ptyCalls.push(`${req.method} ${path}`);
-      sendJson(res, 200, { ok: true });
-    },
+    pty: full ? createPtyRoutes(fakePtys, { remoteFull: true }) : fakePty,
+    ...(full ? { usageRefresh: { run: async () => [] } as unknown as UsageRefresher } : {}),
     renameRoom: () => 'sala',
-    remote: { is: isRemoteRequest, allows: (f) => allowSet.has(f) },
+    remote: { is: isRemoteRequest, allows: (f) => allowSet.has(f), full },
     world: (req, res, url) => {
       req.resume();
       worldCalls.push(`${req.method} ${url.pathname}`);
       sendJson(res, 200, { ok: true });
     },
   });
-  const guard = createRequestGuard();
-  const gate = createRemoteGate({ config: CFG, sessions: new RemoteSessions(SECRET, CFG), secure: false });
+  const guard = createRequestGuard(full ? { allowedHosts: new Set([TUNNEL_HOST]) } : {});
+  const gate =createRemoteGate({ config: CFG, sessions: new RemoteSessions(SECRET, CFG), secure: false });
   const page = (_req: http.IncomingMessage, res: http.ServerResponse) => {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end('<!doctype html><title>Habblaud</title>');
@@ -558,6 +577,121 @@ describe('porta local (inalterada)', () => {
     expect(h.permissionCalls).toEqual(['local POST /api/permissions/p1/decision']);
     const health = JSON.parse((await request(h.localBase, '/api/health')).body);
     expect(health).toMatchObject({ remote: false, permissions: true, messages: true });
+  });
+});
+
+describe('porta remota com acesso total', () => {
+  const ALL: RemoteFeature[] = ['permissions', 'messages', 'terminal', 'spawn'];
+
+  it('logado: terminal interativo, atualizar o uso, renomear salas e o personagem passam, sem depender do Host local', async () => {
+    const s = await start(ALL, { full: true });
+    const cookie = await login(s.remoteBase);
+    const headers = { Cookie: cookie, Host: TUNNEL_HOST };
+    expect((await request(s.remoteBase, '/api/pty', { headers })).status).toBe(200);
+    const stop = await request(s.remoteBase, '/api/agents/a1/stop', { method: 'POST', headers, body: {} });
+    expect(stop.status).toBe(204);
+    expect(s.ptyCalls).toEqual(['stop a1']);
+    expect((await request(s.remoteBase, '/api/usage/refresh', { method: 'POST', headers, body: {} })).status).toBe(200);
+    expect((await request(s.remoteBase, '/api/rooms/rename', { method: 'POST', headers, body: { id: 'r', name: 'n' } })).status).toBe(200);
+    // Corpo inválido: a rota respondeu (400), não a trava (403).
+    expect((await request(s.remoteBase, '/api/agents/x/character', { method: 'PUT', headers, body: {} })).status).toBe(400);
+    expect(JSON.parse((await request(s.remoteBase, '/api/health', { headers })).body)).toMatchObject({ remote: true, pty: true });
+    expect(JSON.parse((await request(s.remoteBase, '/api/access', { headers })).body)).toMatchObject({
+      remote: true,
+      local: false,
+      full: true,
+      spawn: true,
+      usageRefresh: true,
+      world: false,
+    });
+  });
+
+  it('rotas dos hooks, plugins, Codex, auxiliar do host e o Habblaud World seguem barradas, mesmo com Host local', async () => {
+    const s = await start(ALL, { full: true });
+    const cookie = await login(s.remoteBase);
+    const headers = { Cookie: cookie, Host: 'localhost' };
+    const blocked: Array<[string, string]> = [
+      ['POST', '/api/permissions'],
+      ['GET', '/api/permissions/p1/wait'],
+      ['POST', '/api/mod/inbox'],
+      ['POST', '/api/mod/inbox/ack'],
+      ['POST', '/api/codex/events'],
+      ['POST', '/api/codex/bridge/poll'],
+      ['POST', '/api/host/files/poll'],
+      ['POST', '/api/host/spawn/poll'],
+      ['POST', '/api/host/dictation/poll'],
+      ['GET', '/api/world/status'],
+      ['POST', '/api/world/login'],
+    ];
+    for (const [method, path] of blocked) {
+      const r = await request(s.remoteBase, path, { method, headers, ...(method === 'POST' ? { body: {} } : {}) });
+      expect(r.status, `${method} ${path}`).toBe(403);
+    }
+    expect(s.permissionCalls).toEqual([]);
+    expect(s.worldCalls).toEqual([]);
+    // O modo demonstração vale para todo mundo: nem o acesso total liga.
+    expect((await request(s.remoteBase, '/api/demo', { method: 'POST', body: { enabled: true }, headers })).status).toBe(403);
+  });
+
+  it('o terminal interativo exige a mesma origem e o login', async () => {
+    const s = await start(ALL, { full: true });
+    const cookie = await login(s.remoteBase);
+    const headers = { Cookie: cookie, Host: TUNNEL_HOST };
+    const extras: Array<Record<string, string>> = [{ Origin: 'https://evil.example' }, { 'Sec-Fetch-Site': 'cross-site' }, { 'Sec-Fetch-Site': 'same-site' }];
+    for (const extra of extras) {
+      const r = await request(s.remoteBase, '/api/pty', { headers: { ...headers, ...extra } });
+      expect(r.status, JSON.stringify(extra)).toBe(403);
+      expect(JSON.parse(r.body).error).toMatch(/origem/);
+    }
+    // Origin igual ao Host (a página aberta pelo túnel) passa.
+    expect((await request(s.remoteBase, '/api/pty', { headers: { ...headers, Origin: `https://${TUNNEL_HOST}`, 'Sec-Fetch-Site': 'same-origin' } })).status).toBe(200);
+    // Sem login, o portão responde antes da API.
+    expect((await request(s.remoteBase, '/api/pty', { headers: { Host: TUNNEL_HOST } })).status).toBe(401);
+    expect((await request(s.remoteBase, '/api/agents/a1/stop', { method: 'POST', headers: { Host: TUNNEL_HOST }, body: {} })).status).toBe(401);
+    expect(s.ptyCalls).toEqual([]);
+  });
+
+  it('ptyRequestProblem: no modo total, só cai a exigência do Host local', () => {
+    const req = (headers: Record<string, string>, remoteAddress = '127.0.0.1') =>
+      ({ headers, socket: { remoteAddress } }) as unknown as http.IncomingMessage;
+    // Conexão da rede (não é o cloudflared local): recusada.
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST }, '10.0.0.5'), true)).toMatch(/próprio computador/);
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST }), true)).toBeNull();
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST, origin: `https://${TUNNEL_HOST.toUpperCase()}` }, '::ffff:127.0.0.1'), true)).toBeNull();
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST, origin: 'https://evil.example' }), true)).toMatch(/origem/);
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST, origin: 'http://localhost:4747' }), true)).toMatch(/origem/);
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST, 'sec-fetch-site': 'cross-site' }), true)).toMatch(/origem/);
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST, 'sec-fetch-site': 'same-site' }), true)).toMatch(/origem/);
+    // Sem o modo total, como antes.
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST }))).toMatch(/localhost/);
+    expect(ptyRequestProblem(req({ host: TUNNEL_HOST }), false)).toMatch(/localhost/);
+  });
+
+  it('sem o modo total: o access não diz full e o terminal interativo segue barrado', async () => {
+    const s = await start(ALL);
+    const cookie = await login(s.remoteBase);
+    const headers = { Cookie: cookie, Host: 'localhost' };
+    const access = JSON.parse((await request(s.remoteBase, '/api/access', { headers })).body);
+    expect(access.full).toBeUndefined();
+    expect(access.usageRefresh).toBe(false);
+    expect((await request(s.remoteBase, '/api/pty', { headers })).status).toBe(403);
+    expect((await request(s.remoteBase, '/api/rooms/rename', { method: 'POST', headers, body: { id: 'r', name: 'n' } })).status).toBe(403);
+    expect(s.ptyCalls).toEqual([]);
+  });
+
+  it('porta local: o modo total não muda nada (sem login, vale o Host local)', async () => {
+    const s = await start(ALL, { full: true });
+    expect((await request(s.localBase, '/api/pty')).status).toBe(200);
+    const lan = await request(s.localBase, '/api/pty', { headers: { Host: TUNNEL_HOST } });
+    expect(lan.status).toBe(403);
+    expect(JSON.parse(lan.body).error).toMatch(/localhost/);
+    expect((await request(s.localBase, '/api/agents/a1/stop', { method: 'POST', headers: { Host: TUNNEL_HOST }, body: {} })).status).toBe(403);
+    expect((await request(s.localBase, '/api/usage/refresh', { method: 'POST', headers: { Host: TUNNEL_HOST }, body: {} })).status).toBe(403);
+    expect(s.ptyCalls).toEqual([]);
+    const access = JSON.parse((await request(s.localBase, '/api/access')).body);
+    expect(access.full).toBeUndefined();
+    expect(access.usageRefresh).toBe(true);
+    expect(JSON.parse((await request(s.localBase, '/api/health')).body).pty).toBe(true);
   });
 });
 

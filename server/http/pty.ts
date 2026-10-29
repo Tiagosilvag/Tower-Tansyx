@@ -8,12 +8,14 @@
 //   POST /api/agents/:id/stop          encerra o agente (aqui ou noutro terminal)
 //   POST /api/agents/:id/takeover      assume a sessão: encerra lá e retoma aqui
 // Quem controla um terminal destes executa comandos na máquina: só conexões do próprio computador, com Host
-// local e (quando o navegador manda) Origin da mesma origem. A borda (http/guard.ts) já exige JSON nos POST.
+// local e (quando o navegador manda) Origin da mesma origem. A borda (http/guard.ts) já exige JSON nos POST. Com
+// HABBLAUD_REMOTE_FULL, a sessão logada pela porta remota dispensa só o Host local (ver ptyRequestProblem).
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { PtyError, type PtyManager } from '../pty/manager';
 import { HttpError, readJson, sendJson } from './app';
 import { ATTACHMENT_BODY_MAX, attachmentsRoot, parseAttachment, writeAttachments } from '../spawn/attachments';
 import { isLoopbackHost } from './guard';
+import { isRemoteRequest } from './remote';
 import { tr } from '../../shared/i18n';
 
 /** /api/agents/:id/(stop|takeover) (ids nunca contêm '/'). */
@@ -25,11 +27,15 @@ function isLoopbackAddress(addr: string | undefined): boolean {
   return a === '::1' || a.startsWith('127.');
 }
 
-/** Motivo da recusa, ou null. */
-export function ptyRequestProblem(req: IncomingMessage): string | null {
+/**
+ * Motivo da recusa, ou null. `remoteFull` = requisição logada pela porta remota com HABBLAUD_REMOTE_FULL: aí o Host é o
+ * do túnel e só cai a exigência do Host local; o socket continua tendo de ser do loopback (só o cloudflared local
+ * chega) e a origem, a mesma.
+ */
+export function ptyRequestProblem(req: IncomingMessage, remoteFull = false): string | null {
   if (!isLoopbackAddress(req.socket.remoteAddress)) return tr('o terminal interativo só pode ser usado no próprio computador');
   const host = req.headers.host;
-  if (!isLoopbackHost(host)) return tr('abra o Habblaud por http://localhost para usar o terminal interativo');
+  if (!remoteFull && !isLoopbackHost(host)) return tr('abra o Habblaud por http://localhost para usar o terminal interativo');
   const origin = req.headers.origin;
   if (typeof origin === 'string') {
     let same = false;
@@ -46,7 +52,14 @@ export function ptyRequestProblem(req: IncomingMessage): string | null {
   return null;
 }
 
-export function createPtyRoutes(ptys: PtyManager): (req: IncomingMessage, res: ServerResponse, path: string) => void {
+/**
+ * `remoteFull`: HABBLAUD_REMOTE_FULL ligado. Vale só para a requisição que o portão remoto autenticou
+ * (isRemoteRequest); a porta local segue com a trava do Host local.
+ */
+export function createPtyRoutes(
+  ptys: PtyManager,
+  opts: { remoteFull?: boolean } = {},
+): (req: IncomingMessage, res: ServerResponse, path: string) => void {
   const fail = (res: ServerResponse, err: unknown) => {
     if (res.headersSent) return void res.destroy();
     if (err instanceof HttpError || err instanceof PtyError) sendJson(res, err.status, { error: err.message });
@@ -69,7 +82,7 @@ export function createPtyRoutes(ptys: PtyManager): (req: IncomingMessage, res: S
   };
 
   const handle = async (req: IncomingMessage, res: ServerResponse, path: string) => {
-    const problem = ptyRequestProblem(req);
+    const problem = ptyRequestProblem(req, !!opts.remoteFull && isRemoteRequest(req));
     if (problem) throw new HttpError(403, problem);
     const method = req.method ?? 'GET';
     const action = AGENT_ACTION_ROUTE.exec(path);

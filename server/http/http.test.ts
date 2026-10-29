@@ -501,7 +501,7 @@ describe('despacho da API de usuários', () => {
   it('pela porta remota os caminhos só locais seguem bloqueados (a rota de usuários não os alcança)', async () => {
     let chamadas = 0;
     const env = await start({
-      remote: { is: () => true, allows: () => true },
+      remote: { is: () => true, allows: () => true, full: false },
       users: (_req, res) => {
         chamadas++;
         res.writeHead(204);
