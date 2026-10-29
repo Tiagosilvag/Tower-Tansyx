@@ -26,6 +26,23 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Login com usuários.** A porta remota pode conferir um banco de usuários em vez do login único: ligue com
+  `HABBLAUD_REMOTE_USERS=1` (sem a variável, o modo de usuário único segue exatamente como antes; ligada e sem nenhum
+  usuário no banco, a porta não sobe). Os usuários nascem por `npm run users:add -- <usuario> [--name "Nome"]
+  [--color #rrggbb]` (a senha é pedida duas vezes, escondida, ou lida com `--password-stdin`; mínimo de 10 caracteres),
+  e `users:passwd` e `users:list` completam o conjunto. Depois de entrar, o menu do chip de usuário › **Usuários**
+  abre a tela de administração: criar, editar, remover e trocar senhas. Todos têm o mesmo acesso. Cada usuário tem o
+  seu freio: 5 senhas erradas seguidas o bloqueiam por 15 minutos; a sessão dura 30 dias e trocar a senha encerra as
+  sessões daquele usuário. As contas ficam num banco SQLite (`HABBLAUD_DB`, padrão `~/.habblaud/habblaud.db`) com modo
+  600 (a pasta, 700), só com os hashes scrypt. Atrás de um túnel que termina o HTTPS (cloudflared), use
+  `HABBLAUD_REMOTE_HOST=127.0.0.1` com `HABBLAUD_REMOTE_INSECURE_HTTP=1`: nesse caso, e só nele, o cookie vira `Secure`
+  pelo `X-Forwarded-Proto: https`.
+- **Acesso total opt-in para a sessão logada.** Com `HABBLAUD_REMOTE_FULL=1`, quem passa pelo login remoto conta como
+  o próprio computador para o terminal interativo, os agentes, o Novo agente e o Projeto novo, o ditado, a atualização
+  do uso, o renomear sala e a edição de personagem. Hooks, plugins, Codex, o auxiliar do host e o Habblaud World
+  seguem sempre só locais. **Atenção: é um shell root na máquina para quem passa pelo login, que passa a ser a única
+  barreira.** Vem desligado; no Docker as variáveis passam pelo `docker-compose.yml`, mas o terminal interativo
+  continua exigindo conexão por loopback.
 - **A barra do terminal segue a cor da sala.** Cada janela de terminal ganha a cor da sala do agente (a mesma do
   cabeçalho da sala na barra lateral), com o nome do agente maior e o nome da sala numa etiqueta colorida, para
   não confundir as conversas. O histórico de sessões encerradas continua na cor padrão.
@@ -131,6 +148,11 @@ do meio (0.**3**.0).
   terminal interativo); com uma conta só, nada muda na tela. O servidor aceita `account` no `POST /api/spawn` e recusa
   uma conta desconhecida. Vale no modo Node: quando o pedido cai na tela do app do Claude, o link `claude://` não leva
   a conta e o painel avisa; no Docker, escolher a conta é recusado, porque quem roda é o auxiliar do host.
+
+### Alterado
+
+- **Node mínimo 22.13.** O banco de usuários usa o SQLite embutido no Node (`node:sqlite`), que precisa dessa versão;
+  o `engines` do `package.json` passou a pedir `>=22.13`.
 
 ## [1.0.3] - 2026-10-16
 

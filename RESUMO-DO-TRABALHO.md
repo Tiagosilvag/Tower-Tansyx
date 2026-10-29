@@ -251,6 +251,27 @@ foram apagados do servidor; os repositórios originais continuam nas contas de o
 **Não testado no navegador real.** Estas mudanças foram validadas por typecheck, `i18n:check`, vitest, build e e2e do
 servidor; o aspecto visual foi conferido só nos prints do usuário.
 
+### Login e usuários (código pronto, troca pendente)
+
+O código está pronto no repositório, na branch `worktree-anexos-pty` (commits de `feat(users)` a `feat(ui): chip do
+usuário…`), **ainda não implantado em produção**. O Caddy **continua** na frente (`:8080`) e a produção segue com o
+Basic Auth; nada disto está ligado lá.
+
+- **Arquitetura:** contas num SQLite (`node:sqlite`, `HABBLAUD_DB`, padrão `<dataDir>/habblaud.db`, modo 600) com
+  hashes scrypt (`server/db/`, `server/users/`); a porta remota 4748 confere o login com `HABBLAUD_REMOTE_USERS=1`,
+  com freio de 5 erros/15 min por usuário e sessão de 30 dias; `HABBLAUD_REMOTE_FULL=1` faz a sessão logada valer como
+  o próprio computador (terminal, agentes, Novo agente), sem abrir hooks, plugins, Codex, auxiliar do host nem o
+  Habblaud World; CLI `npm run users:add|passwd|list` e tela **Usuários** no chip do usuário. Detalhes no README
+  ("Acesso por usuários").
+- **Troca (NÃO feita, depende do dono):** (1) criar os usuários com `npm run users:add`; (2) ajuste do serviço
+  `/etc/systemd/system/habblaud.service.d/remote-users.conf` com `HABBLAUD_REMOTE_USERS=1`, `HABBLAUD_REMOTE_FULL=1`,
+  `HABBLAUD_REMOTE_INSECURE_HTTP=1`, `HABBLAUD_REMOTE_HOST=127.0.0.1` e `HABBLAUD_REMOTE_ALLOW`, mais `daemon-reload` e
+  `restart`; (3) apontar o serviço do túnel `towertansyx` de `http://localhost:8080` para `http://localhost:4748`;
+  (4) só depois de todos entrarem, desligar o Caddy. Volta: apontar o túnel de novo para `8080`.
+- **Aviso:** com `HABBLAUD_REMOTE_FULL=1`, o login é a única barreira de um shell root.
+- Spec: `docs/superpowers/specs/2026-10-28-login-usuarios-design.md`; plano:
+  `docs/superpowers/plans/2026-10-28-login-usuarios.md`.
+
 ## 7. Pendências
 
 1. **Trocar a senha do Caddy** (`caddy hash-password` → editar o Caddyfile → `systemctl reload caddy`). A

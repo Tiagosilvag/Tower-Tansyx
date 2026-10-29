@@ -298,6 +298,45 @@ Without HTTPS the remote port doesn't start; `HABBLAUD_REMOTE_INSECURE_HTTP=1` f
 in the clear on the network). In Node mode: `HABBLAUD_REMOTE_PORT` and `HABBLAUD_REMOTE_HOST` (default
 `0.0.0.0:4748`) and `HABBLAUD_REMOTE_TLS_DIR` (default `~/.habblaud/remote-tls/server`).
 
+#### Access by users (several logins)
+
+Instead of the single username and password from `remote:setup`, the remote port can check a **database of users**.
+Set `HABBLAUD_REMOTE_USERS=1` to turn it on; without it, the single-user mode above keeps working exactly as before.
+With it on and **no users in the database, the remote port does not start**: create the first one before (or restart
+Habblaud after creating it).
+
+```bash
+npm run users:add -- <usuario> [--name "Nome"] [--color #rrggbb] [--password-stdin]
+npm run users:passwd -- <usuario> [--password-stdin]
+npm run users:list
+```
+
+- **Password:** asked twice, hidden, in the terminal; with `--password-stdin` it is read from one line of stdin
+  instead. At least 10 characters.
+- **Admin screen:** once logged in, the menu on your user chip › **Users** lists, adds, edits and removes users and
+  changes passwords. Everyone has the same access: there are no roles.
+- **Lockout:** 5 wrong passwords in a row for a user lock that user for 15 minutes.
+- **Sessions:** last 30 days; changing a user's password ends that user's sessions.
+- **Database:** SQLite built into Node (hence Node 22.13 or newer), at `HABBLAUD_DB` (default
+  `<dataDir>/habblaud.db`, i.e. `~/.habblaud/habblaud.db`), created with mode 600 (the folder, 700). It holds the
+  password hashes (scrypt), never the passwords.
+- **In Docker:** the command uses the data folder of wherever it runs (or `HABBLAUD_DB`), so run on the host it would
+  create a different database from the container's (the data lives in the `habblaud-data` volume, at `/data`). The
+  image only ships the server (`dist/server/index.js`), not these commands: run them in a checkout with `HABBLAUD_DB`
+  pointing at the database file inside that volume (`docker volume inspect habblaud-data` shows the folder), or from
+  a container that has the project's code and mounts the volume. Restart the container afterwards.
+- **Behind a tunnel (e.g. cloudflared):** let the tunnel terminate HTTPS and talk to Habblaud on loopback:
+  `HABBLAUD_REMOTE_HOST=127.0.0.1` + `HABBLAUD_REMOTE_INSECURE_HTTP=1` (no certificate of its own), and point the
+  tunnel to `http://localhost:4748`. Only in this case (no TLS and the port listening on loopback) does Habblaud trust
+  `X-Forwarded-Proto: https` and mark the cookie `Secure`. If the port is on the network without TLS, the header is
+  ignored.
+
+> ⚠️ **`HABBLAUD_REMOTE_FULL=1` gives a root shell on the machine to whoever passes the login.** It is opt-in (off by
+> default). With it, a logged-in remote session counts as the computer itself for the interactive terminal, agents,
+> **New agent** and **New project**, dictation, usage refresh, room rename and character editing. The login is the only
+> barrier: use long, unique passwords, few users, and never turn it on without HTTPS or a tunnel. Hooks, plugins,
+> Codex, the host helper and Habblaud World always stay local-only, even with it on.
+
 ### Updating
 
 The version in use shows up in the top bar, next to "Connected", and in **Settings › About**. Every 6 hours
@@ -729,6 +768,9 @@ Everything works without configuring anything. If you need to adjust something, 
 | `HABBLAUD_TMUX_MOUSE` | on | The mouse wheel scrolls the conversation history inside tmux; to select text, hold Shift while dragging. `0` turns the mouse off in tmux (the browser then selects normally, but the wheel no longer scrolls the history). |
 | `HABBLAUD_CLAUDE_BIN` | `claude` from PATH | The Claude Code executable that the interactive terminal and New agent run. |
 | `HABBLAUD_REMOTE_ALLOW` | `permissions` | What the [phone with login](#phone-with-login-and-https-approving-requests) can do: `permissions`, `messages`, `terminal`, `spawn` (comma-separated) or `none`. The other `HABBLAUD_REMOTE_*` are written by `npm run remote:setup`. |
+| `HABBLAUD_REMOTE_USERS` | off | `1` makes the remote port check a database of users instead of the single login. Without users in the database the port does not start. See [Access by users](#access-by-users-several-logins). |
+| `HABBLAUD_REMOTE_FULL` | off | `1` makes a logged-in remote session count as the computer itself (interactive terminal, agents, New agent/New project, dictation, usage refresh, room rename, character editing); hooks, plugins, Codex, the host helper and Habblaud World stay local-only. **Whoever passes the login gets a root shell.** |
+| `HABBLAUD_DB` | `<dataDir>/habblaud.db` (`~/.habblaud/habblaud.db`) | Path of the SQLite database with the users. |
 | `HABBLAUD_MENSAGENS` | on (with the terminal) | `0` turns off only messages from the office (the box in the terminal and in the agent's details). |
 | `HABBLAUD_CODEX` | on | `0` turns off Codex in the office. |
 | `HABBLAUD_CODEX_DIRS` | automatic detection | Codex folders, comma-separated (instead of `~/.codex*` and `CODEX_HOME`). |
@@ -742,6 +784,9 @@ Everything works without configuring anything. If you need to adjust something, 
 `HABBLAUD_REMOTE_*` apply (in `.env` or in the environment), as do `HABBLAUD_CLAUDE_DIRS`, `HABBLAUD_CODEX_DIRS`, `HABBLAUD_USAGE_DIR` and
 `HABBLAUD_ACCOUNTS` (read by `docker:up` on the host); the rest are fixed inside the container. Options: `npm run docker:up -- --no-build` (starts without rebuilding),
 `npm run docker:down` (stops) and `npm run docker:logs` (follows the logs).
+
+`HABBLAUD_REMOTE_USERS` and `HABBLAUD_REMOTE_FULL` are passed through `docker-compose.yml`, but the interactive terminal
+still requires a loopback connection, so `HABBLAUD_REMOTE_FULL` does not open it on a published Docker port.
 
 ## Habblaud World
 

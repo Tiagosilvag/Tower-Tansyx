@@ -296,6 +296,44 @@ Sem HTTPS a porta remota não sobe; `HABBLAUD_REMOTE_INSECURE_HTTP=1` força HTT
 rede). No modo Node: `HABBLAUD_REMOTE_PORT` e `HABBLAUD_REMOTE_HOST` (padrão `0.0.0.0:4748`) e
 `HABBLAUD_REMOTE_TLS_DIR` (padrão `~/.habblaud/remote-tls/server`).
 
+#### Acesso por usuários (vários logins)
+
+Em vez do usuário e da senha únicos do `remote:setup`, a porta remota pode conferir um **banco de usuários**. Ligue com
+`HABBLAUD_REMOTE_USERS=1`; sem isso, o modo de usuário único acima continua funcionando exatamente como antes. Ligado e
+**sem nenhum usuário no banco, a porta remota não sobe**: crie o primeiro antes (ou reinicie o Habblaud depois de
+criá-lo).
+
+```bash
+npm run users:add -- <usuario> [--name "Nome"] [--color #rrggbb] [--password-stdin]
+npm run users:passwd -- <usuario> [--password-stdin]
+npm run users:list
+```
+
+- **Senha:** pedida duas vezes, escondida, no terminal; com `--password-stdin` ela é lida de uma linha da entrada
+  padrão. Mínimo de 10 caracteres.
+- **Tela de administração:** depois de entrar, o menu do seu chip de usuário › **Usuários** lista, cria, edita e remove
+  usuários e troca senhas. Todos têm o mesmo acesso: não há papéis.
+- **Bloqueio:** 5 senhas erradas seguidas de um usuário bloqueiam aquele usuário por 15 minutos.
+- **Sessão:** 30 dias; trocar a senha de um usuário encerra as sessões dele.
+- **Banco:** SQLite embutido no Node (por isso Node 22.13 ou mais novo), em `HABBLAUD_DB` (padrão
+  `<dataDir>/habblaud.db`, ou seja, `~/.habblaud/habblaud.db`), criado com modo 600 (a pasta, 700). Guarda os hashes das
+  senhas (scrypt), nunca as senhas.
+- **No Docker:** o comando usa a pasta de dados de onde roda (ou o `HABBLAUD_DB`); rodado no host, criaria um banco
+  diferente do do container (os dados ficam no volume `habblaud-data`, em `/data`). A imagem só traz o servidor
+  (`dist/server/index.js`), não esses comandos: rode-os num checkout com `HABBLAUD_DB` apontando para o arquivo do
+  banco dentro desse volume (`docker volume inspect habblaud-data` mostra a pasta), ou num container que tenha o código
+  do projeto e monte o volume. Reinicie o container depois.
+- **Atrás de um túnel (ex.: cloudflared):** deixe o túnel terminar o HTTPS e falar com o Habblaud no loopback:
+  `HABBLAUD_REMOTE_HOST=127.0.0.1` + `HABBLAUD_REMOTE_INSECURE_HTTP=1` (sem certificado próprio), e aponte o túnel para
+  `http://localhost:4748`. Só nesse caso (sem TLS e com a porta escutando no loopback) o Habblaud confia no
+  `X-Forwarded-Proto: https` e marca o cookie como `Secure`. Com a porta na rede e sem TLS, o cabeçalho é ignorado.
+
+> ⚠️ **`HABBLAUD_REMOTE_FULL=1` dá um shell root na máquina a quem passa pelo login.** É opt-in (desligado por padrão).
+> Com ele, uma sessão remota logada conta como o próprio computador para o terminal interativo, os agentes, o **Novo
+> agente** e o **Projeto novo**, o ditado, a atualização do uso, o renomear sala e a edição de personagem. O login é a
+> única barreira: use senhas longas e únicas, poucos usuários, e nunca ligue sem HTTPS ou túnel. Hooks, plugins, Codex,
+> o auxiliar do host e o Habblaud World continuam sempre só locais, mesmo com ele ligado.
+
 ### Atualizar
 
 A versão em uso aparece na barra superior, ao lado de "Conectado", e em **Configurações › Sobre**. A cada 6 horas o
@@ -727,6 +765,9 @@ Tudo funciona sem configurar nada. Se precisar ajustar, use variáveis de ambien
 | `HABBLAUD_TMUX_MOUSE` | ligado | A roda do mouse rola o histórico da conversa dentro do tmux; para selecionar texto, segure Shift ao arrastar. `0` desliga o mouse no tmux (o navegador então seleciona normalmente, mas a roda deixa de rolar o histórico). |
 | `HABBLAUD_CLAUDE_BIN` | `claude` do PATH | O executável do Claude Code que o terminal interativo e o Novo agente rodam. |
 | `HABBLAUD_REMOTE_ALLOW` | `permissions` | O que o [celular com login](#celular-com-login-e-https-aprovando-pedidos) pode fazer: `permissions`, `messages`, `terminal`, `spawn` (separados por vírgula) ou `none`. Os outros `HABBLAUD_REMOTE_*` são escritos pelo `npm run remote:setup`. |
+| `HABBLAUD_REMOTE_USERS` | desligado | `1` faz a porta remota conferir um banco de usuários em vez do login único. Sem usuários no banco, a porta não sobe. Veja [Acesso por usuários](#acesso-por-usuários-vários-logins). |
+| `HABBLAUD_REMOTE_FULL` | desligado | `1` faz uma sessão remota logada contar como o próprio computador (terminal interativo, agentes, Novo agente/Projeto novo, ditado, atualização do uso, renomear sala, edição de personagem); hooks, plugins, Codex, o auxiliar do host e o Habblaud World seguem só locais. **Quem passa pelo login ganha um shell root.** |
+| `HABBLAUD_DB` | `<dataDir>/habblaud.db` (`~/.habblaud/habblaud.db`) | Caminho do banco SQLite com os usuários. |
 | `HABBLAUD_MENSAGENS` | ligado (com o terminal) | `0` desliga só as mensagens pelo escritório (a caixa no terminal e nos detalhes do agente). |
 | `HABBLAUD_CODEX` | ligado | `0` desliga o Codex no escritório. |
 | `HABBLAUD_CODEX_DIRS` | detecção automática | Pastas do Codex, separadas por vírgula (no lugar de `~/.codex*` e `CODEX_HOME`). |
@@ -740,6 +781,9 @@ Tudo funciona sem configurar nada. Se precisar ajustar, use variáveis de ambien
 `HABBLAUD_REMOTE_*` (no `.env` ou no ambiente) e `HABBLAUD_CLAUDE_DIRS`, `HABBLAUD_CODEX_DIRS`, `HABBLAUD_USAGE_DIR` e
 `HABBLAUD_ACCOUNTS` (lidas pelo `docker:up` no host); as demais ficam fixas dentro do container. Opções: `npm run docker:up -- --no-build` (sobe sem reconstruir),
 `npm run docker:down` (para) e `npm run docker:logs` (acompanha os logs).
+
+`HABBLAUD_REMOTE_USERS` e `HABBLAUD_REMOTE_FULL` passam pelo `docker-compose.yml`, mas o terminal interativo continua
+exigindo conexão por loopback, então `HABBLAUD_REMOTE_FULL` não o abre numa porta publicada do Docker.
 
 ## Habblaud World
 
