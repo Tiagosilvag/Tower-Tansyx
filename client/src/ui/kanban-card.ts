@@ -232,8 +232,8 @@ export class CardDialog {
     const who = e.actorName ?? (e.via === 'agent' ? tr('agente') : tr('alguém'));
     return h(
       'li',
-      {},
-      h('b', { text: who }),
+      { class: `ui-kbc__ev${e.via === 'agent' ? ' is-agent' : ''}${quote ? ' has-quote' : ''}` },
+      h('b', { class: 'ui-kbc__who', text: who }),
       ' ',
       e.via === 'agent' ? h('span', { class: 'ui-kb__badge ui-kb__badge--agent', text: tr('via agente') }) : null,
       ` ${text}`,

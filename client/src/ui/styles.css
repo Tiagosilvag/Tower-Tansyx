@@ -12683,7 +12683,7 @@ html.is-replay #world {
 
 .ui-kbc__log {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -12748,11 +12748,41 @@ html.is-replay #world {
 }
 
 .ui-kbc__quote {
-  margin: 4px 0 0;
-  padding: 2px 0 2px 10px;
+  margin: 6px 0 0;
+  padding: 8px 10px 8px 12px;
   border-left: 4px solid var(--kb-agent);
-  color: var(--kb-soft);
+  border-radius: 0 6px 6px 0;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--kb-ink);
   overflow-wrap: anywhere;
+}
+
+/* Histórico: cada evento é um bloco com fundo próprio (como as mensagens do chat); o autor aparece maior e em cor. */
+.ui-kbc__ev {
+  padding: 8px 12px;
+  border: 1px solid var(--kb-edge);
+  border-left: 5px solid var(--kb-blue);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.ui-kbc__ev.is-agent {
+  border-left-color: var(--kb-agent);
+}
+
+.ui-kbc__ev.has-quote {
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 1px 0 rgba(43, 34, 32, 0.08);
+}
+
+.ui-kbc__who {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--kb-blue);
+}
+
+.ui-kbc__ev.is-agent .ui-kbc__who {
+  color: var(--kb-agent);
 }
 
 @media (max-width: 520px) {
