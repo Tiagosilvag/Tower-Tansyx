@@ -52,6 +52,24 @@ async function montar(opts: { writable?: (req: IncomingMessage) => boolean } = {
 const AGENTE = { 'X-Habblaud-Via': 'agent' };
 
 describe('rotas /api/kanban', () => {
+  it('a revisão sobe a cada alteração aceita (página, outro usuário, agente) e não com leitura ou erro', async () => {
+    const { call, geral } = await montar();
+    const rev = async () => (await call('GET', '/api/kanban/version')).json.version as number;
+    const r0 = await rev();
+    expect(typeof r0).toBe('number');
+    await call('GET', '/api/kanban/boards');
+    expect(await rev()).toBe(r0);
+    const card = (await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title: 'a' } })).json.card;
+    const r1 = await rev();
+    expect(r1).toBeGreaterThan(r0);
+    await call('POST', `/api/kanban/cards/${card.id}/move`, { body: { column: 'fazendo' }, headers: AGENTE });
+    const r2 = await rev();
+    expect(r2).toBeGreaterThan(r1);
+    expect((await call('POST', `/api/kanban/boards/${geral}/cards`, { body: {} })).status).toBe(400);
+    expect(await rev()).toBe(r2);
+    expect((await call('POST', '/api/kanban/version', { body: {} })).status).toBe(405);
+  });
+
   it('quadros: lista, cria, renomeia e remove (com force)', async () => {
     const { call, geral } = await montar();
     expect((await call('GET', '/api/kanban/boards')).json.boards).toEqual([{ id: geral, kind: 'general', name: 'Geral', openCount: 0 }]);

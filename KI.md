@@ -99,6 +99,10 @@ Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qu
 
 ## 6. Kanban
 
+_Atualização em tempo real:_ o servidor mantém uma revisão (`GET /api/kanban/version`, sobe a cada alteração aceita; começa em
+`Date.now()`). A janela aberta consulta a cada 3 s (`POLL_MS` em `kanban.ts`) e recarrega se mudou, exceto quando a tela está
+ocupada (campo aberto, arrasto, cartão aberto) ou a aba está escondida. Botão ↻ força. Não há push (SSE) por enquanto.
+
 Ideias e tarefas num quadro Geral e por projeto, no SQLite (mesmo banco). Janela flutuante como o chat (tecla K).
 Código em `server/kanban/`, `client/src/ui/kanban*.ts`. Agentes podem usar via API local (`docs/kanban-agentes.md`);
 a porta exposta é só leitura. O histórico de cada cartão guarda quem mexeu.

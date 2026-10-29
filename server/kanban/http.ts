@@ -71,6 +71,11 @@ export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessag
   const { store, users, readJson } = deps;
   const isRemote = deps.isRemote ?? isRemoteRequest;
   const writable = deps.writable ?? (() => true);
+  /**
+   * Revisão do Kanban: sobe a cada alteração aceita (pela página, por outro usuário ou por um agente, tudo passa por aqui).
+   * A página consulta e recarrega quando muda. Começa na hora de subida para nunca repetir um número depois de um reinício.
+   */
+  let revision = Date.now();
 
   /** Quem está agindo (ver o cabeçalho do arquivo). `body` é o corpo já lido, ou {} em GET e DELETE. */
   const actorOf = (req: IncomingMessage, body: Record<string, unknown>): Actor => {
@@ -94,6 +99,12 @@ export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessag
       req.resume();
       send(res, 403, { error: tr('o Kanban só aceita alterações pelo próprio computador: a porta do Habblaud está exposta na rede') });
       return true;
+    }
+
+    if (method !== 'GET' && method !== 'HEAD') {
+      res.on('finish', () => {
+        if (res.statusCode < 400) revision++;
+      });
     }
 
     /** Responde 405 quando o método não está na lista; devolve true quando respondeu. */
@@ -121,6 +132,10 @@ export function createKanbanRoutes(deps: KanbanRoutesDeps): (req: IncomingMessag
       return true;
     };
 
+    if (seg[0] === 'version' && seg.length === 1) {
+      if (only('GET')) return true;
+      return run(() => send(res, 200, { version: revision }));
+    }
     if (seg[0] === 'boards' && seg.length === 1) {
       if (only('GET', 'POST')) return true;
       if (method === 'GET') return run(() => send(res, 200, { boards: store.boards() }));

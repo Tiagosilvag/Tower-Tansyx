@@ -1688,6 +1688,7 @@ export const EN: Readonly<Record<string, string>> = {
   "{0}, {1} e mais {2}": "{0}, {1} and {2} more",
   "{0} está digitando…": "{0} is typing…",
   "{0} digitando…": "{0} typing…",
+  "Atualizar o Kanban": "Refresh the Kanban",
   "{0} estão digitando…": "{0} are typing…",
   "{0} está aqui": "{0} is here",
   "{0} estão aqui": "{0} are here",

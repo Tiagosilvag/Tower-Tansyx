@@ -18,6 +18,7 @@ export interface NewCard {
 export type CardPatch = Partial<Pick<NewCard, 'title' | 'description' | 'priority' | 'assigneeId' | 'projectId'>>;
 
 export const kanbanApi = {
+  version: async (): Promise<number> => (await usersApi<{ version: number }>(`${base}/version`)).version,
   boards: async (): Promise<KanbanBoard[]> => (await usersApi<{ boards: KanbanBoard[] }>(`${base}/boards`)).boards,
   cards: async (boardId: number, q = ''): Promise<KanbanCard[]> => (await usersApi<{ cards: KanbanCard[] }>(`${base}/boards/${boardId}/cards${q ? `?q=${encodeURIComponent(q)}` : ''}`)).cards,
   card: (id: number): Promise<{ card: KanbanCard; events: KanbanEvent[] }> => usersApi(`${base}/cards/${id}`),

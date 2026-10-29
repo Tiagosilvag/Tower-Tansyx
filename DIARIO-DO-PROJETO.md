@@ -13,11 +13,18 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Kanban: atualizar sozinho e botão Atualizar
+- **Pedido:** o Kanban só mostrava o que um colega mexeu depois de fechar e abrir; criar um botão de atualizar ou atualizar
+  sempre que houver ação.
+- **Feito:** os dois. Revisão no servidor (`/api/kanban/version`), consulta a cada 3 s com a janela aberta, botão ↻ na barra
+  e proteção contra recarregar no meio de uma digitação ou arrasto. Teste da revisão em `server/kanban/http.test.ts`.
+- **Produção:** pendente de deploy.
+
 ### Barra lateral: pílulas com o nome (opção A)
 - **Pedido:** destacar mais que há alguém com o agente; entre 4 exemplos, "gostei da A".
 - **Feito:** a linha do agente mostra uma pílula por pessoa (avatar + nome, na cor dela; "nome digitando…" quando digita),
   no máximo 2 e "+N", abaixo da linha do nome. Mockup: artifact "Presença na lateral".
-- **Produção:** pendente de deploy.
+- **Produção:** pendente de deploy (commit `dfb1841`).
 
 ### Correção: "digitando" não aparecia
 - **Pedido:** o luciano digitava no chat da Larissa e o tiago não via. O `/api/presence` mostrava o luciano com o agente

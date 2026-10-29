@@ -12022,6 +12022,22 @@ html.is-replay #world {
   color: var(--kb-ink);
 }
 
+.ui-kb__refresh.is-spinning .ui-px-icon {
+  animation: ui-kb-spin 0.9s linear infinite;
+}
+
+@keyframes ui-kb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-kb__refresh.is-spinning .ui-px-icon {
+    animation: none;
+  }
+}
+
 .ui-kb__search {
   display: flex;
   align-items: center;

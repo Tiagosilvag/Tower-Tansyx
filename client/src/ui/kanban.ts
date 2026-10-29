@@ -14,6 +14,8 @@ import { usersApi } from './users';
 import { applyMove, COLUMN_LABEL, dropTarget, filterBoards, filterCards, groupByColumn, loadShelf, PRIORITY_LABEL, projectSuggestions, roomProjects, saveShelf, type ProjectSuggestion, type ShelfState } from './kanban-model';
 
 /** Cores dos post-its e das lombadas, em rodízio. */
+/** De quanto em quanto tempo a janela aberta pergunta se alguém mexeu no quadro. */
+const POLL_MS = 3_000;
 const TINTS = ['y', 'p', 'm', 'b'] as const;
 
 export class KanbanPanel implements UiComponent {
@@ -27,6 +29,9 @@ export class KanbanPanel implements UiComponent {
   private qTask = '';
   private error: string | null = null;
   private loading = false;
+  /** Revisão do servidor que a tela já mostra; mudou = alguém mexeu (ver createKanbanRoutes). */
+  private version: number | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private seq = 0;
   private addingCard: Column | null = null;
   private addingProject = false;
@@ -49,6 +54,7 @@ export class KanbanPanel implements UiComponent {
   private readonly statusEl: HTMLElement;
   private readonly statusText: HTMLElement;
   private readonly retry: HTMLButtonElement;
+  private readonly refreshBtn: HTMLButtonElement;
   private readonly emptyEl: HTMLElement;
   private readonly actionsEl: HTMLElement;
   private readonly confirmEl: HTMLElement;
@@ -89,6 +95,7 @@ export class KanbanPanel implements UiComponent {
 
     this.titleEl = h('span', { class: 'ui-kb__board-name' });
     const close = iconButton(ICONS.close, tr('Fechar (Esc)'), () => this.close(), 'ui-icon-btn--sm');
+    this.refreshBtn = iconButton(ICONS.refresh, tr('Atualizar o Kanban'), () => void this.manualRefresh(), 'ui-icon-btn--sm ui-kb__refresh');
     this.statusText = h('span', {});
     this.retry = h('button', { class: 'ui-link-btn', type: 'button', text: tr('Tentar de novo'), hidden: true, on: { click: () => void this.load() } });
     this.statusEl = h('p', { class: 'ui-kb__status', attrs: { role: 'status', 'aria-live': 'polite' } }, this.statusText, this.retry);
@@ -111,6 +118,7 @@ export class KanbanPanel implements UiComponent {
       this.titleEl,
       this.actionsEl,
       h('label', { class: 'ui-kb__search' }, h('span', { text: '⌕', attrs: { 'aria-hidden': 'true' } }), this.searchTask),
+      this.refreshBtn,
       maximizeButton(() => this.movable),
       close,
     );
@@ -153,6 +161,7 @@ export class KanbanPanel implements UiComponent {
     this.el.show();
     this.button.setAttribute('aria-expanded', 'true');
     void this.load();
+    this.startPolling();
   }
 
   close(): void {
@@ -170,6 +179,7 @@ export class KanbanPanel implements UiComponent {
 
   private onClosed(): void {
     this.seq++;
+    this.stopPolling();
     this.button.setAttribute('aria-expanded', 'false');
     if (this.opener?.isConnected) this.opener.focus({ preventScroll: true });
     this.opener = null;
@@ -187,8 +197,10 @@ export class KanbanPanel implements UiComponent {
     this.error = null;
     this.renderStatus();
     try {
+      const version = await kanbanApi.version().catch(() => null);
       const boards = await kanbanApi.boards();
       if (seq !== this.seq) return;
+      if (version !== null) this.version = version;
       this.boards = boards;
       const want = this.boardId ?? this.shelf.boardId;
       this.boardId = boards.find((b) => b.id === want)?.id ?? boards[0]?.id ?? null;
@@ -202,11 +214,49 @@ export class KanbanPanel implements UiComponent {
     this.renderAll();
   }
 
+  /** A tela está no meio de algo que um redesenho apagaria (campo de texto aberto, cartão sendo arrastado). */
+  private get busy(): boolean {
+    return this.addingCard !== null || this.addingProject || this.renaming || this.confirmingDelete || this.dragId !== null || this.cardDialog.el.open;
+  }
+
+  private startPolling(): void {
+    this.stopPolling();
+    this.pollTimer = setInterval(() => void this.poll(), POLL_MS);
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = null;
+  }
+
+  /** Pergunta ao servidor se alguém mexeu e recarrega quando sim (e a tela está livre; senão fica para o próximo ciclo). */
+  private async poll(): Promise<void> {
+    if (!this.el.open || document.hidden || this.loading || this.busy) return;
+    try {
+      const v = await kanbanApi.version();
+      if (this.version !== null && v !== this.version && !this.busy) await this.refresh();
+      else if (this.version === null) this.version = v;
+    } catch {
+      // sem rede ou sessão vencida: o próximo ciclo tenta de novo, sem estragar a tela
+    }
+  }
+
+  private async manualRefresh(): Promise<void> {
+    this.refreshBtn.classList.add('is-spinning');
+    this.refreshBtn.disabled = true;
+    await this.refresh();
+    this.refreshBtn.disabled = false;
+    this.refreshBtn.classList.remove('is-spinning');
+  }
+
   /** Recarrega os cartões do quadro aberto e as contagens da estante, sem apagar a tela enquanto espera. */
   private async refresh(): Promise<void> {
     const seq = ++this.seq;
     try {
+      // a revisão vem antes dos dados: uma alteração no meio do caminho muda a revisão e dispara outra leitura
+      const version = await kanbanApi.version().catch(() => null);
       const [boards, cards] = await Promise.all([kanbanApi.boards(), this.boardId === null ? Promise.resolve([]) : kanbanApi.cards(this.boardId)]);
+      if (version !== null) this.version = version;
       if (seq !== this.seq) return;
       this.boards = boards;
       this.cards = cards;
