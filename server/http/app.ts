@@ -108,6 +108,11 @@ export interface ApiDeps {
    * depois do bloqueio das rotas só locais; quem decide quem é o usuário é o portão remoto, não esta rota.
    */
   users?: (req: IncomingMessage, res: ServerResponse, url: URL) => boolean;
+  /**
+   * API do Kanban (/api/kanban/*; server/kanban/http.ts). Ausente = banco indisponível: 404 nessas rotas. Só lê e grava
+   * no banco, então vale para a página local e para qualquer sessão remota logada; a autoria vem da própria rota.
+   */
+  kanban?: (req: IncomingMessage, res: ServerResponse, url: URL) => boolean;
 }
 
 /** GET /api/agents/:id/terminal (ids nunca contêm '/'). */
@@ -360,6 +365,9 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
     }
     if (deps.users && (path === '/api/me' || path === '/api/users' || path.startsWith('/api/users/') || path === '/api/me/password')) {
       if (deps.users(req, res, url)) return true;
+    }
+    if (deps.kanban && (path === '/api/kanban' || path.startsWith('/api/kanban/'))) {
+      if (deps.kanban(req, res, url)) return true;
     }
     if (path === '/api/world' || path.startsWith('/api/world/')) {
       // A conta do Habblaud World age em seu nome: só o próprio computador, como o terminal. O Host local sozinho não

@@ -13,6 +13,8 @@ import { createApiHandler, readJson, sendJson } from './http/app';
 import { createRequestGuard, isLoopbackHost } from './http/guard';
 import { cookieHeader, createRemoteGate, isRemoteRequest, loadSecret, RemoteSessions, startRemoteListener, type RemoteConfig, type RemoteListener, type SingleUserCreds } from './http/remote';
 import { openDb, type Db } from './db/db';
+import { createKanbanRoutes } from './kanban/http';
+import { KanbanStore } from './kanban/store';
 import { UserAuth, UserSessions, UserThrottle } from './users/auth';
 import { createUsersRoutes } from './users/http';
 import { UserStore } from './users/store';
@@ -382,14 +384,23 @@ const ticker = setInterval(() => {
 // Cookie da porta remota com Secure: HTTPS próprio, ou proxy local que terminou o TLS e avisou pelo X-Forwarded-Proto.
 const remoteSecure = (req: http.IncomingMessage): boolean =>
   !!config.remote?.tls || (!!config.remote?.trustProxyProto && req.headers['x-forwarded-proto'] === 'https');
+// Banco SQLite (usuários e Kanban). Sem ele o Kanban fica desligado e o modo de usuários também (a porta remota não sobe).
+let db: Db | undefined;
+try {
+  db = openDb(config.dbFile);
+} catch (err) {
+  log.warn(
+    config.remote?.users
+      ? tr('   Acesso remoto: desligado, não deu para abrir o banco de usuários {0} ({1}).', [config.dbFile, errMsg(err)])
+      : tr('   Kanban: desligado, não deu para abrir o banco {0} ({1}).', [config.dbFile, errMsg(err)]),
+  );
+}
 // Modo de usuários (HABBLAUD_REMOTE_USERS=1): contas no SQLite. Montado antes da API, que recebe as rotas de usuários;
 // a porta remota, mais abaixo, só sobe se já houver alguém cadastrado.
-let usersDb: Db | undefined;
 let userAccounts: { store: UserStore; auth: UserAuth; routes: ReturnType<typeof createUsersRoutes> } | undefined;
-if (config.remote?.users) {
+if (config.remote?.users && db) {
   try {
-    usersDb = openDb(config.dbFile);
-    const store = new UserStore(usersDb);
+    const store = new UserStore(db);
     // Revogados num arquivo próprio: os tokens v2 não se misturam com os do usuário único.
     const sessions = new UserSessions(loadSecret(join(config.dataDir, 'remote-secret')), (id) => store.recordById(id), Date.now, join(config.dataDir, 'remote-users-revoked.json'));
     const auth = new UserAuth(store, sessions, new UserThrottle());
@@ -399,6 +410,7 @@ if (config.remote?.users) {
     log.warn(tr('   Acesso remoto: desligado, não deu para abrir o banco de usuários {0} ({1}).', [config.dbFile, errMsg(err)]));
   }
 }
+const kanban = db ? createKanbanRoutes({ store: new KanbanStore(db), users: new UserStore(db), readJson: (req) => readJson(req) }) : undefined;
 
 const api = createApiHandler({
   renameRoom: (id, name) => {
@@ -442,6 +454,7 @@ const api = createApiHandler({
   remote: config.remote ? { is: isRemoteRequest, allows: (f) => config.remote!.allow.has(f), full: config.remote.full } : undefined,
   world: world ? createWorldRoutes(world, worldViewer, worldSocial) : undefined,
   users: userAccounts?.routes,
+  kanban,
 });
 
 const server = http.createServer();
@@ -648,7 +661,7 @@ function shutdown(signal: string): void {
   names.flush();
   void closeVite?.();
   remoteListener?.close();
-  usersDb?.close();
+  db?.close();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 1_500).unref();
 }

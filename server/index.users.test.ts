@@ -40,7 +40,7 @@ const accepts = (port: number): Promise<boolean> =>
   });
 
 /** Sobe `server/index.ts` e espera o log `until` (ou o fim do processo); devolve o log inteiro e as portas. */
-async function boot(setup: (dir: string) => { db?: string }, until: RegExp) {
+async function boot(setup: (dir: string) => { db?: string }, until: RegExp, extraEnv: NodeJS.ProcessEnv = {}) {
   const tmp = tempDir();
   cleanups.push(tmp.cleanup);
   const home = join(tmp.dir, 'home');
@@ -63,6 +63,7 @@ async function boot(setup: (dir: string) => { db?: string }, until: RegExp) {
     HABBLAUD_REMOTE_INSECURE_HTTP: '1',
     HABBLAUD_REMOTE_HOST: '127.0.0.1',
     ...(db ? { HABBLAUD_DB: db } : {}),
+    ...extraEnv,
   };
   const child = spawn(process.execPath, ['--import', 'tsx', 'server/index.ts'], { env, cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] });
   children.push(child);
@@ -116,5 +117,35 @@ describe('subida no modo de usuários (processo real)', () => {
     );
     expect(s.log()).toMatch(/Acesso remoto: ligado.*1 cadastrado/);
     expect(await accepts(s.remotePort)).toBe(true);
+  }, 30_000);
+});
+
+describe('Kanban na subida real', () => {
+  it('responde na porta local mesmo sem o modo de usuários, e um agente grava com a marca', async () => {
+    const s = await boot(() => ({}), /em http:\/\/127\.0\.0\.1:\d+/, { HABBLAUD_REMOTE_USERS: '' });
+    const base = `http://127.0.0.1:${s.port}`;
+    const boards = await (await fetch(`${base}/api/kanban/boards`)).json();
+    expect(boards.boards).toMatchObject([{ kind: 'general', name: 'Geral' }]);
+    const r = await fetch(`${base}/api/kanban/boards/${boards.boards[0].id}/cards`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Habblaud-Via': 'agent' },
+      body: JSON.stringify({ title: 'do agente', as: 'ninguem' }),
+    });
+    expect(r.status).toBe(201);
+    expect((await r.json()).card).toMatchObject({ title: 'do agente', createdBy: null, createdVia: 'agent' });
+  }, 30_000);
+
+  it('sem banco (não abre) o Kanban fica desligado: 404 e o servidor segue de pé', async () => {
+    const s = await boot(
+      (dir) => {
+        const file = join(dir, 'arquivo-comum');
+        writeFileSync(file, 'x');
+        return { db: join(file, 'habblaud.db') };
+      },
+      /em http:\/\/127\.0\.0\.1:\d+/,
+      { HABBLAUD_REMOTE_USERS: '' },
+    );
+    expect(s.log()).toMatch(/Kanban: desligado/);
+    expect((await fetch(`http://127.0.0.1:${s.port}/api/kanban/boards`)).status).toBe(404);
   }, 30_000);
 });
