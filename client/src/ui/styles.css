@@ -11725,3 +11725,526 @@ html.is-replay #world {
     padding-left: 0;
   }
 }
+
+/* ============================================================================================================
+   Kanban (ui/kanban.ts): o quadro branco da parede da sala, com a estante de projetos ao lado e post-its com fita.
+   Visual único e de propósito (a sala tem a própria luz): cores explícitas. Rótulos e títulos em Pixelify Sans; o texto dos
+   cartões em fonte do sistema (na Pixelify o "C" parece "O" e o "5" parece "S").
+   ============================================================================================================ */
+.ui-dialog.ui-kb {
+  --kb-ink: #2b2220;
+  --kb-soft: #5b4a40;
+  --kb-wall: #c58a55;
+  --kb-wall-dark: #a96f40;
+  --kb-wall-top: #3b3330;
+  --kb-base: #6d4574;
+  --kb-trim: #e08a3c;
+  --kb-tile: #ecd7a8;
+  --kb-tile-line: #d7bd89;
+  --kb-board: #f1e4c8;
+  --kb-edge: #c9b48f;
+  --kb-tray: #b9ab92;
+  --kb-wood: #9a6338;
+  --kb-orange: #d98a3d;
+  --kb-blue: #4a78b8;
+  --kb-green: #4a9a63;
+  --kb-purple: #8a5fb8;
+  --kb-y: #ffd878;
+  --kb-p: #f5a9b8;
+  --kb-m: #a7dfb9;
+  --kb-b: #a9cdf2;
+  --kb-hi: #d6452f;
+  --kb-mid: #b97d12;
+  --kb-lo: #5f735e;
+  --kb-agent: #6a47c9;
+  width: min(1180px, calc(100vw - 16px));
+  height: min(860px, calc(100dvh - 16px));
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--kb-tile);
+  color: var(--kb-ink);
+  font: 14px/1.4 var(--font-ui);
+  box-shadow: 0 0 0 2px var(--kb-ink), 8px 10px 0 0 rgba(5, 7, 12, 0.5);
+}
+
+.ui-kb button,
+.ui-kb input {
+  font-family: inherit;
+}
+
+.ui-kb__room {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 40px 22px 30px;
+  background-color: var(--kb-tile);
+  background-image: linear-gradient(var(--kb-tile-line) 2px, transparent 2px), linear-gradient(90deg, var(--kb-tile-line) 2px, transparent 2px);
+  background-size: 96px 96px;
+}
+
+/* parede de madeira em ripas, com rodapé roxo e friso laranja */
+.ui-kb__room::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 170px;
+  border-top: 10px solid var(--kb-wall-top);
+  border-bottom: 14px solid var(--kb-base);
+  box-shadow: 0 4px 0 0 var(--kb-trim) inset, 0 6px 0 0 var(--kb-ink);
+  background: repeating-linear-gradient(90deg, var(--kb-wall) 0 46px, var(--kb-wall-dark) 46px 48px);
+}
+
+/* o quadro branco: borda de pixel com as quinas chanfradas e a bandeja de marcadores embaixo */
+.ui-kb__board {
+  position: relative;
+  min-height: calc(100% - 14px);
+  margin: 2px 2px 22px;
+  display: flex;
+  flex-direction: column;
+  background: var(--kb-board);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink), 4px 5px 0 0 rgba(43, 34, 32, 0.4);
+}
+
+.ui-kb__board::after {
+  content: '';
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: -14px;
+  height: 10px;
+  background: var(--kb-tray);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+}
+
+.ui-kb__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 18px 6px;
+}
+
+.ui-kb__title {
+  margin: 0;
+  font: 700 20px/1 var(--font-px);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ui-kb__board-name {
+  font: 600 15px/1 var(--font-px);
+  color: var(--kb-soft);
+}
+
+.ui-kb__board-name:not(:empty)::before {
+  content: '· ';
+}
+
+.ui-kb__bar .ui-icon-btn {
+  margin-left: auto;
+  color: var(--kb-ink);
+}
+
+.ui-kb__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 220px;
+  max-width: 380px;
+  margin: 2px 2px 2px auto;
+  padding: 4px 10px;
+  background: #fff8e6;
+  color: var(--kb-soft);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+}
+
+.ui-kb__search:focus-within {
+  box-shadow: 0 -2px 0 0 var(--kb-blue), 0 2px 0 0 var(--kb-blue), -2px 0 0 0 var(--kb-blue), 2px 0 0 0 var(--kb-blue);
+}
+
+.ui-kb__search--small {
+  max-width: none;
+  margin: 2px;
+  padding: 3px 8px;
+}
+
+.ui-kb__input {
+  all: unset;
+  flex: 1;
+  min-width: 0;
+  color: var(--kb-ink);
+  font: 14px var(--font-ui);
+}
+
+.ui-kb__input::placeholder {
+  color: var(--kb-soft);
+  opacity: 0.85;
+}
+
+.ui-kb__layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  padding: 8px 18px 18px;
+  flex: 1 1 auto;
+}
+
+.ui-kb--collapsed .ui-kb__layout {
+  grid-template-columns: 66px minmax(0, 1fr);
+}
+
+/* estante: madeira com o Geral e os projetos como livros */
+.ui-kb__shelf {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  align-content: start;
+  margin: 2px;
+  padding: 8px 18px 10px 8px;
+  background: var(--kb-wood);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink), 4px 5px 0 0 rgba(43, 34, 32, 0.4);
+}
+
+.ui-kb__shelf-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.ui-kb__shelf-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ui-kb__label {
+  padding: 2px 4px;
+  color: #f4e2c4;
+  font: 12px/1 var(--font-px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ui-kb__fold {
+  all: unset;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: 2px;
+  background: var(--kb-board);
+  color: var(--kb-ink);
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+}
+
+.ui-kb :is(.ui-kb__fold, .ui-kb__gen, .ui-kb__book, .ui-kb__adder, .ui-kb__note):focus-visible {
+  outline: 3px solid var(--kb-blue);
+  outline-offset: 3px;
+}
+
+.ui-kb__gen,
+.ui-kb__book {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 2px 2px 8px;
+  padding: 6px 9px;
+  color: var(--kb-ink);
+  font: 500 14px var(--font-px);
+  cursor: pointer;
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+}
+
+.ui-kb__gen {
+  margin-left: 2px;
+  background: var(--kb-board);
+}
+
+.ui-kb__book {
+  background: var(--kb-b);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink), inset 6px 0 0 0 rgba(43, 34, 32, 0.28);
+}
+
+.ui-kb__book--y { background: var(--kb-y); }
+.ui-kb__book--p { background: var(--kb-p); }
+.ui-kb__book--m { background: var(--kb-m); }
+.ui-kb__book--b { background: var(--kb-b); }
+
+.ui-kb__book.is-on {
+  transform: translateX(8px);
+}
+
+.ui-kb__gen.is-on {
+  box-shadow: 0 -2px 0 0 var(--kb-blue), 0 2px 0 0 var(--kb-blue), -2px 0 0 0 var(--kb-blue), 2px 0 0 0 var(--kb-blue);
+}
+
+.ui-kb__name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ui-kb__count {
+  font: 500 13px var(--font-px);
+  color: var(--kb-soft);
+}
+
+.ui-kb__spine {
+  display: none;
+  font-weight: 700;
+}
+
+.ui-kb__hint {
+  margin: 0;
+  padding: 2px 4px;
+  color: #f4e2c4;
+  font-size: 13px;
+}
+
+.ui-kb__adder {
+  all: unset;
+  box-sizing: border-box;
+  padding: 5px;
+  border: 2px dashed var(--kb-edge);
+  color: var(--kb-soft);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.ui-kb__shelf .ui-kb__adder {
+  margin: 0 2px;
+  border-color: #d8b58a;
+  color: #f4e2c4;
+}
+
+.ui-kb__inline {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  border: 2px solid var(--kb-blue);
+  border-radius: 0;
+  background: #fff8e6;
+  color: var(--kb-ink);
+  font: 14px var(--font-ui);
+}
+
+/* estante recolhida: só as lombadas, com a inicial */
+.ui-kb--collapsed .ui-kb__shelf {
+  padding: 6px 4px;
+  justify-items: center;
+}
+
+.ui-kb--collapsed :is(.ui-kb__label, .ui-kb__search--small, .ui-kb__name, .ui-kb__count, .ui-kb__hint, .ui-kb__adder, .ui-kb__inline) {
+  display: none;
+}
+
+.ui-kb--collapsed .ui-kb__shelf-head {
+  justify-content: center;
+}
+
+.ui-kb--collapsed :is(.ui-kb__gen, .ui-kb__book) {
+  width: 40px;
+  justify-content: center;
+  padding: 6px 0;
+  margin: 2px;
+}
+
+.ui-kb--collapsed .ui-kb__book.is-on {
+  transform: none;
+}
+
+.ui-kb--collapsed .ui-kb__spine {
+  display: block;
+}
+
+/* colunas e post-its */
+.ui-kb__main {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ui-kb__status {
+  margin: 0;
+  padding: 6px 10px;
+  background: #fff8e6;
+  color: var(--kb-soft);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+  margin: 2px;
+}
+
+.ui-kb__status.is-error {
+  color: var(--kb-hi);
+}
+
+.ui-kb__status .ui-link-btn {
+  margin-left: 8px;
+  color: var(--kb-blue);
+}
+
+.ui-kb__empty {
+  margin: 0;
+  padding: 8px 12px;
+  border: 2px dashed var(--kb-edge);
+  color: var(--kb-soft);
+}
+
+.ui-kb__cols {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  gap: 18px;
+  overflow-x: auto;
+  padding: 4px 4px 10px;
+}
+
+.ui-kb__col {
+  --c: var(--kb-purple);
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-width: 0;
+}
+
+.ui-kb__col--ideias { --c: var(--kb-purple); }
+.ui-kb__col--a_fazer { --c: var(--kb-orange); }
+.ui-kb__col--fazendo { --c: var(--kb-green); }
+.ui-kb__col--feito { --c: var(--kb-blue); }
+
+.ui-kb__col-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 5px solid var(--c);
+  font: 700 14px var(--font-px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ui-kb__col-head i {
+  color: var(--kb-soft);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.ui-kb__note {
+  --n: var(--kb-y);
+  position: relative;
+  display: grid;
+  gap: 9px;
+  margin: 2px;
+  padding: 14px 11px 9px;
+  background: var(--n);
+  cursor: pointer;
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink), 3px 3px 0 0 rgba(43, 34, 32, 0.4);
+}
+
+.ui-kb__note--y { --n: var(--kb-y); }
+.ui-kb__note--p { --n: var(--kb-p); }
+.ui-kb__note--m { --n: var(--kb-m); }
+.ui-kb__note--b { --n: var(--kb-b); }
+
+.ui-kb__note.is-selected {
+  box-shadow: 0 -2px 0 0 var(--kb-blue), 0 2px 0 0 var(--kb-blue), -2px 0 0 0 var(--kb-blue), 2px 0 0 0 var(--kb-blue), 3px 3px 0 0 rgba(43, 34, 32, 0.4);
+}
+
+/* fita nos cantos de cima */
+.ui-kb__note::before,
+.ui-kb__note::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  width: 14px;
+  height: 9px;
+  background: #f7e7a6;
+  box-shadow: 0 0 0 2px var(--kb-ink);
+}
+
+.ui-kb__note::before { left: 8px; }
+.ui-kb__note::after { right: 8px; }
+
+.ui-kb__note-title {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.ui-kb__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--kb-soft);
+  font-size: 12px;
+}
+
+.ui-kb__pri {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 700 11px var(--font-px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ui-kb__pri::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  margin: 2px;
+  background: currentColor;
+  box-shadow: 0 0 0 2px var(--kb-ink);
+}
+
+.ui-kb__pri--alta { color: var(--kb-hi); }
+.ui-kb__pri--media { color: var(--kb-mid); }
+.ui-kb__pri--baixa { color: var(--kb-lo); }
+
+.ui-kb__badge {
+  margin: 2px;
+  padding: 0 6px;
+  background: var(--kb-agent);
+  color: #fff;
+  font: 600 11px var(--font-px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+}
+
+.ui-kb__badge--project {
+  background: var(--kb-blue);
+}
+
+.ui-kb__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.ui-kb__av {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: 2px;
+  background: var(--kb-y);
+  color: var(--kb-ink);
+  font: 700 12px var(--font-px);
+  box-shadow: 0 -2px 0 0 var(--kb-ink), 0 2px 0 0 var(--kb-ink), -2px 0 0 0 var(--kb-ink), 2px 0 0 0 var(--kb-ink);
+}
+
+@media (max-width: 640px) {
+  .ui-kb__layout { grid-template-columns: 1fr; }
+  .ui-kb--collapsed .ui-kb__layout { grid-template-columns: 66px minmax(0, 1fr); }
+  .ui-kb__room { padding-inline: 12px; }
+}

@@ -13,6 +13,7 @@ import type { OfficeStore } from '../net/store';
 import type { Selection, WorldApi } from '../world/api';
 import type { PanelName, TerminalRouter, UiComponent, UiContext } from './context';
 import { DayLauncher } from './daystats-launcher';
+import { KanbanLauncher } from './kanban-launcher';
 import { RoomRenamer } from './roomrename';
 import { h } from './dom';
 import { Drawer } from './drawer';
@@ -251,6 +252,8 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   help = new HelpDialog();
   const day = new DayLauncher(ctx, (el) => root.append(el));
   topbar.addPanelButton(day.button);
+  const kanban = new KanbanLauncher(ctx, (el) => root.append(el));
+  topbar.addPanelButton(kanban.button);
   // Botão direito numa sala (lista lateral ou escritório): renomear.
   const renamer = new RoomRenamer(ctx);
   ctx.renameRoom = (id, at) => renamer.open(id, at);
@@ -430,6 +433,11 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
       case 'M':
         e.preventDefault();
         day.toggle();
+        break;
+      case 'k':
+      case 'K':
+        e.preventDefault();
+        kanban.toggle();
         break;
       case '[':
         e.preventDefault();
