@@ -27,6 +27,10 @@ vi.mock('./termwindows', () => ({ TerminalWindows: class {
   closeChats() {}
 } }));
 vi.mock('./toasts');
+vi.mock('./usermenu', () => ({ UserMenu: class {
+  el = {};
+  panels = [];
+} }));
 vi.mock('./version');
 vi.mock('./update');
 vi.mock('./viewport');
@@ -34,6 +38,7 @@ vi.mock('./topbar', () => ({ TopBar: class {
   panelGroup = { prepend() {} };
   addPanelButton() {}
   addStatus() {}
+  addUserChip() {}
   render() {}
 } }));
 

@@ -56,6 +56,8 @@ export class TopBar implements UiComponent {
   /** Grupo dos botões de painéis (feed, Habblaud World, configurações, ajuda); o histórico entra aqui (ui/index.ts). */
   readonly panelGroup: HTMLElement;
 
+  private readonly right = h('div', { class: 'ui-topbar__right' });
+
   constructor(private ctx: UiContext) {
     // Marca: usa o logo do projeto se existir; senão, o prédio em pixels.
     const mark = h('span', { class: 'ui-brand__mark' });
@@ -157,13 +159,19 @@ export class TopBar implements UiComponent {
       counterWrap,
       this.usage.el,
       this.usageRefresh.el,
-      h('div', { class: 'ui-topbar__right' }, viewGroup, panelGroup),
+      this.right,
     );
+    this.right.append(viewGroup, panelGroup);
   }
 
   /** Acrescenta um selo à linha de status da marca, depois da versão (ex.: o chip do Habblaud World). */
   addStatus(el: HTMLElement): void {
     this.status.append(el);
+  }
+
+  /** Chip do usuário logado, no fim do grupo da direita (escondido por ele mesmo quando não há login). */
+  addUserChip(el: HTMLElement): void {
+    this.right.append(el);
   }
 
   /** Botão Mundo (troca de cena), ao lado do Timelapse. */

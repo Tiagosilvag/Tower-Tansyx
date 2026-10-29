@@ -36,6 +36,7 @@ import { TimelapsePlayer } from './timelapse';
 import { Toasts } from './toasts';
 import { UpdateToaster } from './version';
 import { TopBar } from './topbar';
+import { UserMenu } from './usermenu';
 import { UpdateBanner } from './update';
 import { WorldPopups } from './world/world-popups';
 import { WorldChip } from './world/world-chip';
@@ -243,6 +244,10 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
       void sw.visitOwn();
     };
   }
+  // Chip de quem está logado (só com o login ligado; na porta local fica escondido) e o menu/painéis dele.
+  const userMenu = new UserMenu();
+  topbar.addUserChip(userMenu.el);
+  root.append(...userMenu.panels);
   help = new HelpDialog();
   const day = new DayLauncher(ctx, (el) => root.append(el));
   topbar.addPanelButton(day.button);
