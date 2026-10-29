@@ -65,6 +65,27 @@ describe('parseRemoteConfig', () => {
     expect(docker?.tls?.dir).toBe('/remote-tls');
     expect(parseRemoteConfig(env, false, TLS_FILES).config).toMatchObject({ port: 9999, host: '10.0.0.1' });
   });
+  it('modo de usuários liga sem usuário nem hash, com full desligado', () => {
+    const { config } = parseRemoteConfig({ HABBLAUD_REMOTE_USERS: '1', HABBLAUD_REMOTE_INSECURE_HTTP: '1' }, false, () => false);
+    expect(config).toMatchObject({ users: true, full: false, trustProxyProto: false });
+    expect(config?.user).toBeUndefined();
+    expect(config?.passwordHash).toBeUndefined();
+    expect(config?.passwordHashText).toBeUndefined();
+  });
+  it('HABBLAUD_REMOTE_FULL liga full; atrás de proxy local (sem TLS) confia no X-Forwarded-Proto', () => {
+    const env = { HABBLAUD_REMOTE_USERS: '1', HABBLAUD_REMOTE_INSECURE_HTTP: '1', HABBLAUD_REMOTE_FULL: '1', HABBLAUD_REMOTE_HOST: '127.0.0.1' };
+    expect(parseRemoteConfig(env, false, () => false).config).toMatchObject({ users: true, full: true, trustProxyProto: true });
+    expect(parseRemoteConfig({ ...env, HABBLAUD_REMOTE_HOST: '::1' }, false, () => false).config?.trustProxyProto).toBe(true);
+    expect(parseRemoteConfig(env, false, TLS_FILES).config?.trustProxyProto).toBe(false);
+  });
+  it('modo de usuários também exige HTTPS sem HABBLAUD_REMOTE_INSECURE_HTTP', () => {
+    const r = parseRemoteConfig({ HABBLAUD_REMOTE_USERS: '1' }, false, () => false);
+    expect(r.config).toBeUndefined();
+    expect(r.warning).toMatch(/HTTPS é obrigatório/);
+  });
+  it('modo de usuário único segue com users:false e full:false', () => {
+    expect(parseRemoteConfig(base, false, TLS_FILES).config).toMatchObject({ users: false, full: false, trustProxyProto: false, user: 'ana' });
+  });
   it('HABBLAUD_REMOTE_ALLOW: lista, ignora nomes desconhecidos, "none" = só ver', () => {
     expect([...parseAllow('messages, Terminal, bogus')]).toEqual(['messages', 'terminal']);
     expect([...parseAllow('none')]).toEqual([]);

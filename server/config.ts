@@ -24,6 +24,8 @@ export interface ServerConfig {
   claudeDirs: string[];
   /** Onde o Habblaud guarda o próprio estado (nomes persistidos). */
   dataDir: string;
+  /** Banco SQLite (contas de usuário); HABBLAUD_DB ou <dataDir>/habblaud.db. */
+  dbFile: string;
   /**
    * Pasta com o uso capturado pelo statusline do Claude Code (scripts/statusline-tap.mjs):
    * HABBLAUD_USAGE_DIR ou ~/.habblaud/usage. No Docker, o docker-up monta essa pasta em /usage.
@@ -230,6 +232,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
   const host = env.HABBLAUD_HOST?.trim() || '127.0.0.1';
   const pkg = readPackage(rootDir);
   const remote = parseRemoteConfig(env, inDocker);
+  const dataDir = resolve(env.HABBLAUD_DATA_DIR?.trim() || (inDocker ? '/data' : join(home, '.habblaud')));
   return {
     port: Number.isFinite(port) && port > 0 && port < 65536 ? port : 4747,
     host,
@@ -238,7 +241,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
     inDocker,
     home,
     claudeDirs: discoverClaudeDirs(env, home),
-    dataDir: resolve(env.HABBLAUD_DATA_DIR?.trim() || (inDocker ? '/data' : join(home, '.habblaud'))),
+    dataDir,
+    dbFile: env.HABBLAUD_DB?.trim() ? resolve(env.HABBLAUD_DB.trim()) : join(dataDir, 'habblaud.db'),
     usageDir: resolve(env.HABBLAUD_USAGE_DIR?.trim() || join(home, '.habblaud', 'usage')),
     allowedHosts: parseAllowedHosts(env.HABBLAUD_ALLOWED_HOSTS),
     terminal: terminalOffReason(env, host, inDocker) === undefined,

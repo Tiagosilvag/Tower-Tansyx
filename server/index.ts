@@ -11,7 +11,7 @@ import { AccountsService } from './accounts/service';
 import { isTruthy, loadConfig, messagesOffReason, terminalOffReason, worldSocketUrl } from './config';
 import { createApiHandler, sendJson } from './http/app';
 import { createRequestGuard, isLoopbackHost } from './http/guard';
-import { createRemoteGate, isRemoteRequest, loadSecret, RemoteSessions, startRemoteListener, type RemoteListener } from './http/remote';
+import { createRemoteGate, isRemoteRequest, loadSecret, RemoteSessions, startRemoteListener, type RemoteConfig, type RemoteListener, type SingleUserCreds } from './http/remote';
 import { Hub } from './http/sse';
 import { createStaticHandler } from './http/static';
 import { TerminalStreams } from './http/terminal';
@@ -470,11 +470,13 @@ server.on('error', (err: NodeJS.ErrnoException) => {
  * API. A porta principal segue só local; quem separa as duas é a porta em que a conexão chegou.
  */
 let remoteListener: RemoteListener | undefined;
-if (config.remote) {
+if (config.remote && !config.remote.users) {
   const remote = config.remote;
+  // Modo de usuário único: parseRemoteConfig garante user e hash fora do modo de usuários.
+  const creds = remote as RemoteConfig & SingleUserCreds;
   const gate = createRemoteGate({
-    config: remote,
-    sessions: new RemoteSessions(loadSecret(join(config.dataDir, 'remote-secret')), remote, Date.now, join(config.dataDir, 'remote-revoked.json')),
+    config: creds,
+    sessions: new RemoteSessions(loadSecret(join(config.dataDir, 'remote-secret')), creds, Date.now, join(config.dataDir, 'remote-revoked.json')),
     secure: !!remote.tls,
     caFile: remote.tls?.caFile,
   });

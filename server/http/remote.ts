@@ -43,14 +43,24 @@ export interface RemoteTls {
 export interface RemoteConfig {
   port: number;
   host: string;
-  user: string;
-  passwordHash: PasswordHash;
+  /** Modo de usuários (contas no SQLite); então user/passwordHash/passwordHashText não existem. */
+  users: boolean;
+  /** Acesso total: o celular libera tudo, não só as funções de `allow`. */
+  full: boolean;
+  /** Atrás de proxy local que termina o TLS: confia no X-Forwarded-Proto. */
+  trustProxyProto: boolean;
+  /** Só no modo de usuário único. */
+  user?: string;
+  passwordHash?: PasswordHash;
   /** Texto do hash como veio do ambiente (entra na chave das sessões). */
-  passwordHashText: string;
+  passwordHashText?: string;
   allow: ReadonlySet<RemoteFeature>;
   /** Ausente = HTTP puro (só com HABBLAUD_REMOTE_INSECURE_HTTP=1). */
   tls?: RemoteTls;
 }
+
+/** Credenciais do modo de usuário único: no modo de usuários não existem, e o portão/sessões antigos não são criados. */
+export type SingleUserCreds = Required<Pick<RemoteConfig, 'user' | 'passwordHash' | 'passwordHashText'>>;
 
 export const DEFAULT_REMOTE_PORT = 4748;
 export const COOKIE = 'habblaud_remote';
@@ -76,11 +86,15 @@ export function parseRemoteConfig(
   const user = env.HABBLAUD_REMOTE_USER?.trim() ?? '';
   const hashText = env.HABBLAUD_REMOTE_PASSWORD_HASH?.trim() ?? '';
   const plain = env.HABBLAUD_REMOTE_PASSWORD ?? '';
-  if (!user && !hashText && !plain) return {};
-  if (plain && !hashText) return { warning: tr('acesso remoto desligado: senha em texto puro (HABBLAUD_REMOTE_PASSWORD) não é aceita; rode npm run remote:setup') };
-  if (!user || !hashText) return { warning: tr('acesso remoto desligado: faltam HABBLAUD_REMOTE_USER e HABBLAUD_REMOTE_PASSWORD_HASH; rode npm run remote:setup') };
-  const passwordHash = parsePasswordHash(hashText);
-  if (!passwordHash) return { warning: tr('acesso remoto desligado: HABBLAUD_REMOTE_PASSWORD_HASH inválido; rode npm run remote:setup') };
+  const users = truthy(env.HABBLAUD_REMOTE_USERS);
+  let passwordHash: PasswordHash | undefined;
+  if (!users) {
+    if (!user && !hashText && !plain) return {};
+    if (plain && !hashText) return { warning: tr('acesso remoto desligado: senha em texto puro (HABBLAUD_REMOTE_PASSWORD) não é aceita; rode npm run remote:setup') };
+    if (!user || !hashText) return { warning: tr('acesso remoto desligado: faltam HABBLAUD_REMOTE_USER e HABBLAUD_REMOTE_PASSWORD_HASH; rode npm run remote:setup') };
+    passwordHash = parsePasswordHash(hashText);
+    if (!passwordHash) return { warning: tr('acesso remoto desligado: HABBLAUD_REMOTE_PASSWORD_HASH inválido; rode npm run remote:setup') };
+  }
   const dir = defaultTlsDir(env, inDocker);
   const tls: RemoteTls = { dir, keyFile: join(dir, 'server.key'), certFile: join(dir, 'server.crt'), caFile: join(dir, 'ca.crt') };
   const hasTls = exists(tls.keyFile) && exists(tls.certFile);
@@ -89,9 +103,17 @@ export function parseRemoteConfig(
   const rawPort = Number.parseInt(env.HABBLAUD_REMOTE_PORT ?? '', 10);
   const port = inDocker ? DEFAULT_REMOTE_PORT : Number.isInteger(rawPort) && rawPort > 0 && rawPort < 65536 ? rawPort : DEFAULT_REMOTE_PORT;
   const host = inDocker ? '0.0.0.0' : env.HABBLAUD_REMOTE_HOST?.trim() || '0.0.0.0';
-  return {
-    config: { port, host, user, passwordHash, passwordHashText: hashText, allow: parseAllow(env.HABBLAUD_REMOTE_ALLOW), tls: hasTls ? tls : undefined },
+  const base = {
+    port,
+    host,
+    users,
+    full: truthy(env.HABBLAUD_REMOTE_FULL),
+    // Sem TLS próprio e só em loopback: quem fala com a porta é um proxy local que termina o HTTPS.
+    trustProxyProto: !hasTls && (host === '127.0.0.1' || host === '::1'),
+    allow: parseAllow(env.HABBLAUD_REMOTE_ALLOW),
+    tls: hasTls ? tls : undefined,
   };
+  return { config: users ? base : { ...base, user, passwordHash, passwordHashText: hashText } };
 }
 
 export function parseAllow(raw: string | undefined): Set<RemoteFeature> {
@@ -184,7 +206,7 @@ export class RemoteSessions {
 
   constructor(
     secret: Buffer,
-    cfg: Pick<RemoteConfig, 'user' | 'passwordHashText'>,
+    cfg: Pick<SingleUserCreds, 'user' | 'passwordHashText'>,
     private readonly now: () => number = Date.now,
     /** Onde a lista de tokens encerrados sobrevive a reinícios (ausente = só em memória). */
     revokedFile?: string,
@@ -409,7 +431,7 @@ function cookieHeader(value: string, maxAgeS: number, secure: boolean): string {
 }
 
 export interface RemoteGateDeps {
-  config: Pick<RemoteConfig, 'user' | 'passwordHash'>;
+  config: Pick<SingleUserCreds, 'user' | 'passwordHash'>;
   sessions: RemoteSessions;
   /** Cookie com Secure (a porta fala HTTPS). */
   secure: boolean;
