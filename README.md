@@ -710,6 +710,9 @@ board **per project**, with the columns Ideas, To do, Doing and Done. It belongs
 organizing ideas, tasks, priorities and projects. The data lives in Habblaud's SQLite database (`HABBLAUD_DB`, the same one
 the users use), and the Kanban also works without users mode.
 
+- **A window like the chat:** it floats over the office (which stays usable behind it). Drag it by the board bar or the wall
+  strip, pull the edges and corners to resize, use the expand-to-full-screen button, and double-click the bar to put it back.
+  Position and size are kept in the browser. **Esc** closes it.
 - **Project shelf:** on the left, General and the projects as books, with the count of open cards. The ◀ button collapses
   the shelf into spines with each project's initial (it remembers that choice and the last board). It has a project search.
 - **Task search:** at the top of the board, it filters only the open board, ignoring accents and case.

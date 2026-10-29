@@ -39,21 +39,24 @@ export class Movable {
   private drag: { id: number; dx: number; dy: number; sx: number; sy: number; moving: boolean } | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** `handle` é a barra da janela; uma janela com mais de uma área de arrasto (ex.: uma faixa decorativa) passa a lista. */
   constructor(
     private el: HTMLElement,
-    handle: HTMLElement,
+    handle: HTMLElement | HTMLElement[],
     private opts: MovableOptions,
   ) {
-    handle.classList.add('ui-move-handle');
-    handle.addEventListener('pointerdown', (e) => this.onDown(e, handle));
-    handle.addEventListener('pointermove', (e) => this.onMove(e));
-    handle.addEventListener('pointerup', (e) => this.onUp(e, handle));
-    handle.addEventListener('pointercancel', (e) => this.onUp(e, handle));
-    handle.addEventListener('dblclick', (e) => {
-      if (interactive(e.target)) return;
-      if (this.max) this.toggleMaximize();
-      else this.dock();
-    });
+    for (const hd of Array.isArray(handle) ? handle : [handle]) {
+      hd.classList.add('ui-move-handle');
+      hd.addEventListener('pointerdown', (e) => this.onDown(e, hd));
+      hd.addEventListener('pointermove', (e) => this.onMove(e));
+      hd.addEventListener('pointerup', (e) => this.onUp(e, hd));
+      hd.addEventListener('pointercancel', (e) => this.onUp(e, hd));
+      hd.addEventListener('dblclick', (e) => {
+        if (interactive(e.target)) return;
+        if (this.max) this.toggleMaximize();
+        else this.dock();
+      });
+    }
     for (const edge of EDGES) el.append(this.edgeHandle(edge));
     const saved = load(opts.key);
     if (saved && this.allowed()) this.float(saved, false);

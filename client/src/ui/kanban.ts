@@ -8,6 +8,7 @@ import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
 import { CardDialog } from './kanban-card';
+import { maximizeButton, Movable } from './movable';
 import { applyMove, COLUMN_LABEL, dropTarget, filterBoards, filterCards, groupByColumn, loadShelf, PRIORITY_LABEL, saveShelf, type ShelfState } from './kanban-model';
 
 /** Cores dos post-its e das lombadas, em rodízio. */
@@ -33,6 +34,7 @@ export class KanbanPanel implements UiComponent {
   private renaming = false;
   private confirmingDelete = false;
   private readonly cardDialog: CardDialog;
+  private readonly movable: Movable;
   private opener: HTMLElement | null = null;
 
   private readonly shelfEl: HTMLElement;
@@ -95,34 +97,43 @@ export class KanbanPanel implements UiComponent {
     );
     this.cols = h('div', { class: 'ui-kb__cols' });
 
+    // A faixa da parede, em cima do quadro, também arrasta a janela (é onde a mão vai primeiro).
+    const grip = h('div', { class: 'ui-kb__grip', attrs: { 'aria-hidden': 'true' } });
+    const bar = h(
+      'div',
+      { class: 'ui-kb__bar' },
+      h('h2', { class: 'ui-kb__title', text: tr('Kanban'), attrs: { id: 'ui-kb-title' } }),
+      this.titleEl,
+      this.actionsEl,
+      h('label', { class: 'ui-kb__search' }, h('span', { text: '⌕', attrs: { 'aria-hidden': 'true' } }), this.searchTask),
+      maximizeButton(() => this.movable),
+      close,
+    );
     this.el = h(
       'dialog',
       { class: 'ui-dialog ui-kb', attrs: { 'aria-labelledby': 'ui-kb-title' } },
       h(
         'div',
         { class: 'ui-kb__room' },
+        grip,
         h(
           'div',
           { class: 'ui-kb__board' },
-          h(
-            'div',
-            { class: 'ui-kb__bar' },
-            h('h2', { class: 'ui-kb__title', text: tr('Kanban'), attrs: { id: 'ui-kb-title' } }),
-            this.titleEl,
-            this.actionsEl,
-            h('label', { class: 'ui-kb__search' }, h('span', { text: '⌕', attrs: { 'aria-hidden': 'true' } }), this.searchTask),
-            close,
-          ),
+          bar,
           h('div', { class: 'ui-kb__layout' }, this.shelfEl, h('div', { class: 'ui-kb__main' }, this.statusEl, this.confirmEl, this.emptyEl, this.cols)),
         ),
       ),
       this.cardDialog.el,
     );
-    // Clique no fundo fecha; o teclado fica dentro da janela (os atalhos do escritório não disparam por baixo).
-    this.el.addEventListener('click', (e) => {
-      if (e.target === this.el) this.close();
+    // Janela móvel como o chat (ui/movable.ts): arrastar pela barra, puxar as bordas, expandir, duplo clique na barra devolve ao
+    // lugar. Posição e tamanho ficam no navegador. Não é modal: o escritório por trás segue utilizável.
+    this.movable = new Movable(this.el, [bar, grip], { key: 'habblaud.move.kanban', enabled: () => !ctx.isNarrow() });
+    // O teclado fica dentro da janela (os atalhos do escritório não disparam por baixo). Sem fundo escurecido, o Esc é nosso:
+    // o cartão aberto (modal) fecha o próprio Esc, e os campos de uma linha tratam o deles antes de chegar aqui.
+    this.el.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape' && !this.cardDialog.el.open) this.close();
     });
-    this.el.addEventListener('keydown', (e) => e.stopPropagation());
     this.el.addEventListener('close', () => this.onClosed());
     this.applyFold();
   }
@@ -134,7 +145,7 @@ export class KanbanPanel implements UiComponent {
   open(): void {
     if (this.el.open) return;
     this.opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    this.el.showModal();
+    this.el.show();
     this.button.setAttribute('aria-expanded', 'true');
     void this.load();
   }

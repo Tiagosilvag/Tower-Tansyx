@@ -708,6 +708,9 @@ quadro **por projeto**, com as colunas Ideias, A fazer, Fazendo e Feito. É do t
 ideias, tarefas, prioridades e projetos. Os dados ficam no SQLite do Habblaud (`HABBLAUD_DB`, o mesmo banco dos usuários),
 e o Kanban funciona também sem o modo de usuários.
 
+- **Janela como a do chat:** flutua sobre o escritório (que continua utilizável por trás). Arraste pela barra do quadro ou pela
+  faixa da parede, puxe as bordas e quinas para mudar o tamanho, use o botão de expandir na tela toda, e dê duplo clique na
+  barra para devolver ao lugar. Posição e tamanho ficam no navegador. **Esc** fecha.
 - **Estante de projetos:** à esquerda, o Geral e os projetos como livros, com a contagem de cartões abertos. O botão ◀
   recolhe a estante para lombadas com a inicial (ela lembra a escolha e o último quadro). Tem busca de projetos.
 - **Busca de tarefas:** no alto do quadro, filtra só o quadro aberto, ignorando acentos e maiúsculas.

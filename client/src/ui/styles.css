@@ -11732,6 +11732,12 @@ html.is-replay #world {
    cartões em fonte do sistema (na Pixelify o "C" parece "O" e o "5" parece "S").
    ============================================================================================================ */
 .ui-dialog.ui-kb {
+  /* Janela flutuante como o chat: fixa, centrada até ser movida (ui/movable.ts), sem fundo escurecido. */
+  position: fixed;
+  /* centrada na área livre, abaixo da barra superior (como o chat), até ser movida */
+  inset: calc(var(--top-h) + var(--gap)) 0 var(--gap) 0;
+  margin: auto;
+  z-index: 32;
   --kb-ink: #2b2220;
   --kb-soft: #5b4a40;
   --kb-wall: #c58a55;
@@ -11758,7 +11764,7 @@ html.is-replay #world {
   --kb-lo: #5f735e;
   --kb-agent: #6a47c9;
   width: min(1180px, calc(100vw - 16px));
-  height: min(860px, calc(100dvh - 16px));
+  height: min(860px, calc(100dvh - var(--top-h) - var(--gap) * 2));
   max-height: none;
   border: 0;
   border-radius: 0;
@@ -11771,6 +11777,39 @@ html.is-replay #world {
 .ui-kb button,
 .ui-kb input {
   font-family: inherit;
+}
+
+/* Depois de movida ou redimensionada, o movable.ts põe left/top/width/height em linha. */
+.ui-dialog.ui-kb.is-floating {
+  inset: auto;
+  margin: 0;
+  animation: none;
+}
+
+/* Expandida na tela toda do Habblaud (botão ao lado do fechar), como o terminal. */
+.ui-dialog.ui-kb.is-max {
+  z-index: 47;
+  inset: calc(var(--top-h) + var(--gap)) var(--gap) var(--gap) !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0;
+  animation: none;
+}
+
+.ui-kb.is-max .ui-move-handle {
+  cursor: default;
+}
+
+/* a faixa da parede (o padding de cima da sala) também é alça de arrasto */
+.ui-kb__grip {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 40px;
+  z-index: 1;
+}
+
+.ui-kb__bar .ui-term__max {
+  color: var(--kb-ink);
 }
 
 .ui-kb__room {
@@ -11843,7 +11882,6 @@ html.is-replay #world {
 }
 
 .ui-kb__bar .ui-icon-btn {
-  margin-left: auto;
   color: var(--kb-ink);
 }
 
