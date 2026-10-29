@@ -4,14 +4,18 @@
 //   npm start      -> node dist/server/index.js (serve dist/client)
 import { existsSync } from 'node:fs';
 import http from 'node:http';
-import { homedir } from 'node:os';
+import { homedir, userInfo } from 'node:os';
 import { join } from 'node:path';
 import { codexDirsRefused, isDefaultDir } from './accounts/detect';
 import { AccountsService } from './accounts/service';
 import { isTruthy, loadConfig, messagesOffReason, terminalOffReason, worldSocketUrl } from './config';
-import { createApiHandler, sendJson } from './http/app';
+import { createApiHandler, readJson, sendJson } from './http/app';
 import { createRequestGuard, isLoopbackHost } from './http/guard';
-import { createRemoteGate, isRemoteRequest, loadSecret, RemoteSessions, startRemoteListener, type RemoteConfig, type RemoteListener, type SingleUserCreds } from './http/remote';
+import { cookieHeader, createRemoteGate, isRemoteRequest, loadSecret, RemoteSessions, startRemoteListener, type RemoteConfig, type RemoteListener, type SingleUserCreds } from './http/remote';
+import { openDb, type Db } from './db/db';
+import { UserAuth, UserSessions, UserThrottle } from './users/auth';
+import { createUsersRoutes } from './users/http';
+import { UserStore } from './users/store';
 import { Hub } from './http/sse';
 import { createStaticHandler } from './http/static';
 import { TerminalStreams } from './http/terminal';
@@ -158,9 +162,11 @@ if (codex) agents.add(codex);
 const codexLive: CodexLive | undefined = codex;
 late.office = office;
 late.agents = agents;
-// Página que pode responder pelo escritório: Host local na porta local; na remota, só com permissions liberado.
+// A sessão remota pode responder pelo escritório com permissions liberado ou no acesso total (HABBLAUD_REMOTE_FULL).
+const remoteAnswers = !!(config.remote?.full || config.remote?.allow.has('permissions'));
+// Página que pode responder pelo escritório: Host local na porta local; na remota, a regra acima.
 const hub = new Hub(office, {
-  canAnswer: (req) => (isRemoteRequest(req) ? !!config.remote?.allow.has('permissions') : isLoopbackHost(req.headers.host)),
+  canAnswer: (req) => (isRemoteRequest(req) ? remoteAnswers : isLoopbackHost(req.headers.host)),
 });
 // "Meu dia": amostra o escritório a cada segundo e persiste em <dataDir>/stats/ (ver history/daystats.ts).
 const stats = new DayStatsService({ dir: join(config.dataDir, 'stats'), snapshot: () => hub.current() });
@@ -248,7 +254,7 @@ const permissions = config.terminal
   ? new PermissionRegistry({
       office,
       viewers: () => hub.localSize,
-      answerLater: () => !!config.remote?.allow.has('permissions'),
+      answerLater: () => remoteAnswers,
       // Só o Claude Code: a busca da resposta dada no terminal lê o formato do transcript dele.
       transcriptPathOf: (id) => claude.transcriptPathOf(id),
       // Pedidos do hook do Codex: a conta pela pasta CODEX_HOME que ele manda.
@@ -373,6 +379,27 @@ const ticker = setInterval(() => {
   }
 }, 250);
 
+// Cookie da porta remota com Secure: HTTPS próprio, ou proxy local que terminou o TLS e avisou pelo X-Forwarded-Proto.
+const remoteSecure = (req: http.IncomingMessage): boolean =>
+  !!config.remote?.tls || (!!config.remote?.trustProxyProto && req.headers['x-forwarded-proto'] === 'https');
+// Modo de usuários (HABBLAUD_REMOTE_USERS=1): contas no SQLite. Montado antes da API, que recebe as rotas de usuários;
+// a porta remota, mais abaixo, só sobe se já houver alguém cadastrado.
+let usersDb: Db | undefined;
+let userAccounts: { store: UserStore; auth: UserAuth; routes: ReturnType<typeof createUsersRoutes> } | undefined;
+if (config.remote?.users) {
+  try {
+    usersDb = openDb(config.dbFile);
+    const store = new UserStore(usersDb);
+    // Revogados num arquivo próprio: os tokens v2 não se misturam com os do usuário único.
+    const sessions = new UserSessions(loadSecret(join(config.dataDir, 'remote-secret')), (id) => store.recordById(id), Date.now, join(config.dataDir, 'remote-users-revoked.json'));
+    const auth = new UserAuth(store, sessions, new UserThrottle());
+    const routes = createUsersRoutes({ store, auth, readJson: (req) => readJson(req), setCookie: (req, token, maxAgeS) => cookieHeader(token, maxAgeS, remoteSecure(req)) });
+    userAccounts = { store, auth, routes };
+  } catch (err) {
+    log.warn(tr('   Acesso remoto: desligado, não deu para abrir o banco de usuários {0} ({1}).', [config.dbFile, errMsg(err)]));
+  }
+}
+
 const api = createApiHandler({
   renameRoom: (id, name) => {
     const path = office.roomPath(id);
@@ -414,6 +441,7 @@ const api = createApiHandler({
   updates,
   remote: config.remote ? { is: isRemoteRequest, allows: (f) => config.remote!.allow.has(f), full: config.remote.full } : undefined,
   world: world ? createWorldRoutes(world, worldViewer, worldSocial) : undefined,
+  users: userAccounts?.routes,
 });
 
 const server = http.createServer();
@@ -470,23 +498,36 @@ server.on('error', (err: NodeJS.ErrnoException) => {
  * API. A porta principal segue só local; quem separa as duas é a porta em que a conexão chegou.
  */
 let remoteListener: RemoteListener | undefined;
+let gate: ReturnType<typeof createRemoteGate> | undefined;
 if (config.remote && !config.remote.users) {
-  const remote = config.remote;
   // Modo de usuário único: parseRemoteConfig garante user e hash fora do modo de usuários.
-  const creds = remote as RemoteConfig & SingleUserCreds;
-  const gate = createRemoteGate({
+  const creds = config.remote as RemoteConfig & SingleUserCreds;
+  gate = createRemoteGate({
     config: creds,
     sessions: new RemoteSessions(loadSecret(join(config.dataDir, 'remote-secret')), creds, Date.now, join(config.dataDir, 'remote-revoked.json')),
-    secure: !!remote.tls,
-    caFile: remote.tls?.caFile,
+    secure: !!creds.tls,
+    caFile: creds.tls?.caFile,
   });
+} else if (config.remote && userAccounts) {
+  // Sem ninguém cadastrado, a porta seria só uma tela de login que ninguém passa: nem sobe.
+  if (userAccounts.store.count() === 0) log.warn(tr('Acesso remoto: nenhum usuário; rode npm run users:add'));
+  else {
+    gate = createRemoteGate({ users: userAccounts.auth, secure: remoteSecure, caFile: config.remote.tls?.caFile });
+    void userAccounts.auth.warm();
+  }
+} else if (!config.remote && config.remoteWarning) {
+  log.warn(`   ${config.remoteWarning}.`);
+}
+if (config.remote && gate) {
+  const remote = config.remote;
+  const remoteGate = gate;
   remoteListener = startRemoteListener(
     remote,
     (req, res) => {
       const url = parseUrl(req);
       try {
         if (guard(req, res)) return;
-        if (gate(req, res, url)) return;
+        if (remoteGate(req, res, url)) return;
         if (!api(req, res, url)) fallback(req, res, url);
       } catch (err) {
         log.warn(tr('Erro ao responder (remoto) {0} {1}: {2}', [req.method, url.pathname, errMsg(err)]));
@@ -501,11 +542,16 @@ if (config.remote && !config.remote.users) {
     const allow = [...remote.allow].join(', ') || tr('só ver');
     const where = config.inDocker ? tr('publicada pelo HABBLAUD_REMOTE_BIND') : remote.host;
     const scheme = remote.tls ? 'HTTPS' : tr('HTTP SEM criptografia (HABBLAUD_REMOTE_INSECURE_HTTP)');
-    log.info(tr('   Acesso remoto: ligado na porta {0} ({1}), {2}, com login; libera: {3}.', [remote.port, where, scheme, allow]));
+    if (remote.users) {
+      const users = userAccounts?.store.count() ?? 0;
+      const grants = remote.full ? tr('acesso total') : allow;
+      log.info(tr('   Acesso remoto: ligado na porta {0} ({1}), {2}, com login de usuários ({3} cadastrado(s)); libera: {4}.', [remote.port, where, scheme, users, grants]));
+    } else log.info(tr('   Acesso remoto: ligado na porta {0} ({1}), {2}, com login; libera: {3}.', [remote.port, where, scheme, allow]));
+    if (remote.full) {
+      log.warn(tr('   Acesso remoto: ACESSO TOTAL ligado (HABBLAUD_REMOTE_FULL). Quem passar pelo login controla este computador, com um terminal do usuário {0}.', [userInfo().username]));
+    }
     if (remote.allow.has('spawn') && !spawn) log.warn(tr('   Acesso remoto: "spawn" liberado, mas o Novo agente está desligado (ligue com HABBLAUD_PTY=1).'));
   });
-} else if (config.remoteWarning) {
-  log.warn(`   ${config.remoteWarning}.`);
 }
 
 server.listen(config.port, config.host, () => {
@@ -602,6 +648,7 @@ function shutdown(signal: string): void {
   names.flush();
   void closeVite?.();
   remoteListener?.close();
+  usersDb?.close();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 1_500).unref();
 }

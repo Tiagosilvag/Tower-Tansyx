@@ -135,8 +135,8 @@ function ask(question: string, fallback?: string): Promise<string> {
   );
 }
 
-/** Pergunta sem ecoar o que é digitado (só no terminal de verdade). */
-function askHidden(question: string): Promise<string> {
+/** Pergunta sem ecoar o que é digitado (só no terminal de verdade). Também usada pelo npm run users:add. */
+export function askHidden(question: string): Promise<string> {
   const stdin = process.stdin;
   if (!stdin.isTTY) throw new Error(tr('sem terminal para perguntar a senha: use --password-stdin'));
   return new Promise((ok) => {
@@ -168,7 +168,7 @@ function askHidden(question: string): Promise<string> {
   });
 }
 
-function readStdinLine(): Promise<string> {
+export function readStdinLine(): Promise<string> {
   return new Promise((ok) => {
     let data = '';
     process.stdin.setEncoding('utf8');

@@ -507,7 +507,8 @@ function sendHtml(res: ServerResponse, html: string): void {
   res.end(html);
 }
 
-function cookieHeader(value: string, maxAgeS: number, secure: boolean): string {
+/** Set-Cookie da sessão remota. Exportado para a API de usuários (troca de senha) emitir o cookie igual ao do login. */
+export function cookieHeader(value: string, maxAgeS: number, secure: boolean): string {
   return `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeS}${secure ? '; Secure' : ''}`;
 }
 

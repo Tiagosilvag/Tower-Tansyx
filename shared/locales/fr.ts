@@ -3379,4 +3379,21 @@ export const FR: Readonly<Record<string, string>> = {
   "senha atual incorreta": "le mot de passe actuel est incorrect",
   "você não pode remover o próprio usuário": "vous ne pouvez pas supprimer votre propre utilisateur",
   "faça login": "connectez-vous",
+
+  // server/index.ts (modo de usuários)
+  "   Acesso remoto: desligado, não deu para abrir o banco de usuários {0} ({1}).": "   Accès à distance : désactivé, impossible d'ouvrir la base des utilisateurs {0} ({1}).",
+  "Acesso remoto: nenhum usuário; rode npm run users:add": "Accès à distance : aucun utilisateur ; lancez npm run users:add",
+  "acesso total": "accès total",
+  "   Acesso remoto: ligado na porta {0} ({1}), {2}, com login de usuários ({3} cadastrado(s)); libera: {4}.": "   Accès à distance : activé sur le port {0} ({1}), {2}, avec connexion des utilisateurs ({3} inscrit(s)) ; autorise : {4}.",
+  "   Acesso remoto: ACESSO TOTAL ligado (HABBLAUD_REMOTE_FULL). Quem passar pelo login controla este computador, com um terminal do usuário {0}.": "   Accès à distance : ACCÈS TOTAL activé (HABBLAUD_REMOTE_FULL). Quiconque passe la connexion contrôle cet ordinateur, avec un terminal de l'utilisateur {0}.",
+
+  // scripts/users.ts
+  "Uso:\n  npm run users:add -- <usuario> [--name \"Nome\"] [--color #rrggbb] [--password-stdin]\n  npm run users:passwd -- <usuario> [--password-stdin]\n  npm run users:list": "Utilisation :\n  npm run users:add -- <utilisateur> [--name \"Nom\"] [--color #rrggbb] [--password-stdin]\n  npm run users:passwd -- <utilisateur> [--password-stdin]\n  npm run users:list",
+  "argumento a mais: {0}": "argument en trop : {0}",
+  "as duas senhas não batem": "les deux mots de passe ne correspondent pas",
+  "Nenhum usuário. Crie o primeiro com npm run users:add -- <usuario>": "Aucun utilisateur. Créez le premier avec npm run users:add -- <utilisateur>",
+  "Usuário {0} criado.": "Utilisateur {0} créé.",
+  "É o primeiro usuário: reinicie o Habblaud para ligar o acesso remoto.": "C'est le premier utilisateur : redémarrez Habblaud pour activer l'accès à distance.",
+  "Senha de {0} trocada; as sessões abertas dele foram encerradas.": "Mot de passe de {0} changé ; ses sessions ouvertes ont été fermées.",
+  "[users] Erro: {0}": "[users] Erreur : {0}",
 };

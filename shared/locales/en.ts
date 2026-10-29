@@ -3362,4 +3362,21 @@ export const EN: Readonly<Record<string, string>> = {
   "senha atual incorreta": "current password is incorrect",
   "você não pode remover o próprio usuário": "you cannot remove your own user",
   "faça login": "sign in",
+
+  // server/index.ts (modo de usuários)
+  "   Acesso remoto: desligado, não deu para abrir o banco de usuários {0} ({1}).": "   Remote access: off, couldn't open the user database {0} ({1}).",
+  "Acesso remoto: nenhum usuário; rode npm run users:add": "Remote access: no users; run npm run users:add",
+  "acesso total": "full access",
+  "   Acesso remoto: ligado na porta {0} ({1}), {2}, com login de usuários ({3} cadastrado(s)); libera: {4}.": "   Remote access: on at port {0} ({1}), {2}, with user login ({3} registered); allows: {4}.",
+  "   Acesso remoto: ACESSO TOTAL ligado (HABBLAUD_REMOTE_FULL). Quem passar pelo login controla este computador, com um terminal do usuário {0}.": "   Remote access: FULL ACCESS on (HABBLAUD_REMOTE_FULL). Whoever gets past the login controls this computer, with a terminal as user {0}.",
+
+  // scripts/users.ts
+  "Uso:\n  npm run users:add -- <usuario> [--name \"Nome\"] [--color #rrggbb] [--password-stdin]\n  npm run users:passwd -- <usuario> [--password-stdin]\n  npm run users:list": "Usage:\n  npm run users:add -- <username> [--name \"Name\"] [--color #rrggbb] [--password-stdin]\n  npm run users:passwd -- <username> [--password-stdin]\n  npm run users:list",
+  "argumento a mais: {0}": "extra argument: {0}",
+  "as duas senhas não batem": "the two passwords don't match",
+  "Nenhum usuário. Crie o primeiro com npm run users:add -- <usuario>": "No users. Create the first one with npm run users:add -- <username>",
+  "Usuário {0} criado.": "User {0} created.",
+  "É o primeiro usuário: reinicie o Habblaud para ligar o acesso remoto.": "This is the first user: restart Habblaud to turn on remote access.",
+  "Senha de {0} trocada; as sessões abertas dele foram encerradas.": "Password for {0} changed; their open sessions were ended.",
+  "[users] Erro: {0}": "[users] Error: {0}",
 };

@@ -207,6 +207,15 @@ export class UserAuth {
     return { ok: true, token, maxAgeS, user: this.store.get(record.id)! };
   }
 
+  /** Calcula o hash de enganação na subida: senão o primeiro login de nome inexistente demoraria dois scrypts. */
+  warm(): Promise<void> {
+    // falha aqui não derruba a subida: o login tenta calcular de novo
+    return decoyHash().then(
+      () => undefined,
+      () => undefined,
+    );
+  }
+
   /** Sessão nova para quem já está autenticado (trocou a própria senha: o token antigo morreu com o hash antigo). */
   issueFor(userId: number): { token: string; maxAgeS: number } {
     return this.sessions.issue(userId);

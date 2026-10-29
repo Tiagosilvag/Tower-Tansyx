@@ -3363,4 +3363,21 @@ export const ES: Readonly<Record<string, string>> = {
   "senha atual incorreta": "la contraseña actual es incorrecta",
   "você não pode remover o próprio usuário": "no puedes eliminar tu propio usuario",
   "faça login": "inicia sesión",
+
+  // server/index.ts (modo de usuários)
+  "   Acesso remoto: desligado, não deu para abrir o banco de usuários {0} ({1}).": "   Acceso remoto: desactivado, no se pudo abrir la base de usuarios {0} ({1}).",
+  "Acesso remoto: nenhum usuário; rode npm run users:add": "Acceso remoto: ningún usuario; ejecuta npm run users:add",
+  "acesso total": "acceso total",
+  "   Acesso remoto: ligado na porta {0} ({1}), {2}, com login de usuários ({3} cadastrado(s)); libera: {4}.": "   Acceso remoto: activado en el puerto {0} ({1}), {2}, con inicio de sesión de usuarios ({3} registrado(s)); permite: {4}.",
+  "   Acesso remoto: ACESSO TOTAL ligado (HABBLAUD_REMOTE_FULL). Quem passar pelo login controla este computador, com um terminal do usuário {0}.": "   Acceso remoto: ACCESO TOTAL activado (HABBLAUD_REMOTE_FULL). Quien pase el inicio de sesión controla esta computadora, con una terminal del usuario {0}.",
+
+  // scripts/users.ts
+  "Uso:\n  npm run users:add -- <usuario> [--name \"Nome\"] [--color #rrggbb] [--password-stdin]\n  npm run users:passwd -- <usuario> [--password-stdin]\n  npm run users:list": "Uso:\n  npm run users:add -- <usuario> [--name \"Nombre\"] [--color #rrggbb] [--password-stdin]\n  npm run users:passwd -- <usuario> [--password-stdin]\n  npm run users:list",
+  "argumento a mais: {0}": "argumento de más: {0}",
+  "as duas senhas não batem": "las dos contraseñas no coinciden",
+  "Nenhum usuário. Crie o primeiro com npm run users:add -- <usuario>": "Ningún usuario. Crea el primero con npm run users:add -- <usuario>",
+  "Usuário {0} criado.": "Usuario {0} creado.",
+  "É o primeiro usuário: reinicie o Habblaud para ligar o acesso remoto.": "Es el primer usuario: reinicia Habblaud para activar el acceso remoto.",
+  "Senha de {0} trocada; as sessões abertas dele foram encerradas.": "Contraseña de {0} cambiada; sus sesiones abiertas se cerraron.",
+  "[users] Erro: {0}": "[users] Error: {0}",
 };

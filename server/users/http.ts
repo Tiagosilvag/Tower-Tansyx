@@ -22,8 +22,9 @@ import { usernameProblem, UserError, type User, type UserStore } from './store';
 /** Mesmo mínimo do `npm run remote:setup`. */
 export const MIN_PASSWORD = 10;
 
-const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
-const MAX_DISPLAY_NAME = 40;
+// exportados para o npm run users:add validar igual à API
+export const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+export const MAX_DISPLAY_NAME = 40;
 const USER_PATH = /^\/api\/users\/([1-9]\d{0,15})(\/password)?$/;
 
 export interface UsersRoutesDeps {

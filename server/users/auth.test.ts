@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openDb, type Db } from '../db/db';
 import { SESSION_MS } from '../http/remote';
-import { hashPassword, type PasswordHash } from '../remote/password';
+import { DEFAULT_LOG_N, hashPassword, type PasswordHash } from '../remote/password';
 import { tempDir } from '../test/fixtures';
 import { UserAuth, UserSessions, UserThrottle } from './auth';
 import { UserStore } from './store';
@@ -172,6 +172,16 @@ describe('UserAuth', () => {
     // o hash de enganação é um scrypt válido, com o mesmo custo de um de verdade
     expect(v.calls[0]!.hash.hash.length).toBe(32);
     expect(v.calls[0]!.hash.logN).toBeGreaterThanOrEqual(10);
+  });
+
+  it('warm() prepara o hash de enganação sem conferir senha nem contar erro; ele tem o custo padrão', async () => {
+    const v = verifyFalso();
+    const { auth, throttle } = montar(v.fn);
+    await expect(auth.warm()).resolves.toBeUndefined();
+    expect(v.calls).toHaveLength(0);
+    expect(throttle.retryAfter('fulano')).toBe(0);
+    expect(await auth.login('fulano', 'senha-certa')).toEqual({ ok: false, status: 401 });
+    expect(v.calls[0]!.hash.logN).toBe(DEFAULT_LOG_N);
   });
 
   it('entradas que não são texto viram texto vazio e caem no mesmo 401, com verify', async () => {
