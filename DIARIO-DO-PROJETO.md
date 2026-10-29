@@ -13,11 +13,22 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Agentes de qualquer projeto enxergam o Kanban
+- **Pedido:** o luciano perguntou "no Kanban do Tower Tansyx?" a um agente de outro projeto, e ele respondeu que não tinha
+  acesso (print). O pedido original era que os agentes conseguissem ver o Kanban.
+- **Causa:** o comando `npm run kanban` só funciona na pasta do Habblaud e o bloco de instruções nunca foi instalado nos
+  `CLAUDE.md` dos agentes.
+- **Feito:** script `scripts/tower-kanban` (funciona de qualquer pasta) ligado em `/usr/local/bin/tower-kanban`; o bloco de
+  instruções foi gravado em `/root/.claude/CLAUDE.md` e `/root/.claude-socio/CLAUDE.md` (CLAUDE.md do usuário de cada conta).
+  `docs/kanban-agentes.md` ganhou a instalação. Só valem para sessões novas: as abertas não releem o arquivo.
+- **Em aberto:** conta nova do Claude Code precisa do mesmo bloco no `CLAUDE.md` dela.
+- **Commits:** `35a511b`. **Produção:** o script já está no `/root/habblaud` (pull); não precisa reiniciar.
+
 ### Kanban: responsável visível no cartão
 - **Pedido:** "No card também traga quem é o responsável por aquela task" (print de um cartão sem responsável).
 - **Feito:** avatar na cor da pessoa + nome de exibição no cartão (ou "Sem responsável"); cartão novo nasce com quem o criou
   como responsável (ruling: assumi isso por ser o padrão mais útil; `assigneeId: null` deixa sem). Cartões antigos intactos.
-- **Produção:** pendente de deploy.
+- **Produção:** no ar desde `2b23904`.
 
 ### Kanban: atualizar sozinho e botão Atualizar
 - **Pedido:** o Kanban só mostrava o que um colega mexeu depois de fechar e abrir; criar um botão de atualizar ou atualizar

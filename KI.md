@@ -99,6 +99,11 @@ Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qu
 
 ## 6. Kanban
 
+_Agentes:_ o comando é `tower-kanban` (`scripts/tower-kanban`, symlink em `/usr/local/bin`), que funciona de qualquer pasta. O bloco
+que ensina o agente a usá-lo está no `CLAUDE.md` do usuário de cada conta do Claude Code (`/root/.claude/CLAUDE.md`,
+`/root/.claude-socio/CLAUDE.md`); só vale para sessões novas. Conta nova precisa do mesmo bloco (texto em `docs/kanban-agentes.md`).
+O agente não sabe quem mandou a mensagem, então só usa `--as` quando a pessoa se identifica.
+
 _Responsável:_ o cartão traz `assigneeName` (login), `assigneeDisplayName` e `assigneeColor` (o avatar do cartão usa a cor). Na
 criação (`server/kanban/http.ts`), sem `assigneeId` o responsável é quem pediu (`actor.userId`, inclusive agente com `--as`);
 `assigneeId: null` explícito deixa sem. Cartões antigos não foram preenchidos.
