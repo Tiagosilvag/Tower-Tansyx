@@ -105,13 +105,17 @@ export function parseRemoteConfig(
   const rawPort = Number.parseInt(env.HABBLAUD_REMOTE_PORT ?? '', 10);
   const port = inDocker ? DEFAULT_REMOTE_PORT : Number.isInteger(rawPort) && rawPort > 0 && rawPort < 65536 ? rawPort : DEFAULT_REMOTE_PORT;
   const host = inDocker ? '0.0.0.0' : env.HABBLAUD_REMOTE_HOST?.trim() || '0.0.0.0';
+  const loopback = host === '127.0.0.1' || host === '::1';
+  if (truthy(env.HABBLAUD_REMOTE_FULL) && !hasTls && !loopback) {
+    return { warning: tr('acesso remoto desligado: acesso total sem HTTPS próprio só com HABBLAUD_REMOTE_HOST=127.0.0.1 (atrás de um proxy local); em outra interface senha e cookie trafegariam em texto puro') };
+  }
   const base = {
     port,
     host,
     users,
     full: truthy(env.HABBLAUD_REMOTE_FULL),
     // Sem TLS próprio e só em loopback: quem fala com a porta é um proxy local que termina o HTTPS.
-    trustProxyProto: !hasTls && (host === '127.0.0.1' || host === '::1'),
+    trustProxyProto: !hasTls && loopback,
     allow: parseAllow(env.HABBLAUD_REMOTE_ALLOW),
     tls: hasTls ? tls : undefined,
   };
@@ -512,6 +516,15 @@ export function cookieHeader(value: string, maxAgeS: number, secure: boolean): s
   return `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeS}${secure ? '; Secure' : ''}`;
 }
 
+/** Quem está tentando o login: o IP do CF-Connecting-IP só vale atrás de proxy local; senão, o do socket. */
+export function clientOf(req: IncomingMessage, trustProxy = false): string {
+  const header = req.headers['cf-connecting-ip'];
+  const forwarded = typeof header === 'string' ? header.trim() : '';
+  // formato de IP (v4 ou v6), sem lixo: o valor vira chave de mapa
+  if (trustProxy && /^[0-9a-fA-F:.]{2,45}$/.test(forwarded)) return forwarded.toLowerCase();
+  return req.socket.remoteAddress ?? '';
+}
+
 /**
  * Um modo ou o outro: `users` (contas no SQLite) ou `config` + `sessions` (usuário único do ambiente).
  */
@@ -524,6 +537,8 @@ export interface RemoteGateDeps {
   /** Arquivo da CA pública servido em /remote/ca.crt (ausente = sem download). */
   caFile?: string;
   throttle?: LoginThrottle;
+  /** Atrás de proxy local (cloudflared): o cliente do freio de login vem do CF-Connecting-IP. */
+  trustProxy?: boolean;
   /** Conferência da senha (injetável nos testes; padrão: scrypt). */
   verify?: (password: string, hash: PasswordHash) => Promise<boolean>;
 }
@@ -567,7 +582,7 @@ export function createRemoteGate(deps: RemoteGateDeps): (req: IncomingMessage, r
           }
           let result: LoginResult;
           try {
-            result = await users.login(body.user, body.password);
+            result = await users.login(body.user, body.password, clientOf(req, deps.trustProxy));
           } catch {
             // falha do armazém depois da senha certa: resposta genérica, sem cookie e sem a mensagem de dentro
             return sendJson(res, 500, { error: tr('erro interno') });

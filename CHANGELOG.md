@@ -12,6 +12,10 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **No acesso por usuários, um anônimo errando senhas não tranca mais a equipe toda, e o acesso total não liga em
+  HTTP na rede.** O freio de login passa a ser por IP (o `CF-Connecting-IP` atrás do túnel) e usuário, com um teto
+  folgado por nome contra chute distribuído; `HABBLAUD_REMOTE_FULL=1` sem HTTPS próprio só sobe no loopback. A receita
+  do túnel agora lista `HABBLAUD_ALLOWED_HOSTS`, `HABBLAUD_PTY=1` e o teste com `curl`.
 - **A conversa somia da janela quando o agente entrava num git worktree.** Clicar no agente abria o terminal
   com "Nenhuma mensagem nesta sessão ainda", embora o escritório mostrasse a atividade e o histórico
   mostrasse a conversa inteira. O Claude Code leva o transcript para a pasta do worktree ao entrar num

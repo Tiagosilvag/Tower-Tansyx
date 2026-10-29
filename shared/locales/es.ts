@@ -2417,6 +2417,7 @@ export const ES: Readonly<Record<string, string>> = {
   "esperado {id, name}": "se esperaba {id, name}",
 
   // server/http/remote.ts
+  "acesso remoto desligado: acesso total sem HTTPS próprio só com HABBLAUD_REMOTE_HOST=127.0.0.1 (atrás de um proxy local); em outra interface senha e cookie trafegariam em texto puro": "acceso remoto desactivado: el acceso total sin HTTPS propio solo funciona con HABBLAUD_REMOTE_HOST=127.0.0.1 (detrás de un proxy local); en otra interfaz la contraseña y la cookie viajarían en texto plano",
   "acesso remoto desligado: senha em texto puro (HABBLAUD_REMOTE_PASSWORD) não é aceita; rode npm run remote:setup": "acceso remoto desactivado: no se acepta una contraseña en texto plano (HABBLAUD_REMOTE_PASSWORD); ejecuta npm run remote:setup",
   "acesso remoto desligado: faltam HABBLAUD_REMOTE_USER e HABBLAUD_REMOTE_PASSWORD_HASH; rode npm run remote:setup": "acceso remoto desactivado: faltan HABBLAUD_REMOTE_USER y HABBLAUD_REMOTE_PASSWORD_HASH; ejecuta npm run remote:setup",
   "acesso remoto desligado: HABBLAUD_REMOTE_PASSWORD_HASH inválido; rode npm run remote:setup": "acceso remoto desactivado: HABBLAUD_REMOTE_PASSWORD_HASH inválido; ejecuta npm run remote:setup",

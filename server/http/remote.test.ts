@@ -17,6 +17,7 @@ import {
   loadSecret,
   LoginThrottle,
   parseAllow,
+  clientOf,
   parseRemoteConfig,
   readCookie,
   RemoteSessions,
@@ -82,6 +83,25 @@ describe('parseRemoteConfig', () => {
     expect(parseRemoteConfig(env, false, () => false).config).toMatchObject({ users: true, full: true, trustProxyProto: true });
     expect(parseRemoteConfig({ ...env, HABBLAUD_REMOTE_HOST: '::1' }, false, () => false).config?.trustProxyProto).toBe(true);
     expect(parseRemoteConfig(env, false, TLS_FILES).config?.trustProxyProto).toBe(false);
+  });
+  it('acesso total sem HTTPS próprio só liga com a porta no loopback (senão senha e cookie iriam em texto puro na rede)', () => {
+    const env = { HABBLAUD_REMOTE_USERS: '1', HABBLAUD_REMOTE_INSECURE_HTTP: '1', HABBLAUD_REMOTE_FULL: '1' };
+    for (const host of [undefined, '0.0.0.0', '192.168.1.5']) {
+      const r = parseRemoteConfig({ ...env, ...(host ? { HABBLAUD_REMOTE_HOST: host } : {}) }, false, () => false);
+      expect(r.config).toBeUndefined();
+      expect(r.warning).toMatch(/acesso total sem HTTPS/);
+    }
+    // com TLS próprio, ou sem acesso total, a interface de rede segue permitida
+    expect(parseRemoteConfig(env, false, TLS_FILES).config).toMatchObject({ full: true });
+    expect(parseRemoteConfig({ ...env, HABBLAUD_REMOTE_FULL: '' }, false, () => false).config).toMatchObject({ full: false });
+  });
+  it('clientOf: CF-Connecting-IP só vale atrás de proxy local; senão, o IP do socket', () => {
+    const req = (ip?: string) => ({ headers: ip === undefined ? {} : { 'cf-connecting-ip': ip }, socket: { remoteAddress: '127.0.0.1' } }) as never;
+    expect(clientOf(req('203.0.113.9'), true)).toBe('203.0.113.9');
+    expect(clientOf(req('2001:DB8::1'), true)).toBe('2001:db8::1');
+    expect(clientOf(req('203.0.113.9'), false)).toBe('127.0.0.1');
+    expect(clientOf(req(), true)).toBe('127.0.0.1');
+    expect(clientOf(req('lixo; drop'), true)).toBe('127.0.0.1');
   });
   it('modo de usuários também exige HTTPS sem HABBLAUD_REMOTE_INSECURE_HTTP', () => {
     const r = parseRemoteConfig({ HABBLAUD_REMOTE_USERS: '1' }, false, () => false);

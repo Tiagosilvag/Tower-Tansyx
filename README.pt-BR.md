@@ -313,7 +313,11 @@ npm run users:list
   padrão. Mínimo de 10 caracteres.
 - **Tela de administração:** depois de entrar, o menu do seu chip de usuário › **Usuários** lista, cria, edita e remove
   usuários e troca senhas. Todos têm o mesmo acesso: não há papéis.
-- **Bloqueio:** 5 senhas erradas seguidas de um usuário bloqueiam aquele usuário por 15 minutos.
+- **Bloqueio:** 5 senhas erradas seguidas, do mesmo IP num usuário, bloqueiam aquele par por 15 minutos; mais de 20 erros
+  em 60 s de um IP seguram só esse IP; e mais de 50 erros em 1 h num mesmo usuário (de todos os IPs) seguram o nome.
+  Atrás do cloudflared o IP vem do `CF-Connecting-IP` (só confiado no modo de túnel abaixo); sem ele, todos chegam como
+  `127.0.0.1` e o bloqueio vira global: um anônimo errando senhas pode atrasar o login de todos (sessões já abertas não
+  caem).
 - **Sessão:** 30 dias; trocar a senha de um usuário encerra as sessões dele.
 - **Banco:** SQLite embutido no Node (por isso Node 22.13 ou mais novo), em `HABBLAUD_DB` (padrão
   `<dataDir>/habblaud.db`, ou seja, `~/.habblaud/habblaud.db`), criado com modo 600 (a pasta, 700). Guarda os hashes das
@@ -325,8 +329,14 @@ npm run users:list
   do projeto e monte o volume. Reinicie o container depois.
 - **Atrás de um túnel (ex.: cloudflared):** deixe o túnel terminar o HTTPS e falar com o Habblaud no loopback:
   `HABBLAUD_REMOTE_HOST=127.0.0.1` + `HABBLAUD_REMOTE_INSECURE_HTTP=1` (sem certificado próprio), e aponte o túnel para
-  `http://localhost:4748`. Só nesse caso (sem TLS e com a porta escutando no loopback) o Habblaud confia no
+  `http://127.0.0.1:4748` (não `localhost`, que pode resolver para `::1` primeiro). Só nesse caso (sem TLS e com a porta escutando no loopback) o Habblaud confia no
   `X-Forwarded-Proto: https` e marca o cookie como `Secure`. Com a porta na rede e sem TLS, o cabeçalho é ignorado.
+  Ponha o domínio público em `HABBLAUD_ALLOWED_HOSTS` (o cloudflared repassa o `Host` público; sem isso toda requisição
+  recebe "Host não permitido"), e use `HABBLAUD_PTY=1` para o terminal. Rode `npm run users:*` com o mesmo usuário do
+  sistema e o mesmo `HABBLAUD_DATA_DIR`/`HABBLAUD_DB` do serviço. Teste antes de trocar o túnel:
+  `curl -H 'Host: <dominio>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login`.
+  `HABBLAUD_REMOTE_FULL=1` sem HTTPS próprio só liga com `HABBLAUD_REMOTE_HOST=127.0.0.1` (ou `::1`); em outra interface a
+  porta remota não sobe.
 
 > ⚠️ **`HABBLAUD_REMOTE_FULL=1` dá um shell root na máquina a quem passa pelo login.** É opt-in (desligado por padrão).
 > Com ele, uma sessão remota logada conta como o próprio computador para o terminal interativo, os agentes, o **Novo

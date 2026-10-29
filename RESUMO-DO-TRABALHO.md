@@ -259,14 +259,14 @@ Basic Auth; nada disto está ligado lá.
 
 - **Arquitetura:** contas num SQLite (`node:sqlite`, `HABBLAUD_DB`, padrão `<dataDir>/habblaud.db`, modo 600) com
   hashes scrypt (`server/db/`, `server/users/`); a porta remota 4748 confere o login com `HABBLAUD_REMOTE_USERS=1`,
-  com freio de 5 erros/15 min por usuário e sessão de 30 dias; `HABBLAUD_REMOTE_FULL=1` faz a sessão logada valer como
+  com freio de 5 erros/15 min por IP+usuário (IP do `CF-Connecting-IP` atrás do túnel) e sessão de 30 dias; `HABBLAUD_REMOTE_FULL=1` faz a sessão logada valer como
   o próprio computador (terminal, agentes, Novo agente), sem abrir hooks, plugins, Codex, auxiliar do host nem o
   Habblaud World; CLI `npm run users:add|passwd|list` e tela **Usuários** no chip do usuário. Detalhes no README
   ("Acesso por usuários").
 - **Troca (NÃO feita, depende do dono):** (1) criar os usuários com `npm run users:add`; (2) ajuste do serviço
   `/etc/systemd/system/habblaud.service.d/remote-users.conf` com `HABBLAUD_REMOTE_USERS=1`, `HABBLAUD_REMOTE_FULL=1`,
-  `HABBLAUD_REMOTE_INSECURE_HTTP=1`, `HABBLAUD_REMOTE_HOST=127.0.0.1` e `HABBLAUD_REMOTE_ALLOW`, mais `daemon-reload` e
-  `restart`; (3) apontar o serviço do túnel `towertansyx` de `http://localhost:8080` para `http://localhost:4748`;
+  `HABBLAUD_REMOTE_INSECURE_HTTP=1`, `HABBLAUD_REMOTE_HOST=127.0.0.1`, `HABBLAUD_REMOTE_ALLOW`, `HABBLAUD_PTY=1` e `HABBLAUD_ALLOWED_HOSTS=<domínio público>` (sem isso o cloudflared recebe "Host não permitido"), mais `daemon-reload` e
+  `restart`; (3) testar com `curl -H 'Host: <dominio>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login` e apontar o serviço do túnel `towertansyx` de `http://localhost:8080` para `http://127.0.0.1:4748`;
   (4) só depois de todos entrarem, desligar o Caddy. Volta: apontar o túnel de novo para `8080`.
 - **Aviso:** com `HABBLAUD_REMOTE_FULL=1`, o login é a única barreira de um shell root.
 - Spec: `docs/superpowers/specs/2026-10-28-login-usuarios-design.md`; plano:

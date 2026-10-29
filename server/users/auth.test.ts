@@ -80,6 +80,38 @@ describe('UserThrottle', () => {
     expect(t.retryAfter('ana')).toBe(0);
   });
 
+  it('(b2) a retaguarda é por cliente: um anônimo estourando 20 erros não segura quem vem de outro IP', () => {
+    const clock = { now: T0 };
+    const t = new UserThrottle(() => clock.now);
+    for (let i = 0; i < 21; i++) t.fail(`chute${i}`, '203.0.113.9');
+    expect(t.retryAfter('chute3', '203.0.113.9')).toBeGreaterThan(0);
+    expect(t.retryAfter('tiago', '203.0.113.9')).toBeGreaterThan(0);
+    expect(t.retryAfter('tiago', '198.51.100.7')).toBe(0);
+  });
+
+  it('(b3) o bloqueio de 5 erros é do par cliente+nome: o atacante tranca a si mesmo, não o dono do nome', () => {
+    const clock = { now: T0 };
+    const t = new UserThrottle(() => clock.now);
+    for (let i = 0; i < 5; i++) t.fail('tiago', '203.0.113.9');
+    expect(t.retryAfter('tiago', '203.0.113.9')).toBe(900);
+    expect(t.retryAfter('tiago', '198.51.100.7')).toBe(0);
+    t.succeed('tiago', '198.51.100.7');
+    expect(t.retryAfter('tiago', '203.0.113.9')).toBe(900);
+  });
+
+  it('(b4) chute distribuído: mais de 50 erros em 1 h, de IPs variados, seguram o nome (teto folgado)', () => {
+    const clock = { now: T0 };
+    const t = new UserThrottle(() => clock.now);
+    for (let i = 0; i < 50; i++) {
+      t.fail('tiago', `10.0.${i}.1`);
+      clock.now += 1000;
+    }
+    expect(t.retryAfter('tiago', '192.0.2.1')).toBe(0);
+    t.fail('tiago', '10.0.99.1');
+    expect(t.retryAfter('tiago', '192.0.2.1')).toBeGreaterThan(3000);
+    expect(t.retryAfter('ana', '192.0.2.1')).toBe(0);
+  });
+
   it('nomes desconhecidos contam igual, mas o mapa tem teto e nenhum bloqueio cai por enchente de nomes', () => {
     const clock = { now: T0 };
     const t = new UserThrottle(() => clock.now);

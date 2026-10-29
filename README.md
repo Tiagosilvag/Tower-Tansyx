@@ -315,7 +315,11 @@ npm run users:list
   instead. At least 10 characters.
 - **Admin screen:** once logged in, the menu on your user chip › **Users** lists, adds, edits and removes users and
   changes passwords. Everyone has the same access: there are no roles.
-- **Lockout:** 5 wrong passwords in a row for a user lock that user for 15 minutes.
+- **Lockout:** 5 wrong passwords in a row from the same IP for a user lock that pair for 15 minutes; more than 20
+  failures in 60 s from one IP hold only that IP; and more than 50 failures in 1 h on one user (from all IPs) hold the
+  name. Behind cloudflared the IP comes from `CF-Connecting-IP` (trusted only in the tunnel mode below); without it
+  everyone arrives as `127.0.0.1` and the lock becomes global: an anonymous attacker guessing passwords can delay
+  everyone's login (open sessions are not affected).
 - **Sessions:** last 30 days; changing a user's password ends that user's sessions.
 - **Database:** SQLite built into Node (hence Node 22.13 or newer), at `HABBLAUD_DB` (default
   `<dataDir>/habblaud.db`, i.e. `~/.habblaud/habblaud.db`), created with mode 600 (the folder, 700). It holds the
@@ -327,9 +331,14 @@ npm run users:list
   a container that has the project's code and mounts the volume. Restart the container afterwards.
 - **Behind a tunnel (e.g. cloudflared):** let the tunnel terminate HTTPS and talk to Habblaud on loopback:
   `HABBLAUD_REMOTE_HOST=127.0.0.1` + `HABBLAUD_REMOTE_INSECURE_HTTP=1` (no certificate of its own), and point the
-  tunnel to `http://localhost:4748`. Only in this case (no TLS and the port listening on loopback) does Habblaud trust
+  tunnel to `http://127.0.0.1:4748` (not `localhost`, which may resolve to `::1` first). Only in this case (no TLS and the port listening on loopback) does Habblaud trust
   `X-Forwarded-Proto: https` and mark the cookie `Secure`. If the port is on the network without TLS, the header is
-  ignored.
+  ignored. Put the public domain in `HABBLAUD_ALLOWED_HOSTS` (cloudflared forwards the public `Host`; without it every
+  request gets "Host não permitido"), and set `HABBLAUD_PTY=1` for the terminal. Run `npm run users:*` as the service's
+  OS user with the same `HABBLAUD_DATA_DIR`/`HABBLAUD_DB`. Test before switching the tunnel:
+  `curl -H 'Host: <domain>' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4748/login`.
+  `HABBLAUD_REMOTE_FULL=1` without TLS of its own only starts with `HABBLAUD_REMOTE_HOST=127.0.0.1` (or `::1`); on any
+  other interface the remote port stays off.
 
 > ⚠️ **`HABBLAUD_REMOTE_FULL=1` gives a root shell on the machine to whoever passes the login.** It is opt-in (off by
 > default). With it, a logged-in remote session counts as the computer itself for the interactive terminal, agents,

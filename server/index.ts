@@ -512,7 +512,7 @@ if (config.remote && !config.remote.users) {
   // Sem ninguém cadastrado, a porta seria só uma tela de login que ninguém passa: nem sobe.
   if (userAccounts.store.count() === 0) log.warn(tr('Acesso remoto: nenhum usuário; rode npm run users:add'));
   else {
-    gate = createRemoteGate({ users: userAccounts.auth, secure: remoteSecure, caFile: config.remote.tls?.caFile });
+    gate = createRemoteGate({ users: userAccounts.auth, secure: remoteSecure, trustProxy: config.remote.trustProxyProto, caFile: config.remote.tls?.caFile });
     void userAccounts.auth.warm();
   }
 } else if (!config.remote && config.remoteWarning) {

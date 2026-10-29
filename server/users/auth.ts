@@ -69,6 +69,8 @@ const MAX_FAILURES = 5;
 const LOCK_MS = 15 * 60_000;
 const GLOBAL_WINDOW_MS = 60_000;
 const GLOBAL_MAX = 20;
+const NAME_WINDOW_MS = 60 * 60_000;
+const NAME_MAX = 50;
 const MAX_TRACKED = 1000;
 
 interface Strikes {
@@ -81,34 +83,59 @@ function norm(username: string): string {
   return username.trim().toLowerCase();
 }
 
+/** Segundos até a janela baixar do teto: `times` guarda só os últimos `max + 1` erros, o mais antigo primeiro. */
+function windowWait(times: number[] | undefined, now: number, windowMs: number, max: number): number {
+  if (!times) return 0;
+  const inWindow = times.filter((t) => t > now - windowMs);
+  return inWindow.length > max ? inWindow[inWindow.length - max - 1]! + windowMs - now : 0;
+}
+
+function pushWindow(map: Map<string, number[]>, key: string, now: number, max: number): void {
+  const times = map.get(key) ?? [];
+  times.push(now);
+  if (times.length > max + 1) times.shift();
+  // reinsere no fim: a ordem do Map vira "mais antigo primeiro" para o despejo
+  map.delete(key);
+  map.set(key, times);
+  if (map.size > MAX_TRACKED) map.delete(map.keys().next().value!);
+}
+
 /**
- * Freio de tentativas por usuário: 5 erros seguidos bloqueiam aquele nome por 15 min, para um atacante não trancar a
- * equipe toda errando senhas de nomes aleatórios. Nomes que não existem contam igual (o freio não revela quem existe).
- * Retaguarda global: mais de 20 erros em 60 s, de quaisquer nomes, fazem todos esperarem a janela baixar de 20.
+ * Freio de tentativas. `client` é quem está tentando (IP; vazio quando não se sabe): sem ele, um anônimo errando senhas
+ * trancaria a equipe toda, que é justamente o que o freio existe para evitar.
+ *  - 5 erros seguidos do MESMO cliente num nome bloqueiam aquele par por 15 min; nomes que não existem contam igual
+ *    (o freio não revela quem existe);
+ *  - retaguarda por cliente: mais de 20 erros em 60 s, de quaisquer nomes, fazem aquele cliente esperar;
+ *  - teto folgado por nome: mais de 50 erros em 1 h, de todos os clientes juntos, seguram o nome (contra chute distribuído).
  */
 export class UserThrottle {
   private readonly users = new Map<string, Strikes>();
-  /** Horários dos erros mais recentes: bastam os últimos GLOBAL_MAX + 1 para saber quando a janela baixa de 20. */
-  private readonly recent: number[] = [];
+  /** Erros recentes por cliente e por nome: bastam os últimos `max + 1` para saber quando a janela baixa do teto. */
+  private readonly byClient = new Map<string, number[]>();
+  private readonly byName = new Map<string, number[]>();
 
   constructor(private readonly now: () => number = Date.now) {}
 
-  /** Segundos inteiros até este nome poder tentar de novo (0 = pode). */
-  retryAfter(username: string): number {
+  /** Segundos inteiros até este nome, vindo deste cliente, poder tentar de novo (0 = pode). */
+  retryAfter(username: string, client = ''): number {
     const now = this.now();
-    const s = this.users.get(norm(username));
-    let wait = s ? s.lockedUntil - now : 0;
-    const inWindow = this.recent.filter((t) => t > now - GLOBAL_WINDOW_MS);
-    if (inWindow.length > GLOBAL_MAX) wait = Math.max(wait, inWindow[inWindow.length - GLOBAL_MAX - 1]! + GLOBAL_WINDOW_MS - now);
+    const name = norm(username);
+    const s = this.users.get(`${client}\n${name}`);
+    const wait = Math.max(
+      s ? s.lockedUntil - now : 0,
+      windowWait(this.byClient.get(client), now, GLOBAL_WINDOW_MS, GLOBAL_MAX),
+      windowWait(this.byName.get(name), now, NAME_WINDOW_MS, NAME_MAX),
+    );
     return wait > 0 ? Math.ceil(wait / 1000) : 0;
   }
 
-  fail(username: string): void {
+  fail(username: string, client = ''): void {
     const now = this.now();
     const name = norm(username);
-    this.recent.push(now);
-    if (this.recent.length > GLOBAL_MAX + 1) this.recent.shift();
-    let s = this.users.get(name);
+    const key = `${client}\n${name}`;
+    pushWindow(this.byClient, client, now, GLOBAL_MAX);
+    pushWindow(this.byName, name, now, NAME_MAX);
+    let s = this.users.get(key);
     if (s && this.expired(s, now)) s = undefined;
     if (!s) this.makeRoom(now);
     s ??= { failures: 0, lockedUntil: 0, last: 0 };
@@ -118,13 +145,12 @@ export class UserThrottle {
       s.lockedUntil = now + LOCK_MS;
       s.failures = 0;
     }
-    // reinsere no fim: a ordem do Map vira "mais antigo primeiro" para o despejo
-    this.users.delete(name);
-    this.users.set(name, s);
+    this.users.delete(key);
+    this.users.set(key, s);
   }
 
-  succeed(username: string): void {
-    this.users.delete(norm(username));
+  succeed(username: string, client = ''): void {
+    this.users.delete(`${client}\n${norm(username)}`);
   }
 
   /** Erros esquecidos 15 min depois do último, e o bloqueio quando vence. */
@@ -133,9 +159,9 @@ export class UserThrottle {
   }
 
   /**
-   * Abre espaço para um nome novo no teto de 1000: primeiro saem os vencidos, depois o mais antigo não bloqueado. Um
-   * bloqueado só sai se todos estiverem bloqueados, e para bloquear 1000 nomes a retaguarda global (20 por minuto) faz
-   * esperar bem mais que os 15 min: inundar o mapa com nomes não solta o bloqueio de ninguém.
+   * Abre espaço para um par novo no teto de 1000: primeiro saem os vencidos, depois o mais antigo não bloqueado. Um
+   * bloqueado só sai se todos estiverem bloqueados, e para bloquear 1000 pares a retaguarda por cliente (20 por minuto)
+   * faz esperar bem mais que os 15 min: inundar o mapa de um IP só não solta o bloqueio de ninguém.
    */
   private makeRoom(now: number): void {
     if (this.users.size < MAX_TRACKED) return;
@@ -176,17 +202,17 @@ export class UserAuth {
     private readonly verify: (password: string, hash: PasswordHash) => Promise<boolean> = verifyPassword,
   ) {}
 
-  login(username: unknown, password: unknown): Promise<LoginResult> {
+  login(username: unknown, password: unknown, client = ''): Promise<LoginResult> {
     const name = typeof username === 'string' ? norm(username) : '';
     const pass = typeof password === 'string' ? password : '';
-    const run = this.queue.then(() => this.attempt(name, pass));
+    const run = this.queue.then(() => this.attempt(name, pass, client));
     this.queue = run.catch(() => undefined);
     return run;
   }
 
-  private async attempt(name: string, password: string): Promise<LoginResult> {
+  private async attempt(name: string, password: string, client: string): Promise<LoginResult> {
     // conferido dentro da fila: os erros de quem estava na frente já contam
-    const retryAfter = this.throttle.retryAfter(name);
+    const retryAfter = this.throttle.retryAfter(name, client);
     if (retryAfter > 0) return { ok: false, status: 429, retryAfter };
     const record = name ? this.store.record(name) : undefined;
     const real = record && parsePasswordHash(record.passwordHash);
@@ -198,10 +224,10 @@ export class UserAuth {
       ok = false;
     }
     if (!ok || !record || !real) {
-      this.throttle.fail(name);
+      this.throttle.fail(name, client);
       return { ok: false, status: 401 };
     }
-    this.throttle.succeed(name);
+    this.throttle.succeed(name, client);
     this.store.touchLogin(record.id);
     const { token, maxAgeS } = this.sessions.issue(record.id);
     return { ok: true, token, maxAgeS, user: this.store.get(record.id)! };
