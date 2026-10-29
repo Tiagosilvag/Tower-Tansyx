@@ -744,8 +744,7 @@ the users use), and the Kanban also works without users mode.
   (just a reference); "Move to board" takes it out of General and puts it on the chosen board, with no copy.
 - **History:** every change records who made it, and when an agent did it at the user's request, the **via agent** mark.
 - **Agents:** they read and change the boards with the `npm run kanban` command (or straight through the local API). The
-  author is the user who asked (`--as tiago`); through the remote port the author is always the logged-in user. See
-  [`docs/kanban-agentes.md`](docs/kanban-agentes.md) for the instruction block to paste into `CLAUDE.md` or `AGENTS.md`.
+  author is the user who asked (`--as <user>`); through the remote port the author is always the logged-in user.
 
 ## Accounts and usage (5-hour and weekly)
 

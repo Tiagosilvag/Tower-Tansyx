@@ -6,6 +6,21 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 29/10/2026 — Documentos de `docs/` saem do repositório
+
+- **Problema:** os desenhos e planos do login e do Kanban tinham detalhes de ambiente e de autenticação, e o repositório é público.
+- **Decisão do dono:** remover do repositório os documentos de `docs/`.
+- **O que foi feito / Arquivos novos:** removidos o guia do Kanban para agentes e os desenhos e planos em `docs/superpowers/`; links
+  nos dois READMEs retirados. Cópia mantida só na máquina do dono, fora do repositório. Ficaram em `docs/` apenas as imagens do
+  Habblaud original e o texto de privacidade do Habblaud World.
+- **Testes:** só documentação, nada a testar.
+- **Limite conhecido:** o histórico do git ainda contém esses arquivos; `RESUMO-DO-TRABALHO.md` e `PLANO-PTY-ACCESS.md` (raiz) continuam
+  no repositório e citam esses caminhos.
+- **Para subir / Pendente:** nada de código. Decidir o destino dos dois arquivos da raiz. [CONFIRMAR]
+- **Lição:** **desenhos e planos novos não devem ser commitados em `docs/` neste repositório público; guardar fora.**
+
+---
+
 ## 29/10/2026 — Diretrizes de memória (segunda versão) e formato novo
 
 - **Problema:** as diretrizes globais mudaram (nomes de arquivo, formato e regras de segurança); o KI e o diário estavam no formato anterior.

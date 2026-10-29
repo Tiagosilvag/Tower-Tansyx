@@ -742,8 +742,7 @@ e o Kanban funciona também sem o modo de usuários.
   projeto** (só uma referência); "Mover para o quadro" o tira do Geral e o põe no quadro escolhido, sem cópia.
 - **Histórico:** cada mudança grava quem fez, e quando foi um agente a pedido do usuário, a marca **via agente**.
 - **Agentes:** leem e alteram os quadros pelo comando `npm run kanban` (ou direto pela API local). O autor é o usuário que
-  pediu (`--as tiago`); pela porta remota o autor é sempre o usuário logado. Veja [`docs/kanban-agentes.md`](docs/kanban-agentes.md)
-  para o bloco de instruções que você cola no `CLAUDE.md` ou no `AGENTS.md`.
+  pediu (`--as <usuário>`); pela porta remota o autor é sempre o usuário logado.
 
 ## Contas e uso (5 horas e semanal)
 
