@@ -3,6 +3,7 @@ import type { AccountInfo, AgentInfo } from '../../../shared/types';
 import { createAvatar, updateAvatar, type AvatarSize } from './avatar';
 import { h, setAttr, setHidden, setStyleVar, setText, setTitle, setVariant } from './dom';
 import { formatDuration } from './format';
+import { paintPresenceFaces } from './presence';
 import { activityFallback, shellLine, shellWaitIn, statusLabel } from './model';
 import {
   createAccountChip,
@@ -28,6 +29,8 @@ interface RowRefs {
   task: HTMLElement;
   /** Há quanto tempo está ocioso (no lugar do "Principal"). */
   since: HTMLElement;
+  /** Avatares de quem mais está com este agente aberto (modo de usuários). */
+  faces: HTMLElement;
   size: AvatarSize;
 }
 
@@ -42,16 +45,17 @@ export function createAgentRow(agent: AgentInfo, onPick: (id: string) => void, s
   const activity = createActivityLine();
   const task = h('span', { class: 'ui-agent__task', hidden: true });
   const since = h('span', { class: 'ui-agent__since', hidden: true });
+  const faces = h('span', { class: 'ui-presence ui-presence--row', hidden: true });
   const row = h(
     'button',
     { class: 'ui-agent', type: 'button' },
     avatar,
-    h('span', { class: 'ui-agent__main' }, h('span', { class: 'ui-agent__top' }, name, chip, since, role), task, activity),
+    h('span', { class: 'ui-agent__main' }, h('span', { class: 'ui-agent__top' }, name, chip, since, role, faces), task, activity),
     dot,
   );
   row.dataset.id = agent.id;
   row.addEventListener('click', () => onPick(row.dataset.id!));
-  refs.set(row, { avatar, name, chip, role, dot, activity, task, since, size });
+  refs.set(row, { avatar, name, chip, role, dot, activity, task, since, faces, size });
   return row;
 }
 
@@ -75,6 +79,7 @@ export function updateAgentRow(
   setText(r.name, agent.name);
   updateAccountChip(r.chip, account, agent.account, agent.provider);
   updateRoleBadge(r.role, agent);
+  paintPresenceFaces(r.faces, agent.id);
   const title = agent.title?.trim() ?? '';
   setText(r.task, title);
   setTitle(r.task, title);

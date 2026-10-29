@@ -48,7 +48,7 @@ do meio (0.**3**.0).
 - **Presença em tempo real.** No modo de usuários, a barra do chat e a do terminal interativo mostram os avatares de
   quem mais está com aquele agente aberto e avisam "fulano está digitando…" quando alguém digita ali, para dois sócios
   não falarem com o agente ao mesmo tempo sem saber. Fica só na memória do servidor: quem para de avisar some em 20 s, e
-  nada disso chega ao agente.
+  nada disso chega ao agente. Os avatares também aparecem na linha de cada agente, na barra lateral e na gaveta.
 - **Mais arquivos abrem nas Entregas.** `.sql`, `.json`, `.yaml`, `.xml` e arquivos de código comuns (js, ts, py, css...)
   aparecem como texto, e o `.md` aparece formatado, como no chat. Links para esses arquivos na resposta do agente também
   viram anexos. PowerPoint, Word e Excel continuam só para baixar.

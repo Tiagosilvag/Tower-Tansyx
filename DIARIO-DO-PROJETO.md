@@ -13,13 +13,19 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Avatares da presença na barra lateral
+- **Pedido:** "Fazer os avatares na barra lateral também".
+- **Feito:** `paintPresenceFaces` em `client/src/ui/presence.ts`, usado em `rows.ts` (linha do agente na barra lateral e na
+  gaveta); o rosto balança quando a pessoa digita e o texto vai no tooltip. A tela só se redesenha quando a lista muda.
+- **Produção:** pendente de deploy.
+
 ### Presença em tempo real
 - **Pedido:** "pode começar" (avatares de quem está com a sessão aberta e "está digitando…", propostos depois da pergunta
   sobre colaboração entre sócios).
 - **Feito:** `Presence` (memória) + rotas `/api/presence` + `startPresence`/`presenceStrip` no cliente, nas barras do
   chat e do terminal interativo; textos em en/es/fr; testes do servidor, da rota e do modelo. Detalhes no `KI.md` §5.
 - **Commits:** ver o log da branch (feat(presença)). **Produção:** no ar desde `4e36ea9`.
-- **Em aberto:** não há trava de "um escreve por vez"; avatares na lista de agentes da barra lateral não foram feitos.
+- **Em aberto:** não há trava de "um escreve por vez".
 
 ### Diário do projeto e KI
 - **Pedido:** criar o diário de projeto e o KI (knowledge) e mantê-los atualizados a cada mudança, para um colaborador
@@ -83,8 +89,8 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## Em aberto
 
-- **Presença:** falta ver no navegador (só testada por testes automáticos) e, se quiserem, avatares na lista da barra
-  lateral e uma trava opcional de "um escreve por vez".
+- **Presença:** falta ver no navegador (só testada por testes automáticos) e, se quiserem, uma trava opcional de
+  "um escreve por vez".
 - (Concluído) **Caddy** aposentado: serviço inativo e desabilitado; o acesso é só pelo login com usuários na 4748.
 - Revogar o token OAuth antigo do `gh`.
 - Conferir no navegador o visual das telas de login, usuários e da marcação no chat.

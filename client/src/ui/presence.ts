@@ -20,6 +20,7 @@ let map: Record<string, PresentUser[]> = {};
 let typingAt = 0;
 let typingAgent: string | null = null;
 let lastBeat = 0;
+let invalidate: () => void = () => undefined;
 const strips = new Set<{ agentId: string | null; paint: () => void }>();
 
 function repaint(): void {
@@ -44,8 +45,11 @@ async function poll(): Promise<void> {
     const res = await fetch('/api/presence', { credentials: 'same-origin', cache: 'no-store' });
     if (!res.ok) return;
     const body = (await res.json()) as { presence?: Record<string, PresentUser[]> };
-    map = body.presence && typeof body.presence === 'object' ? body.presence : {};
+    const next = body.presence && typeof body.presence === 'object' ? body.presence : {};
+    const changed = JSON.stringify(next) !== JSON.stringify(map);
+    map = next;
     repaint();
+    if (changed) invalidate();
   } catch {
     // mantém o que já tinha
   }
@@ -54,6 +58,7 @@ async function poll(): Promise<void> {
 /** Liga a presença; `me` devolve o id do usuário logado (undefined sem login: nada é enviado). */
 export function startPresence(ctx: UiContext, me: () => number | undefined): void {
   meId = me;
+  invalidate = () => ctx.invalidate();
   watching = () => (ctx.store.snapshot?.agents ?? []).filter((a) => ctx.terminals?.showing(a.id)).map((a) => a.id);
   front = () => ctx.terminals?.openAgentId ?? null;
   setInterval(() => void beat(), BEAT_MS);
@@ -69,6 +74,27 @@ export function startPresence(ctx: UiContext, me: () => number | undefined): voi
     true,
   );
   void beat().then(poll);
+}
+
+/**
+ * Só os avatares (sem texto) de quem mais está com o agente aberto, para a linha dele na barra lateral. O texto vai no
+ * `title`. Chamado a cada quadro: só mexe no DOM quando a lista muda.
+ */
+export function paintPresenceFaces(el: HTMLElement, agentId: string): void {
+  const others = othersOf(map[agentId], meId?.());
+  const key = others.map((u) => `${u.id}:${u.color}:${u.typing ? 1 : 0}`).join('|');
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
+  setHidden(el, others.length === 0);
+  if (!others.length) {
+    el.replaceChildren();
+    el.removeAttribute('title');
+    return;
+  }
+  const faces = others.slice(0, MAX_AVATARS).map((u) => avatar({ color: u.color, displayName: u.name }, `ui-presence__face${u.typing ? ' is-typing' : ''}`));
+  const more = others.length > MAX_AVATARS ? [h('span', { class: 'ui-presence__more', text: `+${others.length - MAX_AVATARS}` })] : [];
+  el.replaceChildren(...faces, ...more);
+  el.title = presenceLabel(others);
 }
 
 /** Faixa com os avatares de quem mais está com o agente aberto e o texto ("ansysar está digitando…"). */

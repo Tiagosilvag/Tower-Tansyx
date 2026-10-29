@@ -9113,6 +9113,17 @@ html.is-replay #world {
   white-space: nowrap;
 }
 
+/* Na linha do agente (barra lateral e gaveta): só os rostos, menores e sem a margem da barra do terminal. */
+.ui-presence--row {
+  margin-inline: 4px 0;
+}
+
+.ui-presence--row .ui-presence__face {
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+}
+
 @keyframes ui-presence-pulse {
   50% {
     transform: translateY(-2px);
