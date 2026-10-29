@@ -420,11 +420,20 @@ export class Deliveries implements UiComponent {
     else if (a.kind === 'video') body = h('video', { class: 'ui-deliv-viewer__video', attrs: { src: url, controls: true, playsinline: true } });
     else if (a.kind === 'pdf' || a.kind === 'page') body = h('iframe', { class: 'ui-deliv-viewer__frame', attrs: { src: url, title: a.name } });
     else if (a.kind === 'text') {
-      body = h('pre', { class: 'ui-deliv-viewer__text', text: tr('Carregando…') });
-      const pre = body;
+      // Markdown aparece formatado (como no chat); o resto, como texto simples.
+      const formatted = /\.md$/i.test(a.name);
+      body = formatted ? h('div', { class: 'ui-deliv-viewer__text ui-deliv-viewer__md ui-md', text: tr('Carregando…') }) : h('pre', { class: 'ui-deliv-viewer__text', text: tr('Carregando…') });
+      const box = body;
       void fetch(url, { credentials: 'same-origin' })
         .then(async (r) => (r.ok ? r.text() : Promise.reject(new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? tr('erro {0}', [r.status])))))
-        .then((t) => setText(pre, t.slice(0, 200_000)), (e: Error) => setText(pre, tr('Não deu para abrir: {0}', [e.message])));
+        .then(
+          (t) => {
+            const text = t.slice(0, 200_000);
+            if (formatted) box.replaceChildren(renderMarkdown(text));
+            else setText(box, text);
+          },
+          (e: Error) => setText(box, tr('Não deu para abrir: {0}', [e.message])),
+        );
     } else body = h('div', { class: 'ui-deliv-viewer__file' }, h('p', { text: a.name }), h('a', { class: 'ui-btn', text: tr('Baixar'), attrs: { href: url, download: a.name } }));
     if (body instanceof HTMLImageElement || body instanceof HTMLIFrameElement) {
       body.addEventListener('error', () => this.viewerBody.replaceChildren(h('p', { class: 'ui-deliv-viewer__err', text: tr('Não deu para abrir este anexo (o arquivo mudou de lugar ou o computador não respondeu).') })));

@@ -9072,6 +9072,12 @@ html.is-replay #world {
   white-space: pre-wrap;
 }
 
+/* Markdown formatado no visualizador: texto corrido, não a caixa de código. */
+.ui-deliv-viewer__md {
+  font: 14px/1.6 var(--font-ui, system-ui, sans-serif);
+  padding: 16px 20px;
+}
+
 .ui-deliv-viewer__file,
 .ui-deliv-viewer__err {
   text-align: center;

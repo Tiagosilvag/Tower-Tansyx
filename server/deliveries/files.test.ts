@@ -5,7 +5,10 @@ describe('arquivos das entregas', () => {
   it('só tipos de ver e nada com cara de segredo', () => {
     expect(fileType('/a/b.PNG')).toEqual({ kind: 'image', type: 'image/png' });
     expect(fileType('/a/b.pdf')?.kind).toBe('pdf');
-    expect(fileType('/a/b.json')).toBeUndefined();
+    expect(fileType('/a/b.exe')).toBeUndefined();
+    expect(fileType('/a/consulta.SQL')).toEqual({ kind: 'text', type: 'text/plain; charset=utf-8' });
+    expect(fileType('/a/leia-me.md')?.kind).toBe('text');
+    expect(fileType('/a/dados.json')?.kind).toBe('text');
     expect(pathProblem('/Users/a/p/relatorio.pdf')).toBeUndefined();
     for (const bad of ['/Users/a/.ssh/x.png', '/Users/a/p/.env.png', '/Users/a/p/secret-plan.pdf', '/Users/a/p/server.key', '/Users/a/.aws/c.txt', '/Users/a/.habblaud/remote-tls/ca.pdf', 'rel.png', '/a/../b.png', '/a/b.sh', '/a/id_ed25519']) {
       expect(pathProblem(bad), bad).toBeDefined();

@@ -45,6 +45,9 @@ do meio (0.**3**.0).
   1×, sem partículas, sem efeitos de data comemorativa e sem a iluminação suave. **Mínimo** soma a isso a pausa do
   escritório com o terminal em tela cheia, no máximo 150 linhas no chat e nenhuma animação. Uma opção mostra no
   canto da tela os quadros por segundo e as linhas do chat, para comparar. Vale só para o seu navegador.
+- **Mais arquivos abrem nas Entregas.** `.sql`, `.json`, `.yaml`, `.xml` e arquivos de código comuns (js, ts, py, css...)
+  aparecem como texto, e o `.md` aparece formatado, como no chat. Links para esses arquivos na resposta do agente também
+  viram anexos. PowerPoint, Word e Excel continuam só para baixar.
 - **O chat mostra quem escreveu cada mensagem.** No modo de usuários, o prompt enviado pela página ganha um degradê
   leve na cor de quem escreveu, uma faixa fina na borda e o nome acima do texto, o que separa melhor a mensagem da
   resposta do agente. O servidor guarda só (hora, texto, usuário) por 30 dias e casa isso com o transcript ao montar a

@@ -28,6 +28,13 @@ const TYPES: Readonly<Record<string, { kind: DeliveryAttachmentKind; type: strin
   txt: { kind: 'text', type: 'text/plain; charset=utf-8' },
   csv: { kind: 'text', type: 'text/plain; charset=utf-8' },
   log: { kind: 'text', type: 'text/plain; charset=utf-8' },
+  // Código e configuração, sempre entregues como texto simples (nunca executados nem interpretados pelo navegador).
+  ...Object.fromEntries(
+    ['sql', 'json', 'yaml', 'yml', 'xml', 'toml', 'ini', 'js', 'ts', 'tsx', 'jsx', 'py', 'css', 'rb', 'go', 'java', 'rs', 'php'].map((e) => [
+      e,
+      { kind: 'text' as const, type: 'text/plain; charset=utf-8' },
+    ]),
+  ),
   xlsx: { kind: 'file', type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
   docx: { kind: 'file', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
   pptx: { kind: 'file', type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
