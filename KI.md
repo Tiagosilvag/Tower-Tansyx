@@ -28,7 +28,7 @@ nos serviços continua `habblaud`.
 | Serviço | `systemctl restart habblaud` (`node dist/server/index.js`) |
 | Terminais | tmux (`tmux -L habblaud`, sessões `habblaud-*`); sobrevivem ao reinício (`KillMode=process`) |
 | Acesso hoje | túnel Cloudflare → `https://towertansyx.coffetech.com.br`; porta principal 4747 (só loopback), porta remota 4748 com login |
-| Caddy | ainda existe na porta 8080 (Basic Auth); a ideia é aposentá-lo depois de o túnel apontar para a 4748 |
+| Caddy | aposentado (serviço inativo e desabilitado em 2026-10-29); o túnel aponta para a porta remota 4748. Para voltar: túnel de volta a `http://127.0.0.1:8080` e `systemctl enable --now caddy` |
 
 Trabalho novo é feito num worktree em `/root/projetos/Tower-Tansyx/.claude/worktrees/<nome>` e integrado na branch de
 produção.

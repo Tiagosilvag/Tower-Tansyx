@@ -18,7 +18,7 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
   sobre colaboração entre sócios).
 - **Feito:** `Presence` (memória) + rotas `/api/presence` + `startPresence`/`presenceStrip` no cliente, nas barras do
   chat e do terminal interativo; textos em en/es/fr; testes do servidor, da rota e do modelo. Detalhes no `KI.md` §5.
-- **Commits:** ver o log da branch (feat(presença)). **Produção:** pendente de deploy.
+- **Commits:** ver o log da branch (feat(presença)). **Produção:** no ar desde `4e36ea9`.
 - **Em aberto:** não há trava de "um escreve por vez"; avatares na lista de agentes da barra lateral não foram feitos.
 
 ### Diário do projeto e KI
@@ -33,14 +33,14 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
   100 erros/h: inundar o mapa com nomes aleatórios não esvazia mais o freio de um nome atacado. Teste `(c2)` em
   `server/users/auth.test.ts` (falha sem a correção).
 - **Commits:** na branch `claude/adoring-goldberg-gnh2bj` até `510f763`.
-- **Produção:** pendente de reinício (o deploy foi negado pelo classificador; o dono roda o `!` do deploy).
+- **Produção:** no ar desde `4e36ea9` (deploy de 2026-10-29).
 
 ### Arquivos nas Entregas
 - **Pedido:** visualizar na tela textos, HTML, sql, md, txt; PowerPoint só para baixar; fazer só "abrir sql/código como
   texto" e "md formatado".
 - **Feito:** `.sql`, `.json`, `.yaml/.yml`, `.xml`, `.toml`, `.ini`, js/ts/tsx/jsx/py/css/rb/go/java/rs/php abrem como
   texto; `.md` aparece formatado; links para esses arquivos na resposta viram anexos. `.sh` continua recusado.
-- **Commits:** `386528f`. **Produção:** pendente de reinício (ver acima).
+- **Commits:** `386528f`. **Produção:** no ar desde `4e36ea9`.
 
 ### Marcação de quem escreveu cada mensagem
 - **Pedido:** diferenciar a mensagem do usuário da resposta, com degradê leve na cor do usuário; mockup aprovado.
@@ -83,11 +83,9 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## Em aberto
 
-- **Deploy pendente:** reiniciar o serviço para levar `386528f` e a correção do teto por nome (`510f763`).
 - **Presença:** falta ver no navegador (só testada por testes automáticos) e, se quiserem, avatares na lista da barra
   lateral e uma trava opcional de "um escreve por vez".
-- **Caddy:** ainda ativo na 8080; aposentar só depois de o túnel apontar para `http://127.0.0.1:4748` e do teste com `curl`
-  usando o Host público (`HABBLAUD_ALLOWED_HOSTS`). Volta atrás: túnel de volta à 8080 e `systemctl enable --now caddy`.
+- (Concluído) **Caddy** aposentado: serviço inativo e desabilitado; o acesso é só pelo login com usuários na 4748.
 - Revogar o token OAuth antigo do `gh`.
 - Conferir no navegador o visual das telas de login, usuários e da marcação no chat.
 - `server/index.users.test.ts` nunca foi rodado.
