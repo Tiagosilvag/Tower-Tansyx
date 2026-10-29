@@ -12,6 +12,8 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **A janela do documento .md aparecia transparente.** Ela era criada fora do contêiner da interface, onde as cores do
+  tema não existem; agora nasce dentro dele e usa o mesmo painel escuro do chat.
 - **A prévia de página do Artifact no chat mostrava a versão antiga.** Quando o agente republicava a mesma página, o
   navegador reaproveitava por 5 minutos a cópia anterior, porque o endereço da prévia não muda. Páginas HTML e SVG agora
   são conferidas de novo a cada abertura; imagens comuns continuam no cache.

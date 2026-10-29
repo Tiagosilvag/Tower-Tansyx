@@ -78,7 +78,8 @@ class DocWindow {
       this.opener?.focus?.();
       this.opener = null;
     });
-    document.body.append(this.el);
+    // Dentro do .ui-root: é lá que ficam as variáveis de cor e tipografia (no body o fundo sai transparente).
+    (document.querySelector('.ui-root') ?? document.body).append(this.el);
   }
 
   show(project: string, path: string): void {
