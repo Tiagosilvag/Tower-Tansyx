@@ -1,28 +1,41 @@
 # Kanban para agentes
 
 O Tower Tansyx tem quadros Kanban (um **Geral** e um por projeto). Os agentes leem e alteram os quadros pelo comando
-`npm run kanban`, na pasta do Habblaud, ou direto pela API local. Cole o bloco abaixo no `CLAUDE.md` (Claude Code) ou
-no `AGENTS.md` (Codex) do que for usar.
+`tower-kanban` (ou `npm run kanban --`, na pasta do Habblaud), ou direto pela API local.
+
+## Instalação (uma vez por servidor)
+
+Os agentes rodam em qualquer pasta de projeto, então o comando precisa existir fora da pasta do Habblaud. O script
+`scripts/tower-kanban` faz isso:
+
+```sh
+ln -sf /root/habblaud/scripts/tower-kanban /usr/local/bin/tower-kanban
+```
+
+E o bloco abaixo vai no `CLAUDE.md` **do usuário** de cada conta do Claude Code (`<pasta da conta>/CLAUDE.md`, por exemplo
+`~/.claude/CLAUDE.md`), assim todo agente, em qualquer projeto, sabe usar o Kanban. Sessões que já estavam abertas só
+leem o arquivo na próxima sessão. Para o Codex, o mesmo bloco vai no `AGENTS.md`.
 
 ## Bloco para colar
 
 ```markdown
 ## Kanban do Tower Tansyx
 
-Quando o usuário pedir para ver, criar ou mexer em ideias e tarefas do Kanban, use o comando (na pasta do Habblaud):
+Quando o usuário falar do "Kanban", do "quadro" ou pedir para ver, criar ou mexer em ideias e tarefas do Tower Tansyx,
+use o comando `tower-kanban` (funciona em qualquer pasta). Não procure um serviço externo: o Kanban é do Tower Tansyx.
 
-- `npm run kanban -- boards` lista os quadros (Geral e projetos).
-- `npm run kanban -- list <quadro> [--q texto]` lista os cartões de um quadro (o nome, como `Geral`, ou o número).
-- `npm run kanban -- show <id>` mostra um cartão com o histórico.
-- `npm run kanban -- add <quadro> "título" [--col coluna] [--prio prioridade] [--desc texto] --as <usuário>` cria um cartão.
-- `npm run kanban -- move <id> <coluna> --as <usuário>` muda de coluna.
-- `npm run kanban -- comment <id> "texto" --as <usuário>` comenta.
-- `npm run kanban -- edit <id> [--title ...] [--desc ...] [--prio ...] --as <usuário>` edita.
+- `tower-kanban boards` lista os quadros (Geral e projetos).
+- `tower-kanban list <quadro> [--q texto]` lista os cartões de um quadro (o nome, como `Geral`, ou o número).
+- `tower-kanban show <id>` mostra um cartão com o histórico.
+- `tower-kanban add <quadro> "título" [--col coluna] [--prio prioridade] [--desc texto] [--as <usuário>]` cria um cartão.
+- `tower-kanban move <id> <coluna> [--as <usuário>]` muda de coluna.
+- `tower-kanban comment <id> "texto" [--as <usuário>]` comenta.
+- `tower-kanban edit <id> [--title ...] [--desc ...] [--prio ...] [--as <usuário>]` edita.
 
 Colunas: `ideias`, `a_fazer`, `fazendo`, `feito`. Prioridades: `alta`, `media`, `baixa`.
-Use `--as` com o **nome de usuário de quem pediu** (por exemplo `tiago`). Nunca invente um usuário: se não souber quem
-pediu, omita `--as` e o cartão fica sem autor, marcado só como "via agente". Acrescente `--json` quando precisar da
-resposta em formato de máquina.
+Você não sabe quem escreveu a mensagem. Só use `--as <usuário>` se a própria pessoa disser quem ela é (por exemplo
+"sou o luciano"); nunca invente um usuário. Sem `--as`, o cartão fica sem autor, marcado "via agente". Acrescente
+`--json` quando precisar da resposta em formato de máquina.
 ```
 
 ## Como funciona

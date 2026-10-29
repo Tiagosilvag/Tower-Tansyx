@@ -1,0 +1,6 @@
+#!/bin/sh
+# tower-kanban: o Kanban do Tower Tansyx pela linha de comando, de qualquer pasta (os agentes de outros projetos usam este).
+# Instalação: ln -sf <pasta do Habblaud>/scripts/tower-kanban /usr/local/bin/tower-kanban (veja docs/kanban-agentes.md).
+# Faz o mesmo que `npm run kanban -- ...` na pasta do Habblaud.
+root="$(dirname "$(dirname "$(readlink -f "$0")")")"
+exec npm --prefix "$root" run -s kanban -- "$@"
