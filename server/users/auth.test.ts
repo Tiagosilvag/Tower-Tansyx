@@ -110,6 +110,20 @@ describe('UserThrottle', () => {
     expect(t.retryAfter('tiago', '192.0.2.1')).toBe(0);
   });
 
+  it('(c2) o teto por nome já estourado sobrevive a uma enchente de nomes aleatórios', () => {
+    const clock = { now: T0 };
+    const t = new UserThrottle(() => clock.now);
+    for (let i = 0; i < 101; i++) t.fail('tiago', `10.0.${i}.1`);
+    expect(t.retryAfter('tiago', '192.0.2.1')).toBeGreaterThan(0);
+    // 3000 nomes novos, de IPs novos, dentro da mesma hora: o mapa por nome enche e despeja
+    for (let i = 0; i < 3000; i++) {
+      clock.now += 100;
+      t.fail(`aleatorio${i}`, `10.${(i >> 8) + 1}.${i & 255}.1`);
+    }
+    expect(t['byName'].size).toBeLessThanOrEqual(1000);
+    expect(t.retryAfter('tiago', '192.0.2.1')).toBeGreaterThan(0);
+  });
+
   it('(d) sucesso zera o contador do par (usuário, IP), e só dele', () => {
     const clock = { now: T0 };
     const t = new UserThrottle(() => clock.now);

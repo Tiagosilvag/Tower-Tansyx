@@ -102,8 +102,16 @@ function pushWindow(map: Map<string, number[]>, key: string, now: number, window
   map.delete(key);
   map.set(key, times);
   if (map.size <= MAX_TRACKED) return;
-  // teto: saem primeiro as janelas já vazias; se ainda não couber, a do erro mais antigo
+  // teto: saem primeiro as janelas já vazias; depois a do erro mais antigo que ainda NÃO estourou o teto. Quem estourou
+  // fica: senão inundar o mapa com nomes aleatórios esvaziaria o freio de um nome já atacado.
   for (const [k, ts] of map) if (ts[ts.length - 1]! <= now - windowMs) map.delete(k);
+  if (map.size <= MAX_TRACKED) return;
+  const over = (ts: number[]) => ts.filter((t) => t > now - windowMs).length > max;
+  for (const [k, ts] of map) {
+    if (map.size <= MAX_TRACKED) return;
+    if (!over(ts)) map.delete(k);
+  }
+  // só sobraram janelas estouradas (mais de MAX_TRACKED nomes a 100 erros/h): o limite de memória vence
   if (map.size > MAX_TRACKED) map.delete(map.keys().next().value!);
 }
 
