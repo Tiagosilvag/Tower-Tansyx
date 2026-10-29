@@ -29,6 +29,8 @@ export interface KanbanCard {
   description: string;
   priority: Priority;
   assigneeId: number | null;
+  /** Nome de usuário do responsável (para mostrar sem precisar da lista de usuários). */
+  assigneeName: string | null;
   /** Etiqueta de projeto (só no Geral). */
   projectId: number | null;
   createdBy: number | null;

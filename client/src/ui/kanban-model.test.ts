@@ -3,7 +3,7 @@ import type { KanbanBoard, KanbanCard } from '../../../shared/kanban';
 import { dropTarget, filterBoards, filterCards, groupByColumn, loadShelf, saveShelf, SHELF_KEY } from './kanban-model';
 
 const card = (id: number, column: KanbanCard['column'], position: number, over: Partial<KanbanCard> = {}): KanbanCard => ({
-  id, boardId: 1, column, position, title: `c${id}`, description: '', priority: 'media', assigneeId: null, projectId: null,
+  id, boardId: 1, column, position, title: `c${id}`, description: '', priority: 'media', assigneeId: null, assigneeName: null, projectId: null,
   createdBy: null, createdByName: null, createdVia: 'user', createdAt: 1, updatedAt: 1, ...over,
 });
 

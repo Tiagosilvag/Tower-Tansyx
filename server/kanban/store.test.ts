@@ -127,8 +127,9 @@ describe('KanbanStore: cartões', () => {
   it('updateCard troca título, descrição e responsável e grava edited e assigned', () => {
     const { store, geral, ana } = montar();
     const c = store.createCard(geral.id, { title: 'a' }, nobody);
+    expect(c.assigneeName).toBeNull();
     const u = store.updateCard(c.id, { title: 'b', description: 'd', assigneeId: ana.id }, nobody);
-    expect(u).toMatchObject({ title: 'b', description: 'd', assigneeId: ana.id });
+    expect(u).toMatchObject({ title: 'b', description: 'd', assigneeId: ana.id, assigneeName: 'ansysar' });
     expect(store.events(c.id).map((e) => e.kind).sort()).toEqual(['assigned', 'created', 'edited']);
   });
 
@@ -223,7 +224,7 @@ describe('KanbanStore: usuário removido', () => {
     const c = store.createCard(geral.id, { title: 'a', assigneeId: tiago.id }, por(tiago, 'agent'));
     users.remove(tiago.id);
     expect(ana.id).toBeGreaterThan(0);
-    expect(store.card(c.id)).toMatchObject({ title: 'a', assigneeId: null, createdBy: null, createdByName: 'tiago', createdVia: 'agent' });
+    expect(store.card(c.id)).toMatchObject({ title: 'a', assigneeId: null, assigneeName: null, createdBy: null, createdByName: 'tiago', createdVia: 'agent' });
     expect(store.events(c.id)[0]).toMatchObject({ kind: 'created', actorId: null, actorName: 'tiago', via: 'agent' });
   });
 });

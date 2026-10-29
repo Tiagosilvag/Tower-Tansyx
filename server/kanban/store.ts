@@ -50,6 +50,7 @@ interface CardRow {
   description: string;
   priority: Priority;
   assignee_id: number | null;
+  assignee_name: string | null;
   project_id: number | null;
   created_by: number | null;
   created_by_name: string | null;
@@ -68,7 +69,7 @@ interface EventRow {
   detail: string;
 }
 
-const CARD_COLS = 'id, board_id, column_key, position, title, description, priority, assignee_id, project_id, created_by, created_by_name, created_via, created_at, updated_at';
+const CARD_COLS = 'id, board_id, column_key, position, title, description, priority, assignee_id, (SELECT username FROM users WHERE users.id = cards.assignee_id) AS assignee_name, project_id, created_by, created_by_name, created_via, created_at, updated_at';
 
 const toCard = (r: CardRow): KanbanCard => ({
   id: r.id,
@@ -79,6 +80,7 @@ const toCard = (r: CardRow): KanbanCard => ({
   description: r.description,
   priority: r.priority,
   assigneeId: r.assignee_id,
+  assigneeName: r.assignee_name,
   projectId: r.project_id,
   createdBy: r.created_by,
   createdByName: r.created_by_name,

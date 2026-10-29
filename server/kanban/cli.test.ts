@@ -65,7 +65,7 @@ describe('resolveBoard', () => {
 });
 
 const card = (over: Partial<KanbanCard> = {}): KanbanCard => ({
-  id: 12, boardId: 1, column: 'fazendo', position: 0, title: 'Revisão final', description: 'detalhe', priority: 'alta', assigneeId: null, projectId: null,
+  id: 12, boardId: 1, column: 'fazendo', position: 0, title: 'Revisão final', description: 'detalhe', priority: 'alta', assigneeId: null, assigneeName: null, projectId: null,
   createdBy: 1, createdByName: 'tiago', createdVia: 'agent', createdAt: 1, updatedAt: 1, ...over,
 });
 
