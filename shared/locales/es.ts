@@ -3350,4 +3350,8 @@ export const ES: Readonly<Record<string, string>> = {
   "não consegui criar a pasta {0}: {1}": "no pude crear la carpeta {0}: {1}",
   "a pasta foi criada, mas o git não rodou (ele está instalado?): rode `git init` nela depois": "la carpeta se creó, pero git no se ejecutó (¿está instalado?): ejecuta `git init` en ella después",
   "criar projeto novo só funciona fora do Docker (o servidor precisa enxergar as pastas do computador)": "crear un proyecto nuevo solo funciona fuera de Docker (el servidor debe ver las carpetas del equipo)",
+  "o nome de usuário deve ter de 1 a 32 caracteres: letras, números, ponto, hífen ou sublinhado": "el nombre de usuario debe tener de 1 a 32 caracteres: letras, números, punto, guion o guion bajo",
+  "já existe um usuário com esse nome": "ya existe un usuario con ese nombre",
+  "usuário não encontrado": "usuario no encontrado",
+  "não dá para remover o único usuário": "no se puede eliminar al único usuario",
 };
