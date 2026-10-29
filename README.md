@@ -312,7 +312,7 @@ npm run users:list
 ```
 
 - **Password:** asked twice, hidden, in the terminal; with `--password-stdin` it is read from one line of stdin
-  instead. At least 10 characters.
+  instead. At least 8 characters.
 - **Admin screen:** once logged in, the menu on your user chip › **Users** lists, adds, edits and removes users and
   changes passwords. Everyone has the same access: there are no roles.
 - **Lockout:** counted per **(user, client IP)**: 5 wrong passwords in a row lock that user **from that IP** for 15

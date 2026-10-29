@@ -111,7 +111,7 @@ describe('POST /api/users', () => {
     const token = tokenDe(ana.id);
     const base = { username: 'caio', password: 'senha-do-caio-1' };
     expect((await call('POST', '/api/users', { token, body: { ...base, username: 'ANA' } })).status).toBe(409);
-    expect((await call('POST', '/api/users', { token, body: { ...base, password: '123456789' } })).status).toBe(400);
+    expect((await call('POST', '/api/users', { token, body: { ...base, password: '1234567' } })).status).toBe(400);
     expect((await call('POST', '/api/users', { token, body: { ...base, password: 12345678901 } })).status).toBe(400);
     expect((await call('POST', '/api/users', { token, body: { ...base, username: '../x' } })).status).toBe(400);
     expect((await call('POST', '/api/users', { token, body: { ...base, color: 'red' } })).status).toBe(400);

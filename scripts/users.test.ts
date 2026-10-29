@@ -66,10 +66,10 @@ describe('runUsers', () => {
     expect(t.store.count()).toBe(1);
   });
 
-  it('senha de 9 caracteres é recusada e nada é criado', async () => {
-    const t = montar('123456789', '123456789');
+  it('senha de 7 caracteres é recusada e nada é criado', async () => {
+    const t = montar('1234567', '1234567');
     expect(await t.rodar('add', 'tiago')).not.toBe(0);
-    expect(t.linhas.join('\n')).toMatch(/use pelo menos 10 caracteres/);
+    expect(t.linhas.join('\n')).toMatch(/use pelo menos 8 caracteres/);
     expect(t.store.count()).toBe(0);
   });
 

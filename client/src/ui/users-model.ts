@@ -4,7 +4,7 @@ import type { UserInfo } from '../../../shared/types';
 import { relativeTime } from './format';
 
 /** Mesmo mínimo do servidor (server/users/http.ts). */
-export const MIN_PASSWORD = 10;
+export const MIN_PASSWORD = 8;
 
 /** Letra do avatar: a primeira do nome, maiúscula; "?" quando vazio. */
 export function initialOf(displayName: string): string {

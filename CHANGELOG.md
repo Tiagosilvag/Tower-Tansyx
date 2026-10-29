@@ -37,7 +37,7 @@ do meio (0.**3**.0).
 - **Login com usuários.** A porta remota pode conferir um banco de usuários em vez do login único: ligue com
   `HABBLAUD_REMOTE_USERS=1` (sem a variável, o modo de usuário único segue exatamente como antes; ligada e sem nenhum
   usuário no banco, a porta não sobe). Os usuários nascem por `npm run users:add -- <usuario> [--name "Nome"]
-  [--color #rrggbb]` (a senha é pedida duas vezes, escondida, ou lida com `--password-stdin`; mínimo de 10 caracteres),
+  [--color #rrggbb]` (a senha é pedida duas vezes, escondida, ou lida com `--password-stdin`; mínimo de 8 caracteres),
   e `users:passwd` e `users:list` completam o conjunto. Depois de entrar, o menu do chip de usuário › **Usuários**
   abre a tela de administração: criar, editar, remover e trocar senhas. Todos têm o mesmo acesso. O freio é por usuário
   e IP: 5 senhas erradas seguidas bloqueiam aquele usuário, vindo daquele IP, por 15 minutos (de outro IP ele segue

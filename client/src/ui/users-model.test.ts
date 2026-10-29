@@ -17,7 +17,7 @@ describe('initialOf', () => {
 
 describe('passwordProblem', () => {
   it('curta demais', () => {
-    expect(passwordProblem('123456789', '123456789')).toBe('A senha precisa ter pelo menos 10 caracteres.');
+    expect(passwordProblem('1234567', '1234567')).toBe('A senha precisa ter pelo menos 8 caracteres.');
   });
   it('diferentes', () => {
     expect(passwordProblem('abcdefghij', 'abcdefghik')).toBe('As senhas não são iguais.');

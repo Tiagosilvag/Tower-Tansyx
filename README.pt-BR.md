@@ -310,7 +310,7 @@ npm run users:list
 ```
 
 - **Senha:** pedida duas vezes, escondida, no terminal; com `--password-stdin` ela é lida de uma linha da entrada
-  padrão. Mínimo de 10 caracteres.
+  padrão. Mínimo de 8 caracteres.
 - **Tela de administração:** depois de entrar, o menu do seu chip de usuário › **Usuários** lista, cria, edita e remove
   usuários e troca senhas. Todos têm o mesmo acesso: não há papéis.
 - **Bloqueio:** contado por **(usuário, IP do cliente)**: 5 senhas erradas seguidas bloqueiam aquele usuário **vindo

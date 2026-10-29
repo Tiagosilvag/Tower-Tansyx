@@ -21,7 +21,7 @@ import { userOf } from './identity';
 import { usernameProblem, UserError, type User, type UserStore } from './store';
 
 /** Mesmo mínimo do `npm run remote:setup`. */
-export const MIN_PASSWORD = 10;
+export const MIN_PASSWORD = 8;
 
 // exportados para o npm run users:add validar igual à API
 export const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
