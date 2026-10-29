@@ -26,6 +26,14 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **O chat mostra as imagens que o agente cita ou grava.** Quando uma resposta traz o caminho de uma imagem
+  (`![](/caminho/tela.png)` ou o caminho solto) ou o agente grava um `.png`, `.jpg`, `.gif`, `.webp` ou `.svg` com
+  o Write, a miniatura aparece na própria mensagem e um toque abre a imagem grande. O navegador só recebe um id
+  (`/api/chat-image/:id`), nunca o caminho, e arquivos com cara de segredo não saem.
+- **O chat mostra a página que o agente publica e os links de artefato.** Quando o agente publica um mockup com a
+  ferramenta Artifact, a mensagem ganha "Ver a prévia": um quadro isolado (sem scripts, só HTML e CSS) com a
+  página, ou "Abrir em outra aba". Links `claude.ai/artifact/…` na resposta viram o cartão "Abrir artefato".
+
 - **O chat mostra a pergunta do agente e a sua resposta em todos os filtros.** Com "Sem ferramentas" ou "Só prompts", o
   `AskUserQuestion` (a pergunta com a resposta que você deu) sumia junto com as outras ferramentas e parecia que a
   resposta tinha sido ignorada; agora ele fica visível, como uma conversa com você.

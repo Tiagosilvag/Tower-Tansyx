@@ -13,6 +13,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { demoTerminalEntries } from '../../shared/demo/terminal';
 import type { Activity, AgentInfo, TerminalEntry, TerminalInit } from '../../shared/types';
+import { annotateImages } from '../deliveries/chatimages';
 import { errMsg, log } from '../log';
 import type { Office } from '../model/office';
 import { FileTail } from '../sources/tail';
@@ -87,7 +88,7 @@ function parseInto(parser: TerminalParser, lines: readonly string[], out: Termin
       log.warnOnce(`terminal-parse:${errMsg(err)}`, tr('Terminal: linha do transcript ignorada ({0}).', [errMsg(err)]));
       continue;
     }
-    for (const e of entries) out.push(e);
+    for (const e of entries) out.push(annotateImages(e));
   }
 }
 

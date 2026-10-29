@@ -11482,3 +11482,20 @@ html.is-replay #world {
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/* Imagens que o agente citou ou gravou, no chat. */
+.ui-term__imgs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ui-term__img-btn { padding: 0; border: 1px solid var(--line, rgba(128, 128, 128, 0.35)); border-radius: 6px; background: transparent; cursor: zoom-in; overflow: hidden; line-height: 0; }
+.ui-term__img { display: block; max-width: min(100%, 320px); max-height: 220px; object-fit: contain; }
+.ui-term__lightbox { max-width: 94vw; max-height: 94vh; padding: 8px; border: 0; border-radius: 8px; background: rgba(0, 0, 0, 0.85); text-align: center; }
+.ui-term__lightbox::backdrop { background: rgba(0, 0, 0, 0.6); }
+.ui-term__lightbox-img { display: block; max-width: 90vw; max-height: 84vh; margin: 0 auto; }
+.ui-term__lightbox-open { display: inline-block; margin-top: 6px; color: #fff; font-size: 12px; }
+
+/* Páginas publicadas pelo agente (Artifact) e links de artefato, no chat. */
+.ui-term__previews, .ui-term__artifacts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ui-term__artifacts { flex-direction: row; flex-wrap: wrap; }
+.ui-term__preview { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.ui-term__preview-btn, .ui-term__artifact { padding: 4px 10px; border: 1px solid var(--line, rgba(128, 128, 128, 0.35)); border-radius: 6px; background: transparent; color: inherit; font: inherit; font-size: 12px; cursor: pointer; text-decoration: none; }
+.ui-term__preview-open { font-size: 12px; }
+.ui-term__preview-frame { flex-basis: 100%; width: 100%; height: min(70vh, 520px); border: 1px solid var(--line, rgba(128, 128, 128, 0.35)); border-radius: 6px; background: #fff; }

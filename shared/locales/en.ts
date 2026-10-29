@@ -2407,6 +2407,12 @@ export const EN: Readonly<Record<string, string>> = {
   "as entregas só abrem pelo próprio computador (http://localhost)": "deliveries only open from the computer running Habblaud (http://localhost)",
   "anexo desconhecido: atualize a lista de entregas": "unknown attachment: refresh the deliveries list",
   "arquivos desligados": "files disabled",
+  "Ver a prévia: {0}": "View the preview: {0}",
+  "Abrir artefato": "Open artifact",
+  "Ver a imagem {0}": "View the image {0}",
+  "Abrir em outra aba": "Open in another tab",
+  "as imagens do chat só abrem pelo próprio computador (http://localhost)": "chat images only open from the computer itself (http://localhost)",
+  "imagem desconhecida: reabra o chat": "unknown image: reopen the chat",
   "só o auxiliar do próprio computador": "only the helper on the computer running Habblaud",
   "esperado {id, name}": "expected {id, name}",
 

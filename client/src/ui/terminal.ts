@@ -8,7 +8,7 @@
 // O modelo (deduplicação, junção ferramenta -> resultado, limite de entradas, prévias recolhidas e rodapé) é puro e
 // testado em ui/terminal.test.ts; a montagem usa só textContent (o markdown das respostas vem de ui/markdown.ts).
 // Sessão do Codex: selo "Codex" no cabeçalho e um spinner neutro no rodapé (o ✻ é do Claude Code).
-import type { AgentInfo, Provider, RecentSession, TerminalEntry, TerminalInit } from '../../../shared/types';
+import type { AgentInfo, Provider, RecentSession, TerminalEntry, TerminalImage, TerminalInit } from '../../../shared/types';
 import { MessageComposer } from './composer';
 import type { UiComponent, UiContext, WindowOptions } from './context';
 import { askQuestionNodes, PermissionCard } from './permission';
@@ -478,6 +478,77 @@ function expander(label: string, cls: string, detail: string, detailCls: string)
   return wrap;
 }
 
+const IMAGE_ID = /^[a-f0-9]{8,64}$/;
+
+/** Miniaturas das imagens que o agente citou ou gravou; um toque abre a imagem grande. */
+function imageStrip(images: TerminalImage[] | undefined): HTMLElement | null {
+  const ok = (images ?? []).filter((i) => i && IMAGE_ID.test(i.id) && typeof i.name === 'string').slice(0, 6);
+  if (!ok.length) return null;
+  const strip = h('div', { class: 'ui-term__imgs' });
+  for (const i of ok) {
+    const url = `/api/chat-image/${i.id}`;
+    const img = h('img', { class: 'ui-term__img', attrs: { src: url, alt: i.name, loading: 'lazy', decoding: 'async' } });
+    const btn = h('button', { class: 'ui-term__img-btn', attrs: { type: 'button', title: i.name, 'aria-label': tr('Ver a imagem {0}', [i.name]) } }, img);
+    btn.addEventListener('click', () => openImage(url, i.name));
+    // Arquivo que sumiu ou mudou de lugar: tira a miniatura quebrada.
+    img.addEventListener('error', () => btn.remove());
+    strip.append(btn);
+  }
+  return strip;
+}
+
+/** Páginas HTML que o agente publicou (Artifact): um quadro isolado (sem scripts), carregado só ao abrir. */
+function previewCards(pages: TerminalImage[] | undefined): HTMLElement | null {
+  const ok = (pages ?? []).filter((i) => i && IMAGE_ID.test(i.id) && typeof i.name === 'string').slice(0, 3);
+  if (!ok.length) return null;
+  const wrap = h('div', { class: 'ui-term__previews' });
+  for (const p of ok) {
+    const url = `/api/chat-image/${p.id}`;
+    const btn = h('button', { class: 'ui-term__preview-btn', text: tr('Ver a prévia: {0}', [p.name]), attrs: { type: 'button', 'aria-expanded': 'false' } });
+    const open = h('a', { class: 'ui-term__preview-open', text: tr('Abrir em outra aba'), attrs: { href: url, target: '_blank', rel: 'noopener' } });
+    const box = h('div', { class: 'ui-term__preview' }, btn, open);
+    let frame: HTMLIFrameElement | undefined;
+    btn.addEventListener('click', () => {
+      if (frame) {
+        frame.remove();
+        frame = undefined;
+        btn.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      frame = h('iframe', { class: 'ui-term__preview-frame', attrs: { src: url, title: p.name, sandbox: '', loading: 'lazy' } });
+      box.append(frame);
+      btn.setAttribute('aria-expanded', 'true');
+    });
+    wrap.append(box);
+  }
+  return wrap;
+}
+
+const ARTIFACT_URL = /https:\/\/claude\.ai\/(?:code\/)?artifact\/[A-Za-z0-9-]+/g;
+
+/** Cartão "Abrir artefato" para cada link de artefato do claude.ai na resposta (a página é externa: abre em outra aba). */
+function artifactLinks(text: string): HTMLElement | null {
+  const urls = [...new Set(text.match(ARTIFACT_URL) ?? [])].slice(0, 3);
+  if (!urls.length) return null;
+  const wrap = h('div', { class: 'ui-term__artifacts' });
+  for (const u of urls) wrap.append(h('a', { class: 'ui-term__artifact', text: `${tr('Abrir artefato')} ↗`, attrs: { href: u, target: '_blank', rel: 'noopener noreferrer', title: u } }));
+  return wrap;
+}
+
+let imageDialog: HTMLDialogElement | undefined;
+
+function openImage(url: string, name: string): void {
+  if (!imageDialog) {
+    const d = h('dialog', { class: 'ui-term__lightbox' });
+    d.addEventListener('click', () => d.close());
+    document.body.append(d);
+    imageDialog = d;
+  }
+  const img = h('img', { class: 'ui-term__lightbox-img', attrs: { src: url, alt: name } });
+  imageDialog.replaceChildren(img, h('a', { class: 'ui-term__lightbox-open', text: tr('Abrir em outra aba'), attrs: { href: url, target: '_blank', rel: 'noopener' } }));
+  if (!imageDialog.open) imageDialog.showModal();
+}
+
 function mark(text: string, extra = ''): HTMLElement {
   return h('span', { class: `ui-term__mark ${extra}`.trim(), text, attrs: { 'aria-hidden': 'true' } });
 }
@@ -569,7 +640,7 @@ function toolRow(t: ToolEntry, now: number, copy: Copier): ToolRefs {
   const what = t.inputKind === 'command' || t.tool === 'Bash' ? tr('comando') : input ? tr('entrada da ferramenta') : tr('ferramenta');
   const call = h('div', { class: 'ui-term__call' }, title, input, copy(copyTextOf(t), what));
   const slot = h('div', { class: 'ui-term__slot' });
-  const el = row('tool', t.at, now, mark(DOT, 'ui-term__dot'), h('div', { class: 'ui-term__col' }, call, slot));
+  const el = row('tool', t.at, now, mark(DOT, 'ui-term__dot'), h('div', { class: 'ui-term__col' }, call, imageStrip(t.images), previewCards(t.previews), slot));
   el.classList.add('is-pending');
   return { row: el, slot };
 }
@@ -592,6 +663,10 @@ function entryRow(e: PlainEntry, now: number, copy: Copier): HTMLElement {
     case 'assistant': {
       const body = h('div', { class: 'ui-term__col ui-md' });
       body.append(renderMarkdown(e.text));
+      const pics = imageStrip(e.images);
+      if (pics) body.append(pics);
+      const links = artifactLinks(e.text);
+      if (links) body.append(links);
       const el = row('assistant', e.at, now, mark(DOT, 'ui-term__dot'), body);
       el.append(copy(copyTextOf(e), tr('resposta')));
       return el;

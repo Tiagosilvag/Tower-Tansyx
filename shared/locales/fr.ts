@@ -2423,6 +2423,12 @@ export const FR: Readonly<Record<string, string>> = {
   "as entregas só abrem pelo próprio computador (http://localhost)": "les livraisons ne s'ouvrent que depuis l'ordinateur lui-même (http://localhost)",
   "anexo desconhecido: atualize a lista de entregas": "pièce jointe inconnue : actualisez la liste des livraisons",
   "arquivos desligados": "fichiers désactivés",
+  "Ver a prévia: {0}": "Voir l'aperçu : {0}",
+  "Abrir artefato": "Ouvrir l'artefact",
+  "Ver a imagem {0}": "Voir l'image {0}",
+  "Abrir em outra aba": "Ouvrir dans un autre onglet",
+  "as imagens do chat só abrem pelo próprio computador (http://localhost)": "les images du chat ne s'ouvrent que depuis l'ordinateur lui-même (http://localhost)",
+  "imagem desconhecida: reabra o chat": "image inconnue : rouvrez le chat",
   "só o auxiliar do próprio computador": "uniquement l'auxiliaire de l'ordinateur lui-même",
   "esperado {id, name}": "attendu {id, name}",
 

@@ -487,18 +487,25 @@ export type TerminalInputKind = 'command' | 'diff' | 'json' | 'text';
  * Entradas só são acrescentadas (nunca editadas): o resultado de uma ferramenta chega depois, numa
  * entrada 'result' que aponta para a 'tool' pelo `toolUseId`.
  */
+export interface TerminalImage {
+  /** Id opaco para GET /api/chat-image/:id (nunca o caminho). */
+  id: string;
+  name: string;
+}
+
 export type TerminalEntry =
   /** Prompt do usuário ou comando de barra (ex.: "/model"). */
   | { kind: 'user'; id: string; at: number; text: string }
   /** Texto da resposta do agente (markdown). */
-  | { kind: 'assistant'; id: string; at: number; text: string }
+  | { kind: 'assistant'; id: string; at: number; text: string; images?: TerminalImage[] }
   /** Bloco de raciocínio; `text` ausente quando o transcript só guarda a assinatura. */
   | { kind: 'thinking'; id: string; at: number; text?: string }
   /**
    * Chamada de ferramenta. `id` = id do tool_use. `title` no estilo do Claude Code: "Bash(npm test)",
-   * "Read(server/index.ts)". `input` = argumentos relevantes (comando, diff...), quando houver.
+   * "Read(server/index.ts)". `previews` = páginas HTML publicadas (Artifact), mostradas num quadro isolado. `file` =
+   * caminho do arquivo gravado: só o servidor usa (chatimages.ts) e ele sai antes de ir ao navegador. `input` = argumentos relevantes (comando, diff...), quando houver.
    */
-  | { kind: 'tool'; id: string; at: number; tool: string; title: string; input?: string; inputKind?: TerminalInputKind }
+  | { kind: 'tool'; id: string; at: number; tool: string; title: string; input?: string; inputKind?: TerminalInputKind; images?: TerminalImage[]; previews?: TerminalImage[]; file?: string }
   /** Resultado de uma ferramenta. `truncated` = o texto foi cortado (resultado longo demais). */
   | { kind: 'result'; id: string; at: number; toolUseId: string; text: string; error?: boolean; truncated?: boolean }
   /** Evento da sessão: compactação, interrupção, resultado em segundo plano, erro da API... */

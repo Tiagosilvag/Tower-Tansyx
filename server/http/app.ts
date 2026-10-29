@@ -21,6 +21,7 @@ import { ATTACHMENT_BODY_MAX, parseAttachment, type AttachmentStore } from '../s
 import type { SpawnFolder } from '../spawn/folders';
 import { ProjectError, type ProjectCreator } from '../spawn/project';
 import { AUDIO_BODY_MAX, type DictationService } from '../dictation/dictation';
+import { chatImage } from '../deliveries/chatimages';
 import type { DeliveryIndex } from '../deliveries/deliveries';
 import type { FileFetcher } from '../deliveries/fetcher';
 import { HOST_WAIT_MS } from '../host-wait';
@@ -581,6 +582,20 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
         if (info) sendJson(res, 200, info);
         else sendJson(res, 404, { error: tr('ditado desconhecido') });
       } else methodNotAllowed(res, path === '/api/dictation' ? 'GET, POST' : 'GET');
+      return true;
+    }
+    if (path.startsWith('/api/chat-image/')) {
+      // Imagens do chat: o id vem de uma entrada do terminal, então vale a mesma trava (acesso local).
+      const img = chatImage(decodeURIComponent(path.slice('/api/chat-image/'.length)));
+      if (!isRead) methodNotAllowed(res, 'GET');
+      else if (!trusted(req, 'terminal')) sendJson(res, 403, { error: denied(req, tr('as imagens do chat só abrem pelo próprio computador (http://localhost)')) });
+      else if (!img) sendJson(res, 404, { error: tr('imagem desconhecida: reabra o chat') });
+      else if (!deps.files) sendJson(res, 404, { error: tr('arquivos desligados') });
+      else
+        deps.files.get(img.path).then(
+          (r) => ('data' in r ? sendFile(res, r.data, img.type, img.path.split('/').pop() ?? 'imagem') : sendJson(res, r.status, { error: r.error })),
+          (err) => fail(res, err),
+        );
       return true;
     }
     if (path === '/api/deliveries' || path.startsWith('/api/deliveries/')) {

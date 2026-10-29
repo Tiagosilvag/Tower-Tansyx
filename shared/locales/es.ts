@@ -2407,6 +2407,12 @@ export const ES: Readonly<Record<string, string>> = {
   "as entregas só abrem pelo próprio computador (http://localhost)": "las entregas solo se abren desdel propio equipo (http://localhost)",
   "anexo desconhecido: atualize a lista de entregas": "adjunto desconocido: actualiza la lista de entregas",
   "arquivos desligados": "archivos desactivados",
+  "Ver a prévia: {0}": "Ver la vista previa: {0}",
+  "Abrir artefato": "Abrir artefacto",
+  "Ver a imagem {0}": "Ver la imagen {0}",
+  "Abrir em outra aba": "Abrir en otra pestaña",
+  "as imagens do chat só abrem pelo próprio computador (http://localhost)": "las imágenes del chat solo se abren desde el propio ordenador (http://localhost)",
+  "imagem desconhecida: reabra o chat": "imagen desconocida: vuelve a abrir el chat",
   "só o auxiliar do próprio computador": "solo el auxiliar del propio equipo",
   "esperado {id, name}": "se esperaba {id, name}",
 

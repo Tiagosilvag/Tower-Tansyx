@@ -698,6 +698,9 @@ class Parser implements TerminalParser {
             e.input = view.input;
             e.inputKind = view.inputKind;
           }
+          // Quem grava imagens e páginas: o chat mostra o resultado (http/terminal.ts → chatimages.ts).
+          const file = name === 'Write' || name === 'Artifact' ? str(rec(b.input)?.file_path) : undefined;
+          if (file) e.file = file;
           this.emit(e);
           return;
         }
