@@ -1567,7 +1567,7 @@ export const FR: Readonly<Record<string, string>> = {
   "Anexar arquivos": "Joindre des fichiers",
   "anexou {0}": "a joint {0}",
   "Arquivos anexados": "Fichiers joints",
-  "Arraste arquivos para cá ou use o botão (até 15 MB cada).": "Glissez des fichiers ici ou utilisez le bouton (15 Mo maximum chacun).",
+  "Arraste arquivos, cole um print com Ctrl+V ou use o botão (até 15 MB cada).": "Glissez des fichiers, collez une capture avec Ctrl+V ou utilisez le bouton (15 Mo maximum chacun).",
   "Enviando {0}…": "Envoi de {0}…",
   "não deu para gravar o arquivo no disco": "impossible d’écrire le fichier sur le disque",
   "o arquivo sumiu do disco": "le fichier a disparu du disque",

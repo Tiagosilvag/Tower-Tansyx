@@ -104,7 +104,7 @@ no disco = só o número; o nome original fica no banco). Rotas em `server/kanba
 `GET|DELETE /api/kanban/files/:id`. Envio em JSON base64 (limite de 15 MB, 20 por cartão; `readJson` recebe o teto maior só nessa rota).
 Entrega (`server/kanban/files.ts`, `delivery`): só imagem (png/jpg/gif/webp), PDF e texto (`txt md csv log json sql`) abrem
 `inline`; todo o resto vai como `attachment` + `application/octet-stream` + `nosniff` (HTML e SVG nunca rodam na origem).
-Apagar cartão ou projeto apaga a pasta. O agente (`tower-kanban`) ainda não anexa arquivos.
+O cartão aberto também aceita Ctrl+V (evento `paste` do diálogo). Apagar cartão ou projeto apaga a pasta. O agente (`tower-kanban`) ainda não anexa arquivos.
 
 _Agentes:_ o comando é `tower-kanban` (`scripts/tower-kanban`, symlink em `/usr/local/bin`), que funciona de qualquer pasta. O bloco
 que ensina o agente a usá-lo está no `CLAUDE.md` do usuário de cada conta do Claude Code (`/root/.claude/CLAUDE.md`,

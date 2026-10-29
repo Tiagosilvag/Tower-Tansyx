@@ -7,7 +7,7 @@ import type { UserInfo } from '../../../shared/types';
 import { kanbanApi, type CardPatch } from '../net/kanban';
 import { h, iconButton, setText } from './dom';
 import { ICONS } from './icons';
-import { COLUMN_LABEL, describeEvent, PRIORITY_LABEL } from './kanban-model';
+import { COLUMN_LABEL, describeEvent, PRIORITY_LABEL, pastedFileName } from './kanban-model';
 import { usersApi } from './users';
 
 export interface CardHost {
@@ -15,6 +15,11 @@ export interface CardHost {
   /** O cartão mudou de lugar ou de conteúdo: o quadro recarrega. */
   changed(): void;
 }
+
+const named = (file: File): File => {
+  const name = pastedFileName(file.name, file.type, new Date());
+  return name === file.name ? file : new File([file], name, { type: file.type });
+};
 
 const sizeLabel = (n: number): string => (n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
 
@@ -43,6 +48,14 @@ export class CardDialog {
       if (e.target === this.el) this.close();
     });
     this.el.addEventListener('keydown', (e) => e.stopPropagation());
+    // Ctrl+V com um print (ou arquivos copiados) anexa ao cartão aberto; texto colado segue normal nos campos.
+    this.el.addEventListener('paste', (e) => {
+      const id = this.card?.id;
+      const files = Array.from(e.clipboardData?.files ?? []);
+      if (id === undefined || !files.length) return;
+      e.preventDefault();
+      void this.upload(id, files.map(named));
+    });
     this.el.addEventListener('close', () => {
       this.card = null;
       if (this.opener?.isConnected) this.opener.focus({ preventScroll: true });
@@ -193,7 +206,7 @@ export class CardDialog {
         );
       }),
     );
-    const box = h('div', { class: 'ui-kbc__attach' }, h('h3', { class: 'ui-kbc__h', text: tr('Anexos') }), list, h('div', { class: 'ui-kbc__attach-bar' }, add, h('small', { text: tr('Arraste arquivos para cá ou use o botão (até 15 MB cada).') })), picker);
+    const box = h('div', { class: 'ui-kbc__attach' }, h('h3', { class: 'ui-kbc__h', text: tr('Anexos') }), list, h('div', { class: 'ui-kbc__attach-bar' }, add, h('small', { text: tr('Arraste arquivos, cole um print com Ctrl+V ou use o botão (até 15 MB cada).') })), picker);
     if (!this.files.length) list.hidden = true;
     box.addEventListener('dragover', (e) => {
       if (e.dataTransfer?.types.includes('Files')) e.preventDefault();

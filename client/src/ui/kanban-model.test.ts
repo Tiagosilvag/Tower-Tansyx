@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { KanbanBoard, KanbanCard } from '../../../shared/kanban';
 import type { KanbanEvent } from '../../../shared/kanban';
-import { applyMove, describeEvent, dropTarget, projectSuggestions, roomProjects, filterBoards, filterCards, groupByColumn, loadShelf, saveShelf, SHELF_KEY } from './kanban-model';
+import { applyMove, describeEvent, dropTarget, pastedFileName, projectSuggestions, roomProjects, filterBoards, filterCards, groupByColumn, loadShelf, saveShelf, SHELF_KEY } from './kanban-model';
 
 const card = (id: number, column: KanbanCard['column'], position: number, over: Partial<KanbanCard> = {}): KanbanCard => ({
   id, boardId: 1, column, position, title: `c${id}`, description: '', priority: 'media', assigneeId: null, assigneeName: null, projectId: null,
@@ -182,5 +182,17 @@ describe('roomProjects', () => {
       { name: 'api-pagamentos', path: '/home/ana/api', lastAt: 0 },
     ]);
     expect(roomProjects(null)).toEqual([]);
+  });
+});
+
+describe('pastedFileName', () => {
+  const t = new Date(2026, 9, 29, 16, 5, 9);
+  it('print colado (image.png ou sem nome) ganha data e hora no nome', () => {
+    expect(pastedFileName('image.png', 'image/png', t)).toBe('print-2026-10-29-160509.png');
+    expect(pastedFileName('', 'image/jpeg', t)).toBe('print-2026-10-29-160509.jpg');
+    expect(pastedFileName('', '', t)).toBe('print-2026-10-29-160509.png');
+  });
+  it('arquivo com nome de verdade fica como está', () => {
+    expect(pastedFileName('relatório.pdf', 'application/pdf', t)).toBe('relatório.pdf');
   });
 });

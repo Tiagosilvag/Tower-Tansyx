@@ -1696,7 +1696,7 @@ export const ES: Readonly<Record<string, string>> = {
   "Anexar arquivos": "Adjuntar archivos",
   "anexou {0}": "adjuntó {0}",
   "Arquivos anexados": "Archivos adjuntos",
-  "Arraste arquivos para cá ou use o botão (até 15 MB cada).": "Arrastra archivos aquí o usa el botón (hasta 15 MB cada uno).",
+  "Arraste arquivos, cole um print com Ctrl+V ou use o botão (até 15 MB cada).": "Arrastra archivos, pega una captura con Ctrl+V o usa el botón (hasta 15 MB cada uno).",
   "Enviando {0}…": "Enviando {0}…",
   "não deu para gravar o arquivo no disco": "no se pudo escribir el archivo en el disco",
   "o arquivo sumiu do disco": "el archivo desapareció del disco",

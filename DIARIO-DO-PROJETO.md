@@ -13,13 +13,19 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Kanban: colar print com Ctrl+V no cartão
+- **Pedido:** "quero poder dar CTRL+V e colar um print, igual faço aqui no chat".
+- **Feito:** o cartão aberto trata o evento de colar: imagem ou arquivos na área de transferência viram anexo (print ganha o
+  nome `print-AAAA-MM-DD-HHMMSS.png`); texto colado continua normal nos campos. `pastedFileName` em `kanban-model.ts`, testado.
+- **Produção:** pendente de deploy.
+
 ### Kanban: anexar arquivos nos cartões
 - **Pedido:** "quero poder anexar arquivos nos cards do kanban".
 - **Feito (defaults que escolhi, ver KI §6):** até 20 arquivos de 15 MB por cartão; botão e arrastar; lista com miniatura das
   imagens, tamanho, quem enviou; Remover; "N anexos" no cartão do quadro; histórico registra anexou/removeu. Imagem, PDF e
   texto abrem na tela, o resto só baixa. Disco: `kanban-files/<cartão>/<id>`; apagar o cartão apaga a pasta.
 - **Em aberto:** o `tower-kanban` (agentes) não anexa arquivos; não há limite do total em disco.
-- **Produção:** pendente de deploy (migração nova `card_files` roda sozinha na subida).
+- **Produção:** no ar desde `8108042`.
 
 ### Agentes de qualquer projeto enxergam o Kanban
 - **Pedido:** o luciano perguntou "no Kanban do Tower Tansyx?" a um agente de outro projeto, e ele respondeu que não tinha

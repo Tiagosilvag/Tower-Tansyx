@@ -47,7 +47,8 @@ do meio (0.**3**.0).
   canto da tela os quadros por segundo e as linhas do chat, para comparar. Vale só para o seu navegador.
 - **Dá para anexar arquivos nos cartões do Kanban.** No cartão aberto, a seção Anexos lista os arquivos (miniatura das
   imagens, tamanho, quem enviou e quando), com o botão Anexar arquivo (ou arrastando para o cartão) e Remover. Até 20
-  arquivos de 15 MB por cartão. Imagens, PDF e texto abrem na tela; o resto (HTML, SVG, executáveis...) só baixa, para nunca
+  arquivos de 15 MB por cartão. Ctrl+V com o cartão aberto cola um print (ou arquivos copiados) como anexo, com a data e a
+  hora no nome. Imagens, PDF e texto abrem na tela; o resto (HTML, SVG, executáveis...) só baixa, para nunca
   rodar na página. O quadro mostra "N anexos" no cartão e o histórico registra quem anexou e quem removeu. Os arquivos ficam
   em `kanban-files/` na pasta de dados do Habblaud e somem junto com o cartão.
 - **O cartão do Kanban mostra o responsável.** Um avatar na cor da pessoa e o nome de exibição aparecem no cartão; sem

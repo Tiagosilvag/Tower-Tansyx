@@ -64,6 +64,17 @@ const FIELD_LABEL: Record<string, string> = { title: tr('o título'), descriptio
 const isColumn = (v: string | undefined): v is Column => (COLUMNS as readonly string[]).includes(v ?? '');
 
 /** Uma linha do histórico em palavras. `quote` é o texto do comentário, mostrado à parte. */
+/**
+ * Print colado vem sempre como "image.png" (ou sem nome): ganha a data e a hora no nome, para os anexos não ficarem todos
+ * iguais. Arquivo com nome de verdade segue como está.
+ */
+export function pastedFileName(name: string, type: string, now: Date): string {
+  if (name && !/^image\.\w+$/i.test(name)) return name;
+  const p = (n: number) => String(n).padStart(2, '0');
+  const ext = type.split('/')[1]?.replace('jpeg', 'jpg').replace(/[^a-z0-9]/gi, '') || 'png';
+  return `print-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}.${ext}`;
+}
+
 export function describeEvent(e: KanbanEvent): { text: string; quote?: string } {
   const [from, to] = e.detail.split('→');
   switch (e.kind) {
