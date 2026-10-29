@@ -3,6 +3,8 @@ import type { TerminalEntry } from '../../../shared/types';
 import { TerminalLog, type TerminalItem } from './terminal';
 import {
   copyTextOf,
+  DEFAULT_TERMINAL_FILTER,
+  TERMINAL_FILTERS,
   finalAnswerKeys,
   findMatches,
   foldQuery,
@@ -149,5 +151,12 @@ describe('itemVisible com imagem ou página', () => {
     const plain: TerminalItem = { type: 'tool', key: 'tool:p', tool: { kind: 'tool', id: 'p', at: 1, tool: 'Bash', title: 'Bash(ls)' } };
     for (const f of ['all', 'prompts', 'noTools'] as const) expect(itemVisible(media, f, new Set())).toBe(true);
     expect(itemVisible(plain, 'noTools', new Set())).toBe(false);
+  });
+});
+
+describe('filtro padrão do chat', () => {
+  it('todo chat abre em "Só prompts", que é uma das opções do filtro', () => {
+    expect(DEFAULT_TERMINAL_FILTER).toBe('prompts');
+    expect(TERMINAL_FILTERS.map(([v]) => v)).toContain(DEFAULT_TERMINAL_FILTER);
   });
 });

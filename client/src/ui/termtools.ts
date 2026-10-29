@@ -10,6 +10,9 @@ import { tr } from '../../../shared/i18n';
 
 export type TerminalFilter = 'all' | 'prompts' | 'noTools';
 
+/** Filtro com que todo chat abre: só os prompts e as respostas finais ("Tudo" e "Sem ferramentas" ficam a um clique). */
+export const DEFAULT_TERMINAL_FILTER: TerminalFilter = 'prompts';
+
 export const TERMINAL_FILTERS: readonly [TerminalFilter, string, string][] = [
   ['all', tr('Tudo'), tr('Toda a conversa')],
   ['prompts', tr('Só prompts'), tr('Só os seus prompts e as respostas finais do agente')],

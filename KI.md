@@ -97,6 +97,11 @@ Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qu
   `paintPresenceFaces` põe pílulas (avatar + nome na cor da pessoa; "nome digitando…" quando digita; no máximo 2 e "+N") abaixo do nome do agente (`rows.ts`, barra lateral e gaveta).
 - Não bloqueia ninguém: é só aviso. Uma trava de "um escreve por vez" não existe (decisão: aviso primeiro).
 
+## 5aa. Filtro do chat
+
+Todo chat abre em "Só prompts" (`DEFAULT_TERMINAL_FILTER` em `client/src/ui/termtools.ts`); a escolha do usuário vale só enquanto a
+janela está aberta (não é gravada).
+
 ## 5a. Conversa anterior no chat
 
 O `init` do terminal carrega só o fim do transcript (4 MB / 500 entradas) e traz `earlier`: o byte onde começa a linha mais

@@ -13,6 +13,13 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Chat: abrir sempre em "Só prompts"
+- **Pedido:** os chats devem abrir em "Só prompts" por padrão, não em "Tudo".
+- **Feito:** `DEFAULT_TERMINAL_FILTER = 'prompts'` (termtools.ts) e o painel usa esse valor ao criar; teste em `termtools.test.ts`.
+- **Decisão minha:** o padrão vale para toda janela nova; o que o usuário escolhe durante a sessão continua só naquela janela
+  (não é gravado). Se quiser lembrar a última escolha, é um passo a mais.
+- **Produção:** pendente de deploy.
+
 ### Chat: carregar a conversa anterior
 - **Pedido:** "Por que no chat ele não está carregando as conversas anteriores?" (print desta sessão com "Conversa anterior
   não carregada").
@@ -20,7 +27,7 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 - **Feito:** botão "Carregar conversa anterior" (+500 entradas por clique) para agentes e sessões do histórico; ver KI §5a.
   Testes: `server/sources/earlier.test.ts`, rota em `server/http/terminal.test.ts`, `TerminalLog.prepend` em `terminal.test.ts`.
 - **Limite:** o transcript guarda também o que o Claude já resumiu na compactação, então dá para ver o que veio antes dela.
-- **Produção:** pendente de deploy.
+- **Produção:** no ar desde `96759eb`.
 
 ### Kanban: coluna Revisão e padrão de comentário
 - **Pedido:** adicionar uma etapa de revisão no quadro; ao mover um cartão para ela, comentar o porquê; instruir os agentes no

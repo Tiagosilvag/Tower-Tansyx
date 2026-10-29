@@ -45,6 +45,9 @@ do meio (0.**3**.0).
   1×, sem partículas, sem efeitos de data comemorativa e sem a iluminação suave. **Mínimo** soma a isso a pausa do
   escritório com o terminal em tela cheia, no máximo 150 linhas no chat e nenhuma animação. Uma opção mostra no
   canto da tela os quadros por segundo e as linhas do chat, para comparar. Vale só para o seu navegador.
+- **O chat abre em "Só prompts".** Antes todo chat abria em "Tudo", com cada chamada de ferramenta; agora abre só com os
+  prompts e as respostas finais, e "Tudo" e "Sem ferramentas" ficam a um clique. O filtro continua valendo por janela enquanto
+  ela está aberta.
 - **O chat carrega a conversa anterior.** Conversas longas mostravam só o fim (últimas 500 entradas) e o aviso "Conversa
   anterior não carregada". Agora há o botão **Carregar conversa anterior**: cada clique traz mais 500 entradas para o topo, sem
   mexer no ponto em que você está lendo, até o começo da sessão. Vale para agentes ao vivo e para sessões do histórico.

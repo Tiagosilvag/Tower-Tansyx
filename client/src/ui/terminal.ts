@@ -38,6 +38,7 @@ import {
   searchCounter,
   stepMatch,
   TERMINAL_FILTERS,
+  DEFAULT_TERMINAL_FILTER,
   type TerminalFilter,
 } from './termtools';
 import { chosenLabels, parseAskAnswers, parseAskInput, type AskQuestion } from './termask';
@@ -805,7 +806,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   /** Quem mais está com este agente aberto (modo de usuários). */
   private readonly presence: ReturnType<typeof presenceStrip>;
 
-  private filter: TerminalFilter = 'all';
+  private filter: TerminalFilter = DEFAULT_TERMINAL_FILTER;
   private filterBtns: HTMLButtonElement[] = [];
   /** Linhas que aparecem com o filtro atual. */
   private visibleRows = 0;
