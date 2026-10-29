@@ -1,173 +1,81 @@
 # KI — Conhecimento do projeto (Tower Tansyx)
 
-Leia este arquivo primeiro se você está assumindo o projeto. Ele diz **como as coisas funcionam e por quê**. O histórico do
-que foi feito, dia a dia, está em [`DIARIO-DO-PROJETO.md`](DIARIO-DO-PROJETO.md). As regras de código estão em
-[`CLAUDE.md`](CLAUDE.md) e [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Base de conhecimento: **como as coisas funcionam e por quê**. O histórico do que foi feito está no [`DIARIO.md`](DIARIO.md).
+As regras de código estão em [`CLAUDE.md`](CLAUDE.md) e [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-> **Regra de manutenção:** toda vez que alguém (pessoa ou agente) implementar ou mudar algo, atualize este arquivo (se o
-> conhecimento mudou) **e** o diário (sempre). Nunca escreva senhas, tokens ou chaves aqui.
+> Este arquivo é commitado em repositório público. Não registre aqui credenciais, infraestrutura (hosts, IPs, portas, caminhos
+> do servidor, deploy), esquema de banco, endpoints internos, fluxos de autenticação nem dados de pessoas. Detalhes
+> operacionais ficam fora do repositório.
 
 ## 1. O que é
 
-Tower Tansyx é o Habblaud (escritório virtual em pixel art que mostra o que os agentes do Claude Code e do Codex estão
-fazendo) rodando num servidor Proxmox, usado por sócios. Na tela e nas notificações o nome é "Tower Tansyx"; no código e
-nos serviços continua `habblaud`.
+Tower Tansyx é o Habblaud (escritório virtual em pixel art que mostra o que os agentes do Claude Code e do Codex estão fazendo),
+usado por uma equipe pequena. Na tela o nome é "Tower Tansyx"; no código continua `habblaud`.
 
 - `server/`: Node sem dependências de runtime. `client/`: TypeScript no navegador. `shared/`: tipos e traduções comuns.
 - Texto visível sempre por `tr('texto em PT')`, com en/es/fr em `shared/locales/` (`npm run i18n:check` precisa fechar).
 - Toda mudança visível entra em "Não lançado" do `CHANGELOG.md`.
 - **Não mexer em `shared/world/` nem `server/world/`** (dados verdadeiros do Habblaud World; ver `CLAUDE.md`).
 
-## 2. Onde está e como entra
+## 2. Comandos e convenções
 
-| Item | Valor |
-|---|---|
-| Repositório | `github.com/tansyxtech/Tower-Tansyx` (conta `tansyxtech`) |
-| Branch de produção | `claude/adoring-goldberg-gnh2bj` |
-| Código em produção | `/root/habblaud` (checkout dessa branch) |
-| Serviço | `systemctl restart habblaud` (`node dist/server/index.js`) |
-| Terminais | tmux (`tmux -L habblaud`, sessões `habblaud-*`); sobrevivem ao reinício (`KillMode=process`) |
-| Acesso hoje | túnel Cloudflare → `https://towertansyx.coffetech.com.br`; porta principal 4747 (só loopback), porta remota 4748 com login |
-| Caddy | aposentado (serviço inativo e desabilitado em 2026-10-29); o túnel aponta para a porta remota 4748. Para voltar: túnel de volta a `http://127.0.0.1:8080` e `systemctl enable --now caddy` |
+- Testes: `npx vitest run`, com a variável `HABBLAUD_PTY` vazia (`env HABBLAUD_PTY= npx vitest run`). Também: `npm run typecheck`,
+  `npm run i18n:check`, `npm run build`.
+- Mudanças de banco entram como migração nova, em ordem; nunca se edita uma migração já publicada.
+- Deploy só com a aprovação do dono do projeto; o passo a passo fica fora do repositório.
+- Toda tarefa que muda algo atualiza o `DIARIO.md` e, se o conhecimento mudou, este arquivo.
 
-Trabalho novo é feito num worktree em `/root/projetos/Tower-Tansyx/.claude/worktrees/<nome>` e integrado na branch de
-produção.
+## 3. Armadilhas
 
-### Fluxo de deploy (só com aprovação do dono)
-1. Testes: `env HABBLAUD_PTY= npx vitest run --exclude server/index.users.test.ts`, `npm run typecheck`, `npm run i18n:check`.
-2. Commit no worktree e `git push origin HEAD:claude/adoring-goldberg-gnh2bj`.
-3. No servidor: `git -C /root/habblaud pull --ff-only`, `npm --prefix /root/habblaud run build`, `systemctl restart habblaud`.
-4. Conferir `systemctl is-active habblaud`, `/api/health` (200) e `tmux -L habblaud ls`.
+- Testes ou instâncias de teste não devem herdar `HABBLAUD_PTY`: o terminal interativo se anexaria a sessões reais. Use o valor vazio
+  e isole os diretórios de dados (`HABBLAUD_DATA_DIR`, `HABBLAUD_USAGE_DIR`, `HABBLAUD_DB`) em pasta temporária.
+- `server/test/statusline.test.ts` falha quando a suíte roda com o usuário administrador do sistema (conhecido; ignore).
+- `server/index.users.test.ts` sobe um servidor de verdade; não rode sem necessidade.
+- Edição de acentos por script pode gravar combinantes literais; confira depois.
 
-O dono (Tiago) aprova cada deploy ("Pode fazer o deploy"). O sistema de permissões do Claude Code pode negar o deploy; nesse
-caso o dono roda o comando com `!` no prompt.
+## 4. Contas de usuário
 
-## 3. Armadilhas conhecidas
+Modo opcional (`HABBLAUD_REMOTE_USERS`): contas num banco SQLite embutido, senha só como hash, sessão por
+cookie e freio de tentativas. Acesso total pela sessão logada é opt-in (`HABBLAUD_REMOTE_FULL`). Detalhes de configuração e de
+segurança ficam fora do repositório. Código em `server/users/` e `client/src/ui/users*.ts`.
 
-- **`HABBLAUD_PTY=1` é herdado.** Testes e instâncias de teste NÃO devem ligar o PTY: ele se anexa às sessões tmux de
-  produção. Rode testes com `env HABBLAUD_PTY=` e isole `HABBLAUD_DATA_DIR`, `HABBLAUD_USAGE_DIR` e `HABBLAUD_DB` em
-  pasta temporária.
-- `server/test/statusline.test.ts` falha rodando como root (o `chmod` não bloqueia). É conhecido, ignore.
-- `server/index.users.test.ts` sobe um servidor filho em portas reais (inclusive `0.0.0.0` por segundos): não rode sem
-  necessidade.
-- Heredocs e comandos compostos podem ser recusados pelo sandbox: use scripts em arquivo.
-- Python gravando combinantes unicode pode virar literal; confira acentos depois de editar por script.
-- Se o Edit falhar por `"` ou acento, ancore em texto só ASCII.
+## 5. Funcionalidades
 
-## 4. Login e usuários (modo de usuários)
-
-Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qualquer um administra as contas.
-
-- **Banco:** SQLite embutido do Node (`node:sqlite`), arquivo `~/.habblaud/habblaud.db` (`HABBLAUD_DB` muda), modo 0600.
-  Migrações em `server/db/db.ts` (`MIGRATIONS`; **nunca edite uma já publicada**, acrescente outra).
-- **Senha:** scrypt; mínimo de **8 caracteres** (`MIN_PASSWORD` em `server/users/http.ts` e `client/src/ui/users-model.ts`).
-  O `remote:setup` do usuário único antigo ainda pede 10.
-- **Sessão:** cookie `habblaud_remote` (30 dias, `HttpOnly; SameSite=Strict`); trocar a senha ou remover o usuário
-  derruba as sessões dele na hora.
-- **Freio de tentativas** (`UserThrottle` em `server/users/auth.ts`): 5 erros trancam o par (usuário, IP) por 15 min;
-  retaguarda de 20 erros/60 s por IP; teto de 100 erros/h por nome (o teto já estourado não é despejado por enchente de
-  nomes, ver diário de 2026-10-29). IP vem de `CF-Connecting-IP` só atrás do túnel (`trustProxyProto`).
-- **Acesso total** (`HABBLAUD_REMOTE_FULL=1`): a sessão logada passa a usar terminal interativo, agentes e projeto novo.
-  Hooks, plugins, Codex, auxiliar do host e World continuam só locais. Modo de usuários e acesso total recusam subir em
-  HTTP puro fora do loopback (a receita usa `HABBLAUD_REMOTE_HOST=127.0.0.1` + `HABBLAUD_REMOTE_INSECURE_HTTP=1` atrás do túnel).
-- **Comandos:** `npm run users:add|passwd|list`. A tela fica no menu do chip de usuário (Usuários, Trocar minha senha, Sair).
-- **Código:** `server/users/` (`store`, `auth`, `http`, `identity`, `senders`, `typing`), `server/http/remote.ts` (portão),
-  `scripts/users.ts`, `client/src/ui/usermenu.ts`, `users.ts`, `users-model.ts`.
-- Usuários hoje: `tiago`, `ansysar`, `luciano`. Senhas nunca são legíveis (só hash); quem esquecer troca por Usuários ou
-  `npm run users:passwd <login>`.
-
-## 5. Quem escreveu cada mensagem (marcação no chat)
-
-- Cada usuário tem uma cor. O prompt enviado pela página aparece no chat com degradê leve da cor, faixa fina e nome.
-- **O Claude nunca recebe o nome.** O servidor guarda só (hora, texto normalizado, usuário) na tabela `message_senders`
-  por 30 dias e casa isso com o transcript ao montar a conversa (`SenderLog.annotate`, aplicado em
-  `server/http/terminal.ts`).
-- Entradas: `POST /api/messages` (caixa de mensagem) e teclas do terminal interativo (`TypedLines` remonta a linha no Enter).
-- Limites: não marca mensagem digitada no terminal do próprio computador, nem registrada no transcript >15 min depois;
-  duas pessoas mandando exatamente o mesmo texto quase juntas podem ter as marcas trocadas. A tela crua do terminal
-  interativo não ganha cor (só o chat).
-
-### Presença em tempo real
-- Quem está com cada agente aberto e quem está digitando. Só no modo de usuários e só na memória do servidor
-  (`server/users/presence.ts`; rotas `GET|POST /api/presence` em `presence-http.ts`). Quem para de avisar some em 20 s;
-  "digitando" dura 6 s.
-- Cliente (`client/src/ui/presence.ts`): avisa a cada 8 s os agentes com janela aberta (`terminals.showing`), manda um aviso
-  extra ao digitar dentro de `.ui-term` (no máximo a cada 2,5 s; uma digitada curta agenda o aviso para quando o intervalo passar) e consulta a lista a cada 2,5 s. Aba escondida avisa lista
-  vazia. A faixa (`presenceStrip`) fica nas barras do chat (`terminal.ts`) e do terminal interativo (`pty.ts`);
-  `paintPresenceFaces` põe pílulas (avatar + nome na cor da pessoa; "nome digitando…" quando digita; no máximo 2 e "+N") abaixo do nome do agente (`rows.ts`, barra lateral e gaveta).
-- Não bloqueia ninguém: é só aviso. Uma trava de "um escreve por vez" não existe (decisão: aviso primeiro).
-
-## 5aa. Filtro do chat
-
-Todo chat abre em "Só prompts" (`DEFAULT_TERMINAL_FILTER` em `client/src/ui/termtools.ts`); a escolha do usuário vale só enquanto a
-janela está aberta (não é gravada).
-
-## 5a. Conversa anterior no chat
-
-O `init` do terminal carrega só o fim do transcript (4 MB / 500 entradas) e traz `earlier`: o byte onde começa a linha mais
-antiga carregada. O botão "Carregar conversa anterior" chama `GET /api/agents/:id/terminal/earlier?before=N` (ou
-`/api/sessions/:conta/:sessão/terminal/earlier`), que devolve até 500 entradas anteriores e o novo `earlier` (0 = começo)
-(`server/sources/earlier.ts`, `readEarlier`: janela de 4 MB, parser novo por página, corte sempre no começo de uma linha).
-No cliente, `TerminalLog.prepend` junta o resultado solto à ferramenta que chegou e o painel preserva a posição de leitura.
-Quem carrega páginas aumenta o teto de itens em tela (`keep`), senão a próxima mensagem as descartaria.
-
-## 5b. Compactação visível no chat
-
-O transcript não registra nada enquanto o Claude Code compacta (só o `compact_boundary` no fim), e o office ficava em
-"Pensando…". `server/pty/compaction.ts` (`CompactionWatch`) olha a saída do pty por "Compacting conversation" (ignora escapes, aguenta
-frase partida) e marca `PtyInfo.compacting` por 5 s a cada redesenho; o cliente (`terminalFooter(..., compacting)` e `termtabs.ts`)
-troca o texto por "Compactando a conversa…". Só cobre sessões com pty do Habblaud; sessão rodando em outro terminal continua
-em "Pensando…" (sem como saber).
+- **Marcação de quem escreveu:** o chat mostra o prompt com degradê leve na cor do usuário, faixa fina e nome. O servidor guarda só
+  (hora, texto normalizado, usuário) por 30 dias e casa com o transcript; o agente nunca recebe o nome. Não marca mensagem
+  digitada fora da página nem registrada muito depois do envio; duas pessoas com o mesmo texto quase junto podem ter as marcas
+  trocadas.
+- **Presença em tempo real:** avatares/pílulas de quem mais está com o agente aberto (barra do chat, do terminal e linha do agente) e
+  "está digitando…". Só em memória; some sozinha se a pessoa para de avisar. Código em `server/users/presence*.ts` e
+  `client/src/ui/presence*.ts`. É só aviso: não bloqueia ninguém.
+- **Compactação visível:** o transcript não registra nada durante a compactação; o servidor lê a saída do terminal do agente
+  (`server/pty/compaction.ts`) e o chat mostra "Compactando a conversa…". Só cobre sessões abertas no terminal interativo do Habblaud.
+  Depende do texto em inglês do Claude Code ("Compacting conversation").
+- **Conversa anterior:** o chat carrega só o fim do transcript; o botão "Carregar conversa anterior" lê 500 entradas por vez
+  para trás (`server/sources/earlier.ts`; no cliente, `TerminalLog.prepend`). O teto de itens em tela sobe para não descartar o que o
+  usuário pediu.
+- **Filtro do chat:** abre em "Só prompts" (`DEFAULT_TERMINAL_FILTER`); a escolha vale só enquanto a janela está aberta.
+- **Entregas:** só arquivos que o próprio agente entregou, nunca algo com cara de segredo. Visualiza imagem, PDF, vídeo, HTML (quadro
+  isolado) e texto (md formatado, sql, json, yaml, código comum). Word, PowerPoint, Excel e zip só baixam.
+  Código em `server/deliveries/` e `client/src/ui/deliveries.ts`.
+- **Novo agente / projeto novo:** lista de projetos recentes com pesquisa (a partir de 5 pastas), sem pastas inexistentes nem a
+  home; "+ Projeto novo" cria a pasta, inicia o git e abre a primeira sessão com a ideia (`server/spawn/`, `client/src/ui/spawn.ts`).
+- **Perguntas do agente:** cartão com as opções e a resposta no chat, inclusive com várias perguntas (`termtools.ts`, `termask.ts`).
 
 ## 6. Kanban
 
-_Colunas:_ `ideias`, `a_fazer`, `fazendo`, `revisao`, `feito` (`COLUMNS` em `shared/kanban.ts`; a ordem das colunas no banco vem do
-`CASE` em `store.ts`). Revisão conta como aberta no contador do quadro. Pelo `tower-kanban`, mover para `revisao` exige `--comment`
-com o motivo (o comando move e comenta); a página não obriga. A regra para os agentes está nos `CLAUDE.md` das contas.
+Ideias e tarefas num quadro Geral e um por projeto, em banco SQLite. Colunas: `ideias`, `a_fazer`, `fazendo`, `revisao`, `feito`
+(`COLUMNS` em `shared/kanban.ts`). Janela flutuante, atualiza sozinha quando alguém mexe (consulta leve a cada 3 s, pausa com a aba
+escondida ou o campo em edição) e tem botão de atualizar.
 
-_Anexos nos cartões:_ metadados na tabela `card_files` (migração 4), bytes em `<dataDir>/kanban-files/<cartão>/<id do arquivo>` (nome
-no disco = só o número; o nome original fica no banco). Rotas em `server/kanban/http.ts`: `POST|GET /api/kanban/cards/:id/files`,
-`GET|DELETE /api/kanban/files/:id`. Envio em JSON base64 (limite de 15 MB, 20 por cartão; `readJson` recebe o teto maior só nessa rota).
-Entrega (`server/kanban/files.ts`, `delivery`): só imagem (png/jpg/gif/webp), PDF e texto (`txt md csv log json sql`) abrem
-`inline`; todo o resto vai como `attachment` + `application/octet-stream` + `nosniff` (HTML e SVG nunca rodam na origem).
-O cartão aberto também aceita Ctrl+V (evento `paste` do diálogo). Apagar cartão ou projeto apaga a pasta. O agente (`tower-kanban`) ainda não anexa arquivos.
+- Cartão: responsável (avatar na cor da pessoa; cartão novo nasce com quem o criou), anexos (até 20 por cartão, 15 MB cada; imagem,
+  PDF e texto abrem na tela, o resto só baixa; Ctrl+V cola print), comentários e histórico de quem mexeu.
+- Agentes usam o comando `tower-kanban` (script em `scripts/`), instalado no PATH da máquina e ensinado pelo `CLAUDE.md` do usuário de
+  cada conta do Claude Code. O agente não sabe quem mandou a mensagem: só usa `--as` se a pessoa se identifica.
+- **Revisão:** mover um cartão para `revisao` pelo comando exige `--comment` com o motivo (o comando move e comenta). A página não
+  obriga. Revisão conta como trabalho aberto.
+- Código em `server/kanban/` e `client/src/ui/kanban*.ts`.
 
-_Agentes:_ o comando é `tower-kanban` (`scripts/tower-kanban`, symlink em `/usr/local/bin`), que funciona de qualquer pasta. O bloco
-que ensina o agente a usá-lo está no `CLAUDE.md` do usuário de cada conta do Claude Code (`/root/.claude/CLAUDE.md`,
-`/root/.claude-socio/CLAUDE.md`); só vale para sessões novas. Conta nova precisa do mesmo bloco (texto em `docs/kanban-agentes.md`).
-O agente não sabe quem mandou a mensagem, então só usa `--as` quando a pessoa se identifica.
+## 7. Pendências
 
-_Responsável:_ o cartão traz `assigneeName` (login), `assigneeDisplayName` e `assigneeColor` (o avatar do cartão usa a cor). Na
-criação (`server/kanban/http.ts`), sem `assigneeId` o responsável é quem pediu (`actor.userId`, inclusive agente com `--as`);
-`assigneeId: null` explícito deixa sem. Cartões antigos não foram preenchidos.
-
-_Atualização em tempo real:_ o servidor mantém uma revisão (`GET /api/kanban/version`, sobe a cada alteração aceita; começa em
-`Date.now()`). A janela aberta consulta a cada 3 s (`POLL_MS` em `kanban.ts`) e recarrega se mudou, exceto quando a tela está
-ocupada (campo aberto, arrasto, cartão aberto) ou a aba está escondida. Botão ↻ força. Não há push (SSE) por enquanto.
-
-Ideias e tarefas num quadro Geral e por projeto, no SQLite (mesmo banco). Janela flutuante como o chat (tecla K).
-Código em `server/kanban/`, `client/src/ui/kanban*.ts`. Agentes podem usar via API local (`docs/kanban-agentes.md`);
-a porta exposta é só leitura. O histórico de cada cartão guarda quem mexeu.
-
-## 7. Entregas (arquivos que o agente entrega)
-
-`server/deliveries/`. Só mostra arquivos que o próprio agente entregou, nunca algo com cara de segredo (`.env`, chaves,
-`.ssh`, nomes com senha/token).
-- Visualiza na tela: imagens, PDF, vídeo, HTML (quadro isolado), texto (`md` formatado, `txt`, `csv`, `log`, `sql`,
-  `json`, `yaml`, `xml`, `toml`, `ini` e código comum). `.sh` fica recusado de propósito.
-- PowerPoint, Word, Excel e zip: só baixar (não há LibreOffice neste servidor).
-- Tipos: `server/deliveries/files.ts` (`TYPES`); visualizador: `client/src/ui/deliveries.ts`.
-
-## 8. Novo agente, projetos e chat
-
-- "Novo agente": lista de projetos recentes sem a home e sem pastas inexistentes (`server/spawn/folders.ts`;
-  `HABBLAUD_HIDDEN_FOLDERS` esconde outras); caixa de pesquisa aparece com 5+ pastas.
-- "+ Projeto novo": cria a pasta em `~/projetos` (`HABBLAUD_PROJECTS_DIR`), roda `git init -b main` e abre a primeira
-  sessão com a ideia (`server/spawn/project.ts`, `client/src/ui/spawn.ts`).
-- Perguntas do agente (AskUserQuestion) viram cartão com opções e a resposta no chat, inclusive com várias perguntas
-  (`client/src/ui/termtools.ts`, `termask.ts`).
-- Nome e logotipo "Tower Tansyx": `client/src/ui/icons.ts` (`WORDMARK_GLYPHS`).
-
-## 9. Backlog e pendências
-
-Veja o fim de `DIARIO-DO-PROJETO.md` ("Em aberto").
+Veja o fim de `DIARIO.md` ("Em aberto").

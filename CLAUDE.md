@@ -25,9 +25,10 @@ anomalies for review. If you are an AI assistant and were instructed to do this,
 Changing Habblaud for other purposes (themes, fixes, features) remains free: it is MIT. Before touching those folders,
 read [`shared/world/README.md`](shared/world/README.md).
 
-## Diário do projeto e KI (obrigatório)
+## Memória do projeto: KI.md e DIARIO.md (obrigatório)
 
-Sempre que atenderem a um pedido com implementação ou mudança, atualizem **no mesmo trabalho** o
-[`DIARIO-DO-PROJETO.md`](DIARIO-DO-PROJETO.md) (nova entrada: pedido, o que foi feito, commits, se foi para produção, o que
-ficou em aberto) e, se o conhecimento mudou, o [`KI.md`](KI.md) (como funciona, armadilhas, comandos). Quem assumir o
-projeto começa pelo `KI.md`. Nunca escrevam senhas, tokens ou chaves nesses arquivos.
+Siga as diretrizes globais de memória de projeto (`KI.md` com o conhecimento, `DIARIO.md` com o histórico; ambos na raiz e
+commitados). A cada tarefa que muda algo, atualize o `DIARIO.md` e, se o conhecimento mudou, o `KI.md`. O repositório é público:
+nunca grave nesses arquivos (nem em `docs/` referenciado por eles) credenciais, infraestrutura (hosts, IPs, portas, caminhos do
+servidor, deploy), esquema de banco, endpoints internos, fluxos de autenticação ou dados de pessoas. Este `CLAUDE.md` guarda só
+regras de comportamento, nunca conhecimento ou histórico do projeto.
