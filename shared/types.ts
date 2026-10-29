@@ -745,3 +745,13 @@ export interface InboxMessage {
   /** O texto como foi digitado: o plugin o manda à sessão como se você o tivesse digitado. */
   text: string;
 }
+
+/** Usuário do Tower como a API mostra: igual ao do armazém, e o hash da senha nunca sai. */
+export interface UserInfo {
+  id: number;
+  username: string;
+  displayName: string;
+  color: string;
+  createdAt: number;
+  lastLoginAt?: number;
+}

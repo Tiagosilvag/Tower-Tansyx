@@ -207,6 +207,11 @@ export class UserAuth {
     return { ok: true, token, maxAgeS, user: this.store.get(record.id)! };
   }
 
+  /** Sessão nova para quem já está autenticado (trocou a própria senha: o token antigo morreu com o hash antigo). */
+  issueFor(userId: number): { token: string; maxAgeS: number } {
+    return this.sessions.issue(userId);
+  }
+
   userOf(token: string | undefined): User | undefined {
     const id = this.sessions.verify(token);
     return id === undefined ? undefined : this.store.get(id);

@@ -236,6 +236,15 @@ describe('UserAuth', () => {
     expect((await auth.login('tiago', 'senha-certa')).ok).toBe(true);
   });
 
+  it('issueFor emite um token novo e válido para o usuário', () => {
+    const { store, sessions, auth } = montar();
+    const u = store.create({ username: 'tiago', passwordHash: HASH_A });
+    const { token, maxAgeS } = auth.issueFor(u.id);
+    expect(maxAgeS).toBe(SESSION_MS / 1000);
+    expect(sessions.verify(token)).toBe(u.id);
+    expect(auth.userOf(token)?.id).toBe(u.id);
+  });
+
   it('(e) login certo (scrypt de verdade) devolve o usuário sem hash, atualiza lastLoginAt, e logout encerra a sessão', async () => {
     const { clock, store, auth } = montar();
     const criado = store.create({ username: 'tiago', displayName: 'Tiago', passwordHash: HASH_A });

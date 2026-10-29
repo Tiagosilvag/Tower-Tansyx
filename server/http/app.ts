@@ -101,6 +101,11 @@ export interface ApiDeps {
    * local com Host local: pela porta do celular, nem com login (403 `local_only`).
    */
   world?: (req: IncomingMessage, res: ServerResponse, url: URL) => void;
+  /**
+   * API de usuários (/api/me, /api/users, /api/me/password; server/users/http.ts). Ausente = 404 nessas rotas. Fica
+   * depois do bloqueio das rotas só locais; quem decide quem é o usuário é o portão remoto, não esta rota.
+   */
+  users?: (req: IncomingMessage, res: ServerResponse, url: URL) => boolean;
 }
 
 /** GET /api/agents/:id/terminal (ids nunca contêm '/'). */
@@ -344,6 +349,9 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       req.resume();
       sendJson(res, 403, { error: tr('rota só do próprio computador (hooks, plugins e o auxiliar do host)') });
       return true;
+    }
+    if (deps.users && (path === '/api/me' || path === '/api/users' || path.startsWith('/api/users/') || path === '/api/me/password')) {
+      if (deps.users(req, res, url)) return true;
     }
     if (path === '/api/world' || path.startsWith('/api/world/')) {
       // A conta do Habblaud World age em seu nome: só o próprio computador, como o terminal. O Host local sozinho não

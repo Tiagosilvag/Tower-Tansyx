@@ -3358,4 +3358,9 @@ export const ES: Readonly<Record<string, string>> = {
   "Entre para ver o escritório": "Entra para ver la oficina",
   "Sem conexão com o Tower Tansyx.": "Sin conexión con Tower Tansyx.",
   "createRemoteGate: passe users, ou config e sessions (só um dos dois modos)": "createRemoteGate: pasa users, o config y sessions (solo uno de los dos modos)",
+  "o nome de exibição deve ter de 1 a {0} caracteres": "el nombre para mostrar debe tener de 1 a {0} caracteres",
+  "a cor deve estar no formato #rrggbb": "el color debe tener el formato #rrggbb",
+  "senha atual incorreta": "la contraseña actual es incorrecta",
+  "você não pode remover o próprio usuário": "no puedes eliminar tu propio usuario",
+  "faça login": "inicia sesión",
 };

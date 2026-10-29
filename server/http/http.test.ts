@@ -468,3 +468,54 @@ describe('POST /api/spawn/project', () => {
     }
   });
 });
+
+describe('despacho da API de usuários', () => {
+  it('chama a rota de usuários nos caminhos dela; sem ela configurada, cai no 404 de sempre', async () => {
+    const vistos: string[] = [];
+    const com = await start({
+      users: (_req, res, url) => {
+        vistos.push(url.pathname);
+        res.writeHead(204);
+        res.end();
+        return true;
+      },
+    });
+    try {
+      for (const p of ['/api/me', '/api/users', '/api/users/3', '/api/users/3/password', '/api/me/password']) {
+        expect((await fetch(`${com.base}${p}`)).status).toBe(204);
+      }
+      expect(vistos).toEqual(['/api/me', '/api/users', '/api/users/3', '/api/users/3/password', '/api/me/password']);
+    } finally {
+      await com.close();
+      com.cleanup();
+    }
+    const sem = await start();
+    try {
+      expect((await fetch(`${sem.base}/api/me`)).status).toBe(404);
+    } finally {
+      await sem.close();
+      sem.cleanup();
+    }
+  });
+
+  it('pela porta remota os caminhos só locais seguem bloqueados (a rota de usuários não os alcança)', async () => {
+    let chamadas = 0;
+    const env = await start({
+      remote: { is: () => true, allows: () => true },
+      users: (_req, res) => {
+        chamadas++;
+        res.writeHead(204);
+        res.end();
+        return true;
+      },
+    });
+    try {
+      expect((await fetch(`${env.base}/api/permissions`)).status).toBe(403);
+      expect((await fetch(`${env.base}/api/host/x`)).status).toBe(403);
+      expect(chamadas).toBe(0);
+    } finally {
+      await env.close();
+      env.cleanup();
+    }
+  });
+});
