@@ -26,6 +26,44 @@ export const MIGRATIONS: readonly string[] = [
     created_at INTEGER NOT NULL,
     last_login_at INTEGER
   )`,
+  // Kanban: quadros (o Geral nasce aqui), cartões e o histórico de quem mexeu. Remover um usuário deixa tudo, com as
+  // referências nulas; os nomes ficam gravados nas próprias linhas.
+  `CREATE TABLE boards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL CHECK (kind IN ('general', 'project')),
+    name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    created_at INTEGER NOT NULL,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  INSERT INTO boards (kind, name, created_at) VALUES ('general', 'Geral', CAST(strftime('%s', 'now') AS INTEGER) * 1000);
+  CREATE TABLE cards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    column_key TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    priority TEXT NOT NULL,
+    assignee_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    project_id INTEGER REFERENCES boards(id) ON DELETE SET NULL,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_by_name TEXT,
+    created_via TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX cards_by_column ON cards (board_id, column_key, position);
+  CREATE TABLE card_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+    at INTEGER NOT NULL,
+    actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    actor_name TEXT,
+    via TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    detail TEXT NOT NULL
+  );
+  CREATE INDEX card_events_by_card ON card_events (card_id, at)`,
 ];
 
 /**
