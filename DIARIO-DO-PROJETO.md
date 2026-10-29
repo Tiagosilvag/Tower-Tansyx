@@ -13,6 +13,14 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Presença em tempo real
+- **Pedido:** "pode começar" (avatares de quem está com a sessão aberta e "está digitando…", propostos depois da pergunta
+  sobre colaboração entre sócios).
+- **Feito:** `Presence` (memória) + rotas `/api/presence` + `startPresence`/`presenceStrip` no cliente, nas barras do
+  chat e do terminal interativo; textos em en/es/fr; testes do servidor, da rota e do modelo. Detalhes no `KI.md` §5.
+- **Commits:** ver o log da branch (feat(presença)). **Produção:** pendente de deploy.
+- **Em aberto:** não há trava de "um escreve por vez"; avatares na lista de agentes da barra lateral não foram feitos.
+
 ### Diário do projeto e KI
 - **Pedido:** criar o diário de projeto e o KI (knowledge) e mantê-los atualizados a cada mudança, para um colaborador
   poder assumir o projeto sem se perder.
@@ -76,8 +84,8 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 ## Em aberto
 
 - **Deploy pendente:** reiniciar o serviço para levar `386528f` e a correção do teto por nome (`510f763`).
-- **Presença em tempo real:** avatares de quem está com a sessão aberta e "fulano está digitando…" (nada implementado;
-  sem isso, dois sócios podem digitar na mesma sessão sem aviso).
+- **Presença:** falta ver no navegador (só testada por testes automáticos) e, se quiserem, avatares na lista da barra
+  lateral e uma trava opcional de "um escreve por vez".
 - **Caddy:** ainda ativo na 8080; aposentar só depois de o túnel apontar para `http://127.0.0.1:4748` e do teste com `curl`
   usando o Host público (`HABBLAUD_ALLOWED_HOSTS`). Volta atrás: túnel de volta à 8080 e `systemctl enable --now caddy`.
 - Revogar o token OAuth antigo do `gh`.

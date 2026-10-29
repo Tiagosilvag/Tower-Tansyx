@@ -14,6 +14,7 @@ import { MessageComposer } from './composer';
 import { SessionChips } from './sessionchips';
 import type { UiComponent, UiContext, WindowOptions } from './context';
 import { askQuestionNodes, PermissionCard } from './permission';
+import { presenceStrip } from './presence';
 import { copyText, h, iconButton, prefersReducedMotion, setAttr, setHidden, setText, setTitle, setVariant } from './dom';
 import { calendarDayDiff, formatClock, formatDateTime, formatDuration, formatElapsed, relativeTime } from './format';
 import { ICONS } from './icons';
@@ -756,6 +757,9 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   /** Horário da entrada mais recente (o rodapé de uma sessão retomada acompanha). */
   private lastEntryAt = 0;
 
+  /** Quem mais está com este agente aberto (modo de usuários). */
+  private readonly presence: ReturnType<typeof presenceStrip>;
+
   private filter: TerminalFilter = 'all';
   private filterBtns: HTMLButtonElement[] = [];
   /** Linhas que aparecem com o filtro atual. */
@@ -849,12 +853,14 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     setAttr(this.findBtn, 'aria-expanded', 'false');
     const close = iconButton(ICONS.close, tr('Fechar terminal (Esc)'), () => this.close(), 'ui-icon-btn--sm ui-term__close');
     this.chips = new SessionChips(ctx);
+    this.presence = presenceStrip();
     const bar = h(
       'div',
       { class: 'ui-term__bar' },
       icon,
       this.kindEl,
       h('div', { class: 'ui-term__who' }, this.accEl, this.nameEl, this.provEl, this.roleEl, this.roomEl),
+      this.presence.el,
       this.reconnEl,
       this.chips.el,
       this.findBtn,
@@ -969,6 +975,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.id = null;
     this.session = null;
     this.last = null;
+    this.presence.set(null);
     this.el.hidden = true;
     this.clear();
     const opener = this.opener;
@@ -1022,6 +1029,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     if (this.id === null) return;
     if (this.session) this.renderSessionHead(this.session);
     else this.renderAgentHead();
+    this.presence.set(this.session ? null : this.id);
     const live = this.session ? null : (this.ctx.agent(this.id) ?? null);
     this.actions?.render(live, this.session && !this.session.open ? this.session : null);
     this.chips.render(live);

@@ -113,6 +113,8 @@ export interface ApiDeps {
    * no banco, então vale para a página local e para qualquer sessão remota logada; a autoria vem da própria rota.
    */
   kanban?: (req: IncomingMessage, res: ServerResponse, url: URL) => boolean;
+  /** Presença em tempo real (/api/presence; server/users/presence-http.ts): quem está com cada agente aberto. Só com login. */
+  presence?: (req: IncomingMessage, res: ServerResponse) => boolean;
 }
 
 /** GET /api/agents/:id/terminal (ids nunca contêm '/'). */
@@ -365,6 +367,9 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
     }
     if (deps.users && (path === '/api/me' || path === '/api/users' || path.startsWith('/api/users/') || path === '/api/me/password')) {
       if (deps.users(req, res, url)) return true;
+    }
+    if (deps.presence && path === '/api/presence') {
+      if (deps.presence(req, res)) return true;
     }
     if (deps.kanban && (path === '/api/kanban' || path.startsWith('/api/kanban/'))) {
       if (deps.kanban(req, res, url)) return true;

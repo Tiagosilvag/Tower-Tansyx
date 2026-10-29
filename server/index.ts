@@ -19,6 +19,8 @@ import { UserAuth, UserSessions, UserThrottle } from './users/auth';
 import { createUsersRoutes } from './users/http';
 import { UserStore } from './users/store';
 import { SenderLog } from './users/senders';
+import { Presence } from './users/presence';
+import { createPresenceRoutes } from './users/presence-http';
 import { TypedLines } from './users/typing';
 import { userOf } from './users/identity';
 import { Hub } from './http/sse';
@@ -478,6 +480,7 @@ const api = createApiHandler({
   remote: config.remote ? { is: isRemoteRequest, allows: (f) => config.remote!.allow.has(f), full: config.remote.full } : undefined,
   world: world ? createWorldRoutes(world, worldViewer, worldSocial) : undefined,
   users: userAccounts?.routes,
+  presence: userAccounts ? createPresenceRoutes({ presence: new Presence(), readJson: (req) => readJson(req) }) : undefined,
   kanban,
 });
 

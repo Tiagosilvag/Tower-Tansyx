@@ -41,6 +41,11 @@ export class UserMenu implements UiComponent {
     void this.refresh();
   }
 
+  /** Id de quem está logado (undefined sem login). */
+  get meId(): number | undefined {
+    return this.me?.id;
+  }
+
   render(): void {
     // Nada a reconciliar por quadro: o chip só muda quando o perfil é buscado de novo.
   }

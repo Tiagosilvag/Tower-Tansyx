@@ -87,6 +87,15 @@ Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qu
   duas pessoas mandando exatamente o mesmo texto quase juntas podem ter as marcas trocadas. A tela crua do terminal
   interativo não ganha cor (só o chat).
 
+### Presença em tempo real
+- Quem está com cada agente aberto e quem está digitando. Só no modo de usuários e só na memória do servidor
+  (`server/users/presence.ts`; rotas `GET|POST /api/presence` em `presence-http.ts`). Quem para de avisar some em 20 s;
+  "digitando" dura 6 s.
+- Cliente (`client/src/ui/presence.ts`): avisa a cada 8 s os agentes com janela aberta (`terminals.showing`), manda um aviso
+  extra ao digitar dentro de `.ui-term` (no máximo a cada 2,5 s) e consulta a lista a cada 4 s. Aba escondida avisa lista
+  vazia. A faixa (`presenceStrip`) fica nas barras do chat (`terminal.ts`) e do terminal interativo (`pty.ts`).
+- Não bloqueia ninguém: é só aviso. Uma trava de "um escreve por vez" não existe (decisão: aviso primeiro).
+
 ## 6. Kanban
 
 Ideias e tarefas num quadro Geral e por projeto, no SQLite (mesmo banco). Janela flutuante como o chat (tecla K).

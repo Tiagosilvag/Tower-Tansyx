@@ -7,6 +7,7 @@
 // Fechar a janela não encerra a sessão; "Encerrar" encerra.
 import type { AgentInfo, PtyInfo } from '../../../shared/types';
 import type { UiComponent, UiContext, WindowOptions } from './context';
+import { presenceStrip } from './presence';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
 import { maximizeButton, Movable } from './movable';
@@ -50,6 +51,8 @@ export class PtyPanel implements UiComponent, PtyControl {
   private accEl: HTMLElement;
   private roomEl: HTMLElement;
   private stateEl: HTMLElement;
+  /** Quem mais está com este agente aberto (modo de usuários). */
+  private readonly presence: ReturnType<typeof presenceStrip>;
   private actions: TermActions;
   private tabs: TermTabs;
   private movable: Movable;
@@ -68,6 +71,7 @@ export class PtyPanel implements UiComponent, PtyControl {
     this.nameEl = h('strong', { class: 'ui-term__name' });
     this.roomEl = h('span', { class: 'ui-term__room' });
     this.stateEl = h('span', { class: 'ui-pty__state', role: 'status' });
+    this.presence = presenceStrip();
     this.actions = new TermActions(ctx, this, false, async () => {
       if (this.info) await closePty(this.info.id);
     });
@@ -79,6 +83,7 @@ export class PtyPanel implements UiComponent, PtyControl {
       icon,
       h('span', { class: 'ui-term__kind', text: tr('terminal') }),
       h('div', { class: 'ui-term__who' }, this.accEl, this.nameEl, this.roomEl),
+      this.presence.el,
       this.stateEl,
       h('span', { class: 'ui-pty__live', text: tr('interativo') }),
       this.actions.el,
@@ -139,6 +144,7 @@ export class PtyPanel implements UiComponent, PtyControl {
     this.pane?.detach();
     this.info = null;
     this.external = null;
+    this.presence.set(null);
     this.el.hidden = true;
     this.ctx.invalidate();
   }
@@ -172,6 +178,7 @@ export class PtyPanel implements UiComponent, PtyControl {
       this.ctx.select({ type: 'agent', id: agent.id });
     }
     setText(this.nameEl, agent?.name ?? 'Claude Code');
+    this.presence.set(cur.agentId);
     updateAccountChip(this.accEl, this.ctx.account(cur.account), cur.account);
     setText(this.roomEl, agent?.title ?? cur.cwd);
     const ended = cur.exitedAt !== undefined;
@@ -189,6 +196,7 @@ export class PtyPanel implements UiComponent, PtyControl {
     if (own) return this.show(own);
     const agent = this.ctx.agent(id);
     setText(this.nameEl, agent?.name ?? tr('Agente'));
+    this.presence.set(id);
     if (agent) updateAccountChip(this.accEl, this.ctx.account(agent.account), agent.account);
     const room = agent ? this.ctx.store.room(agent.roomId) : undefined;
     setText(this.roomEl, room?.name ?? '');

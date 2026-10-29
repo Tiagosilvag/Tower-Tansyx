@@ -38,6 +38,7 @@ import { PerfController } from './perf-controller';
 import { Toasts } from './toasts';
 import { UpdateToaster } from './version';
 import { TopBar } from './topbar';
+import { startPresence } from './presence';
 import { UserMenu } from './usermenu';
 import { UpdateBanner } from './update';
 import { WorldPopups } from './world/world-popups';
@@ -254,6 +255,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   const userMenu = new UserMenu();
   topbar.addUserChip(userMenu.el);
   root.append(...userMenu.panels);
+  startPresence(ctx, () => userMenu.meId);
   help = new HelpDialog();
   const day = new DayLauncher(ctx, (el) => root.append(el));
   topbar.addPanelButton(day.button);
