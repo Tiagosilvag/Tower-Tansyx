@@ -92,7 +92,7 @@ Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qu
   (`server/users/presence.ts`; rotas `GET|POST /api/presence` em `presence-http.ts`). Quem para de avisar some em 20 s;
   "digitando" dura 6 s.
 - Cliente (`client/src/ui/presence.ts`): avisa a cada 8 s os agentes com janela aberta (`terminals.showing`), manda um aviso
-  extra ao digitar dentro de `.ui-term` (no máximo a cada 2,5 s) e consulta a lista a cada 4 s. Aba escondida avisa lista
+  extra ao digitar dentro de `.ui-term` (no máximo a cada 2,5 s; uma digitada curta agenda o aviso para quando o intervalo passar) e consulta a lista a cada 2,5 s. Aba escondida avisa lista
   vazia. A faixa (`presenceStrip`) fica nas barras do chat (`terminal.ts`) e do terminal interativo (`pty.ts`);
   `paintPresenceFaces` põe só os rostos na linha do agente (`rows.ts`, barra lateral e gaveta).
 - Não bloqueia ninguém: é só aviso. Uma trava de "um escreve por vez" não existe (decisão: aviso primeiro).

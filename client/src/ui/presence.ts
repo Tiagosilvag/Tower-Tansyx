@@ -6,7 +6,7 @@ import { othersOf, presenceLabel, type PresentUser } from './presence-model';
 import { avatar } from './users';
 
 const BEAT_MS = 8_000;
-const POLL_MS = 4_000;
+const POLL_MS = 2_500;
 /** Depois de uma tecla, "digitando" vale por isto. */
 const TYPING_MS = 4_000;
 /** Aviso extra logo após digitar, mas no máximo neste ritmo. */
@@ -20,6 +20,7 @@ let map: Record<string, PresentUser[]> = {};
 let typingAt = 0;
 let typingAgent: string | null = null;
 let lastBeat = 0;
+let typingTimer: ReturnType<typeof setTimeout> | null = null;
 let invalidate: () => void = () => undefined;
 const strips = new Set<{ agentId: string | null; paint: () => void }>();
 
@@ -69,7 +70,15 @@ export function startPresence(ctx: UiContext, me: () => number | undefined): voi
       if (!meId?.() || !(e.target instanceof Element) || !e.target.closest('.ui-term')) return;
       typingAt = Date.now();
       typingAgent = front();
-      if (Date.now() - lastBeat > TYPING_BEAT_MS) void beat();
+      // Aviso na hora; se o último foi há pouco, um aviso logo que o intervalo passar (senão uma digitada curta nunca chegaria).
+      const wait = TYPING_BEAT_MS - (Date.now() - lastBeat);
+      if (wait <= 0) void beat();
+      else if (!typingTimer) {
+        typingTimer = setTimeout(() => {
+          typingTimer = null;
+          void beat();
+        }, wait);
+      }
     },
     true,
   );
