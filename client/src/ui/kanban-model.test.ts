@@ -36,9 +36,10 @@ describe('filterBoards', () => {
 });
 
 describe('groupByColumn', () => {
-  it('devolve as 4 colunas, vazias incluídas, na ordem das posições', () => {
+  it('devolve as 5 colunas, vazias incluídas, na ordem das posições', () => {
     const g = groupByColumn([card(1, 'fazendo', 1), card(2, 'fazendo', 0), card(3, 'feito', 0)]);
-    expect(Object.keys(g)).toEqual(['ideias', 'a_fazer', 'fazendo', 'feito']);
+    expect(Object.keys(g)).toEqual(['ideias', 'a_fazer', 'fazendo', 'revisao', 'feito']);
+    expect(g.revisao).toEqual([]);
     expect(g.fazendo.map((c) => c.id)).toEqual([2, 1]);
     expect(g.ideias).toEqual([]);
     expect(g.a_fazer).toEqual([]);

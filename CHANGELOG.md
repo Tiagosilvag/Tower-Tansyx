@@ -45,6 +45,9 @@ do meio (0.**3**.0).
   1×, sem partículas, sem efeitos de data comemorativa e sem a iluminação suave. **Mínimo** soma a isso a pausa do
   escritório com o terminal em tela cheia, no máximo 150 linhas no chat e nenhuma animação. Uma opção mostra no
   canto da tela os quadros por segundo e as linhas do chat, para comparar. Vale só para o seu navegador.
+- **O Kanban ganhou a coluna Revisão**, entre Fazendo e Feito. Quando um agente move um cartão para lá pelo comando
+  `tower-kanban`, o motivo é obrigatório (`--comment`) e vira um comentário no cartão; o comando recusa o movimento sem ele. As
+  instruções dos agentes (CLAUDE.md das contas) foram atualizadas com esse padrão. Cartões que já existiam não mudam de coluna.
 - **O chat avisa quando o agente está compactando a conversa.** Antes o rodapé e a aba ficavam em "Pensando…" durante a
   compactação, porque o Claude Code não escreve nada no transcript enquanto compacta. Agora o servidor vê "Compacting
   conversation…" na tela do terminal do agente e o chat mostra "Compactando a conversa…" (rodapé e aba), com o tempo ao

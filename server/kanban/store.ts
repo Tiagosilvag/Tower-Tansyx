@@ -183,7 +183,7 @@ export class KanbanStore {
   cards(boardId: number, q = ''): KanbanCard[] {
     const rows = this.db.all<CardRow>(
       `SELECT ${CARD_COLS} FROM cards WHERE board_id = ?
-       ORDER BY CASE column_key WHEN 'ideias' THEN 0 WHEN 'a_fazer' THEN 1 WHEN 'fazendo' THEN 2 ELSE 3 END, position`,
+       ORDER BY CASE column_key WHEN 'ideias' THEN 0 WHEN 'a_fazer' THEN 1 WHEN 'fazendo' THEN 2 WHEN 'revisao' THEN 3 ELSE 4 END, position`,
       boardId,
     );
     const needle = normalizeText(q);

@@ -41,6 +41,11 @@ describe('parseCommand', () => {
   it('erros em português: ação desconhecida, coluna e prioridade inválidas, id não numérico, falta de argumento', () => {
     expect(parseCommand([])).toMatchObject({ error: expect.stringContaining('uso') });
     expect(parseCommand(['voar'])).toMatchObject({ error: expect.stringContaining('voar') });
+    expect(parseCommand(['move', '12', 'revisao', '--comment', ' falta o teste do login '])).toEqual({ action: 'move', id: 12, column: 'revisao', comment: 'falta o teste do login', json: false });
+    expect(parseCommand(['move', '12', 'fazendo', '--comment', 'voltou'])).toMatchObject({ comment: 'voltou' });
+    // para a revisão o motivo é obrigatório
+    expect(parseCommand(['move', '12', 'revisao'])).toMatchObject({ error: expect.stringContaining('--comment') });
+    expect(parseCommand(['move', '12', 'revisao', '--comment', '  '])).toMatchObject({ error: expect.stringContaining('--comment') });
     expect(parseCommand(['move', '12', 'nada'])).toMatchObject({ error: expect.stringContaining('coluna') });
     expect(parseCommand(['add', 'Geral', 't', '--prio', 'urgente'])).toMatchObject({ error: expect.stringContaining('prioridade') });
     expect(parseCommand(['show', 'abc'])).toMatchObject({ error: expect.stringContaining('id') });

@@ -107,6 +107,10 @@ em "Pensando…" (sem como saber).
 
 ## 6. Kanban
 
+_Colunas:_ `ideias`, `a_fazer`, `fazendo`, `revisao`, `feito` (`COLUMNS` em `shared/kanban.ts`; a ordem das colunas no banco vem do
+`CASE` em `store.ts`). Revisão conta como aberta no contador do quadro. Pelo `tower-kanban`, mover para `revisao` exige `--comment`
+com o motivo (o comando move e comenta); a página não obriga. A regra para os agentes está nos `CLAUDE.md` das contas.
+
 _Anexos nos cartões:_ metadados na tabela `card_files` (migração 4), bytes em `<dataDir>/kanban-files/<cartão>/<id do arquivo>` (nome
 no disco = só o número; o nome original fica no banco). Rotas em `server/kanban/http.ts`: `POST|GET /api/kanban/cards/:id/files`,
 `GET|DELETE /api/kanban/files/:id`. Envio em JSON base64 (limite de 15 MB, 20 por cartão; `readJson` recebe o teto maior só nessa rota).

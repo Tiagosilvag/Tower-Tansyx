@@ -28,11 +28,17 @@ use o comando `tower-kanban` (funciona em qualquer pasta). Não procure um servi
 - `tower-kanban list <quadro> [--q texto]` lista os cartões de um quadro (o nome, como `Geral`, ou o número).
 - `tower-kanban show <id>` mostra um cartão com o histórico.
 - `tower-kanban add <quadro> "título" [--col coluna] [--prio prioridade] [--desc texto] [--as <usuário>]` cria um cartão.
-- `tower-kanban move <id> <coluna> [--as <usuário>]` muda de coluna.
+- `tower-kanban move <id> <coluna> [--comment "motivo"] [--as <usuário>]` muda de coluna.
 - `tower-kanban comment <id> "texto" [--as <usuário>]` comenta.
 - `tower-kanban edit <id> [--title ...] [--desc ...] [--prio ...] [--as <usuário>]` edita.
 
-Colunas: `ideias`, `a_fazer`, `fazendo`, `feito`. Prioridades: `alta`, `media`, `baixa`.
+Colunas: `ideias`, `a_fazer`, `fazendo`, `revisao`, `feito`. Prioridades: `alta`, `media`, `baixa`.
+
+**Revisão:** sempre que mover um cartão para `revisao`, escreva o motivo no mesmo comando, com `--comment`, para quem
+for revisar saber o que olhar: `tower-kanban move <id> revisao --comment "<o que foi feito e por que está em revisão; o
+que conferir; onde está (branch, commit, arquivo)>"`. O comando recusa o movimento sem `--comment`. Se o cartão voltar
+para `fazendo`, diga no `--comment` o que falta corrigir.
+
 Você não sabe quem escreveu a mensagem. Só use `--as <usuário>` se a própria pessoa disser quem ela é (por exemplo
 "sou o luciano"); nunca invente um usuário. Sem `--as`, o cartão fica sem autor, marcado "via agente". Acrescente
 `--json` quando precisar da resposta em formato de máquina.

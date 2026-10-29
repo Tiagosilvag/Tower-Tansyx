@@ -1,6 +1,6 @@
 // Tipos e regras do Kanban que servidor e cliente compartilham (server/kanban/*, client/src/ui/kanban*).
 
-export const COLUMNS = ['ideias', 'a_fazer', 'fazendo', 'feito'] as const;
+export const COLUMNS = ['ideias', 'a_fazer', 'fazendo', 'revisao', 'feito'] as const;
 export type Column = (typeof COLUMNS)[number];
 export const PRIORITIES = ['alta', 'media', 'baixa'] as const;
 export type Priority = (typeof PRIORITIES)[number];

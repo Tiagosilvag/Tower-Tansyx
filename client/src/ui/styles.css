@@ -12291,7 +12291,7 @@ html.is-replay #world {
 
 .ui-kb__cols {
   display: grid;
-  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  grid-template-columns: repeat(5, minmax(170px, 1fr));
   gap: 18px;
   overflow-x: auto;
   padding: 4px 4px 10px;
@@ -12308,6 +12308,7 @@ html.is-replay #world {
 .ui-kb__col--ideias { --c: var(--kb-purple); }
 .ui-kb__col--a_fazer { --c: var(--kb-orange); }
 .ui-kb__col--fazendo { --c: var(--kb-green); }
+.ui-kb__col--revisao { --c: var(--kb-y); }
 .ui-kb__col--feito { --c: var(--kb-blue); }
 
 .ui-kb__col-head {

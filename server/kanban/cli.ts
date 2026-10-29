@@ -8,7 +8,7 @@ export type Command =
   | { action: 'list'; board: string; q?: string; json: boolean }
   | { action: 'show'; id: number; json: boolean }
   | { action: 'add'; board: string; title: string; column?: Column; priority?: Priority; description?: string; as?: string; json: boolean }
-  | { action: 'move'; id: number; column: Column; position?: number; as?: string; json: boolean }
+  | { action: 'move'; id: number; column: Column; position?: number; comment?: string; as?: string; json: boolean }
   | { action: 'comment'; id: number; text: string; as?: string; json: boolean }
   | { action: 'edit'; id: number; title?: string; description?: string; priority?: Priority; as?: string; json: boolean };
 
@@ -17,13 +17,14 @@ export const USAGE = tr(`uso: npm run kanban -- <ação> [argumentos] [--json]
   list <quadro> [--q texto]
   show <id>
   add <quadro> "título" [--col coluna] [--prio prioridade] [--desc texto] [--as usuário]
-  move <id> <coluna> [--pos n] [--as usuário]
+  move <id> <coluna> [--pos n] [--comment "motivo"] [--as usuário]
   comment <id> "texto" [--as usuário]
   edit <id> [--title texto] [--desc texto] [--prio prioridade] [--as usuário]
-Colunas: ideias, a_fazer, fazendo, feito. Prioridades: alta, media, baixa.
+Colunas: ideias, a_fazer, fazendo, revisao, feito. Prioridades: alta, media, baixa.
+Ao mover um cartão para revisao, --comment com o motivo é obrigatório.
 O quadro pode ser o nome (Geral, o nome de um projeto) ou o número. Use --as com o usuário que pediu a mudança.`);
 
-const VALUE_FLAGS = new Set(['--q', '--col', '--prio', '--desc', '--as', '--title', '--pos']);
+const VALUE_FLAGS = new Set(['--q', '--col', '--prio', '--desc', '--as', '--title', '--pos', '--comment']);
 
 const slug = (s: string) => normalizeText(s).replace(/[\s-]+/g, '_');
 
@@ -105,7 +106,10 @@ export function parseCommand(argv: string[]): Command | { error: string } {
         position = Number(flags.get('--pos'));
         if (!Number.isInteger(position) || position < 0) return { error: tr('--pos precisa ser um número inteiro, a partir de 0') };
       }
-      return { action, id, column: col, ...(position === undefined ? {} : { position }), ...withAs, json };
+      const comment = flags.get('--comment')?.trim();
+      // Quem manda um cartão para revisão diz por quê: o comentário vai junto, no mesmo comando.
+      if (col === 'revisao' && !comment) return { error: tr('para mover para revisao, diga o motivo com --comment "..."') };
+      return { action, id, column: col, ...(position === undefined ? {} : { position }), ...(comment ? { comment } : {}), ...withAs, json };
     }
     case 'comment': {
       const id = idOf(pos[1]);

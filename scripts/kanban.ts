@@ -70,6 +70,7 @@ async function execute(cmd: Command, api: <T>(m: string, p: string, b?: unknown)
     }
     case 'move': {
       const r = await api<{ card: KanbanCard }>('POST', `/cards/${cmd.id}/move`, { column: cmd.column, position: cmd.position, as: cmd.as });
+      if (cmd.comment) await api('POST', `/cards/${cmd.id}/comments`, { text: cmd.comment, as: cmd.as });
       return show(r, () => tr('Movido: {0}', [formatCards([r.card])]));
     }
     case 'comment': {

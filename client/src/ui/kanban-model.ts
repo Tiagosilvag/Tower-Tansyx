@@ -6,7 +6,7 @@ import type { OfficeSnapshot } from '../../../shared/types';
 import { filterFolders } from './spawn';
 import { COLUMNS, normalizeText, type Column, type KanbanBoard, type KanbanCard, type KanbanEvent, type Priority } from '../../../shared/kanban';
 
-export const COLUMN_LABEL: Record<Column, string> = { ideias: tr('Ideias'), a_fazer: tr('A fazer'), fazendo: tr('Fazendo'), feito: tr('Feito') };
+export const COLUMN_LABEL: Record<Column, string> = { ideias: tr('Ideias'), a_fazer: tr('A fazer'), fazendo: tr('Fazendo'), revisao: tr('Revisão'), feito: tr('Feito') };
 export const PRIORITY_LABEL: Record<Priority, string> = { alta: tr('alta'), media: tr('média'), baixa: tr('baixa') };
 
 

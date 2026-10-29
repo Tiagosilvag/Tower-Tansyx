@@ -13,6 +13,17 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Kanban: coluna Revisão e padrão de comentário
+- **Pedido:** adicionar uma etapa de revisão no quadro; ao mover um cartão para ela, comentar o porquê; instruir os agentes no
+  CLAUDE.md das contas.
+- **Feito:** coluna `revisao` entre Fazendo e Feito (5 colunas, cor amarela); `tower-kanban move ... revisao` exige
+  `--comment` e grava o comentário junto; instruções atualizadas em `/root/.claude/CLAUDE.md`, `/root/.claude-socio/CLAUDE.md`
+  e `docs/kanban-agentes.md`.
+- **Decisões minhas:** a regra é aplicada no comando dos agentes (e pelas instruções), não na página: quem arrasta um cartão
+  para Revisão na tela não é obrigado a comentar. Cartões antigos ficam onde estão.
+- **Em aberto:** sessões de agente já abertas só leem o CLAUDE.md novo ao reiniciar.
+- **Produção:** pendente de deploy.
+
 ### Chat: mostrar "Compactando a conversa…"
 - **Pedido:** durante a compactação o chat ficava só em "Pensando…" (prints do chat e do terminal interativo).
 - **Causa:** o Claude Code não escreve nada no transcript durante a compactação; só a tela do terminal mostra
@@ -21,13 +32,13 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
   "Compactando a conversa…". Testes em `server/pty/compaction.test.ts` e `terminal.test.ts`.
 - **Limite:** só sessões com pty do Habblaud; outras seguem em "Pensando…". A frase é a do Claude Code em inglês: se a versão
   mudar o texto, ajustar `PHRASE`.
-- **Produção:** pendente de deploy.
+- **Produção:** no ar desde `526d53b`.
 
 ### Kanban: colar print com Ctrl+V no cartão
 - **Pedido:** "quero poder dar CTRL+V e colar um print, igual faço aqui no chat".
 - **Feito:** o cartão aberto trata o evento de colar: imagem ou arquivos na área de transferência viram anexo (print ganha o
   nome `print-AAAA-MM-DD-HHMMSS.png`); texto colado continua normal nos campos. `pastedFileName` em `kanban-model.ts`, testado.
-- **Produção:** pendente de deploy (commit `1f59bc6`).
+- **Produção:** no ar desde `526d53b`.
 
 ### Kanban: anexar arquivos nos cartões
 - **Pedido:** "quero poder anexar arquivos nos cards do kanban".

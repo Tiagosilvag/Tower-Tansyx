@@ -145,6 +145,21 @@ describe('rotas /api/kanban', () => {
     expect((await call('GET', '/api/kanban/files/9999')).status).toBe(404);
   });
 
+  it('a coluna revisão fica entre fazendo e feito, e o cartão vai e volta dela', async () => {
+    const { call, geral } = await montar();
+    const mk = async (title: string, column: string) => (await call('POST', `/api/kanban/boards/${geral}/cards`, { body: { title, column } })).json.card;
+    const feito = await mk('feito', 'feito');
+    const rev = await mk('rev', 'revisao');
+    const fazendo = await mk('fazendo', 'fazendo');
+    expect(rev.column).toBe('revisao');
+    const ordem = ((await call('GET', `/api/kanban/boards/${geral}/cards`)).json.cards as Array<{ title: string }>).map((c) => c.title);
+    expect(ordem).toEqual(['fazendo', 'rev', 'feito']);
+    expect((await call('POST', `/api/kanban/cards/${fazendo.id}/move`, { body: { column: 'revisao' } })).json.card.column).toBe('revisao');
+    expect((await call('POST', `/api/kanban/cards/${feito.id}/move`, { body: { column: 'inexistente' } })).status).toBe(400);
+    // revisão conta como aberta: só "feito" sai da contagem
+    expect((await call('GET', '/api/kanban/boards')).json.boards[0].openCount).toBe(2);
+  });
+
   it('quadros: lista, cria, renomeia e remove (com force)', async () => {
     const { call, geral } = await montar();
     expect((await call('GET', '/api/kanban/boards')).json.boards).toEqual([{ id: geral, kind: 'general', name: 'Geral', openCount: 0 }]);
