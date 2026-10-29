@@ -690,10 +690,12 @@ export const EN: Readonly<Record<string, string>> = {
   "Bordão: “{0}”": "Catchphrase: “{0}”",
   "Retrospecto contra {0}: {1}": "Record against {0}: {1}",
   "Abrir {0}": "Open {0}",
-  "Documento": "Document",
   "só markdown abre aqui": "only markdown opens here",
   "arquivo fora das pastas de projeto conhecidas": "file outside the known project folders",
   "os documentos do chat só abrem pelo próprio computador (http://localhost)": "chat documents only open from the computer itself (http://localhost)",
+  "Atualizar o documento": "Refresh the document",
+  "Copiar o texto": "Copy the text",
+  "Documento grande: só o começo aparece aqui. Use Abrir para ver tudo.": "Large document: only the start is shown here. Use Open to see all of it.",
   "Ver {0}": "View {0}",
 
   // client/src/ui/termactions.ts

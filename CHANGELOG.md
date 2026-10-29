@@ -30,8 +30,8 @@ do meio (0.**3**.0).
 ### Adicionado
 
 - **Clique num `.md` citado no chat para abri-lo.** Caminho de markdown escrito como código na resposta do agente
-  (por exemplo `docs/plano.md`) fica sublinhado e abre o documento formatado numa janela cheia, como os anexos das
-  Entregas. Só abre `.md` de pasta de projeto conhecida, nunca arquivo com cara de segredo, e o arquivo é relido a cada
+  (por exemplo `docs/plano.md`) fica sublinhado e abre o documento formatado numa janela flutuante, como o Kanban
+  (arrasta pela barra, puxa as bordas, expande, não bloqueia o escritório), com Atualizar, Copiar e Abrir. Só abre `.md` de pasta de projeto conhecida, nunca arquivo com cara de segredo, e o arquivo é relido a cada
   abertura (o agente costuma reescrevê-lo).
 - **Pausar, modelo e contexto no chat.** Com o agente trabalhando, o botão **Pausar** ao lado de Enviar manda Esc
   para a sessão (o agente para e espera a sua próxima mensagem). A barra do terminal mostra o **modelo** da sessão

@@ -653,10 +653,12 @@ export const FR: Readonly<Record<string, string>> = {
   "Bordão: “{0}”": "Réplique culte : « {0} »",
   "Retrospecto contra {0}: {1}": "Bilan contre {0} : {1}",
   "Abrir {0}": "Ouvrir {0}",
-  "Documento": "Document",
   "só markdown abre aqui": "seul le markdown s'ouvre ici",
   "arquivo fora das pastas de projeto conhecidas": "fichier hors des dossiers de projet connus",
   "os documentos do chat só abrem pelo próprio computador (http://localhost)": "les documents du chat ne s'ouvrent que depuis l'ordinateur lui-même (http://localhost)",
+  "Atualizar o documento": "Actualiser le document",
+  "Copiar o texto": "Copier le texte",
+  "Documento grande: só o começo aparece aqui. Use Abrir para ver tudo.": "Document volumineux : seul le début s'affiche ici. Utilisez Ouvrir pour tout voir.",
   "Ver {0}": "Voir {0}",
 
   // client/src/ui/terminal.ts

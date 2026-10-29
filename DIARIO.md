@@ -11,7 +11,8 @@ Formato: **data · título** — o que foi feito; pendências e próximos passos
 ## 2026-10-29
 
 **Chat: clicar num `.md` citado abre o documento.** Caminho de markdown escrito como código na resposta fica clicável e abre o
-arquivo formatado numa janela cheia (mesmo visual das Entregas). Decisões: só markdown, só de pasta de projeto conhecida, nunca
+arquivo formatado numa janela flutuante como o Kanban (arrasta, redimensiona, expande, não bloqueia a tela; primeira versão em tela
+cheia ficou feia e foi refeita). Decisões: só markdown, só de pasta de projeto conhecida, nunca
 arquivo com cara de segredo, e sempre relido do disco (o agente reescreve o documento). Pendente: deploy (aguarda aprovação);
 caminhos escritos fora de código (texto solto) ainda não são clicáveis.
 
