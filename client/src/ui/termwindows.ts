@@ -216,10 +216,10 @@ export class TerminalWindows implements UiComponent, TerminalRouter, TerminalCon
     this.raise(s);
   }
 
-  newSession(cwd: string, account?: string, resume?: string): Promise<void> {
+  newSession(cwd: string, account?: string, resume?: string, prompt?: string): Promise<void> {
     const s = this.pick();
     this.raise(s);
-    return s.pty.newSession(cwd, account, resume);
+    return s.pty.newSession(cwd, account, resume, prompt);
   }
 
   // ---------------------------------------------------------------- TerminalControl e PtyControl

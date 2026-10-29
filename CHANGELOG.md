@@ -29,6 +29,12 @@ do meio (0.**3**.0).
 - **O chat mostra a pergunta do agente e a sua resposta em todos os filtros.** Com "Sem ferramentas" ou "Só prompts", o
   `AskUserQuestion` (a pergunta com a resposta que você deu) sumia junto com as outras ferramentas e parecia que a
   resposta tinha sido ignorada; agora ele fica visível, como uma conversa com você.
+- **Projeto novo do zero, pelo "Novo agente".** O botão **+ Projeto novo** pede só o nome (e a ideia, em "Pedido"):
+  o servidor cria a pasta no diretório de projetos (`HABBLAUD_PROJECTS_DIR`; senão `~/projetos`, se existir, ou
+  `~/projects`) com `git init` e a primeira sessão do Claude Code abre nela, no terminal interativo, já com a ideia como
+  primeiro pedido (o aviso de confiança da pasta aparece ali). O nome vira um nome de pasta seguro (`Meu App` →
+  `meu-app`) e nada fora do diretório de projetos é criado. O repositório no GitHub não é criado sozinho: você pede ao
+  agente na conversa e aprova lá. Não funciona no Docker.
 - **O nome na tela passa a ser "Tower Tansyx".** O título da aba, o logotipo em pixels da barra e da tela de abertura
   (agora desenhado por uma fonte bitmap em `ui/icons.ts`, "Tower" em creme e "Tansyx" em âmbar) e o título das
   notificações do navegador. O restante do código (serviço, variáveis `HABBLAUD_*`, pastas) continua com o nome antigo.

@@ -8,6 +8,8 @@ import { AccountsService } from '../accounts/service';
 import { setQuiet } from '../log';
 import { NameStore } from '../model/names';
 import { Office, type OfficeDeps } from '../model/office';
+import { SpawnService } from '../spawn/spawn';
+import { createProjectCreator } from '../spawn/project';
 import { tempDir } from '../test/fixtures';
 import { createApiHandler, type ApiDeps } from './app';
 import { createRequestGuard, hostAllowed, hostnameOf, isLoopbackHost, originAllowed, parseAllowedHosts } from './guard';
@@ -436,5 +438,33 @@ describe('guarda de Host/Origin', () => {
     expect(originAllowed('http://1.2.3.4', 'localhost:4747', allowed)).toBe(false);
     expect(originAllowed('null', 'localhost:4747', allowed)).toBe(false);
     expect(originAllowed('file://', 'localhost:4747', allowed)).toBe(false);
+  });
+});
+
+describe('POST /api/spawn/project', () => {
+  it('cria a pasta e devolve o caminho; nome ruim é 400, repetido é 409; sem o criador (Docker) é 403', async () => {
+    const tmp = tempDir();
+    const projects = createProjectCreator({ dir: () => tmp.dir, git: async () => true });
+    const env = await start({ spawn: new SpawnService({}), projects });
+    try {
+      const post = (name: unknown) => fetch(`${env.base}/api/spawn/project`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+      expect(await (await fetch(`${env.base}/api/spawn/project`)).json()).toEqual({ dir: tmp.dir });
+      const ok = await post('app-novo');
+      expect(ok.status).toBe(201);
+      expect(await ok.json()).toEqual({ name: 'app-novo', path: join(tmp.dir, 'app-novo'), git: true });
+      expect((await post('app-novo')).status).toBe(409);
+      expect((await post('../fora')).status).toBe(400);
+    } finally {
+      await env.close();
+      env.cleanup();
+      tmp.cleanup();
+    }
+    const docker = await start({ spawn: new SpawnService({}) });
+    try {
+      expect((await fetch(`${docker.base}/api/spawn/project`)).status).toBe(403);
+    } finally {
+      await docker.close();
+      docker.cleanup();
+    }
   });
 });

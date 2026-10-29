@@ -50,8 +50,8 @@ export interface TerminalRouter {
    * `switchView`, nunca volta para o chat. Sem pty para o agente, abre o que o roteador abriria.
    */
   showInteractive(agentId: string): void;
-  /** Sessão nova do Claude Code na pasta, aberta no terminal interativo. */
-  newSession(cwd: string, account?: string): Promise<void>;
+  /** Sessão nova do Claude Code na pasta, aberta no terminal interativo (com `prompt`, já começa com esse pedido). */
+  newSession(cwd: string, account?: string, resume?: string, prompt?: string): Promise<void>;
 }
 
 export type HelpSection = 'usage' | 'codex';

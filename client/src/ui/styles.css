@@ -11465,3 +11465,20 @@ html.is-replay #world {
 .ui-term__q-reply-slot:empty {
   display: none;
 }
+
+/* Projeto novo no "Novo agente": o nome da pasta e onde ela será criada. */
+.ui-spawn__project {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.ui-spawn__project[hidden] {
+  display: none;
+}
+
+.ui-spawn__project-hint {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

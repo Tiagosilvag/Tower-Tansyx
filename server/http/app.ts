@@ -19,6 +19,7 @@ import { tr } from '../../shared/i18n';
 import type { SpawnService } from '../spawn/spawn';
 import { ATTACHMENT_BODY_MAX, parseAttachment, type AttachmentStore } from '../spawn/attachments';
 import type { SpawnFolder } from '../spawn/folders';
+import { ProjectError, type ProjectCreator } from '../spawn/project';
 import { AUDIO_BODY_MAX, type DictationService } from '../dictation/dictation';
 import type { DeliveryIndex } from '../deliveries/deliveries';
 import type { FileFetcher } from '../deliveries/fetcher';
@@ -70,6 +71,8 @@ export interface ApiDeps {
   spawnFolders?: () => Promise<SpawnFolder[]>;
   /** Anexos do "Novo agente" (POST /api/spawn/attachments; spawn/attachments.ts). */
   attachments?: AttachmentStore;
+  /** Projeto novo do "Novo agente" (GET/POST /api/spawn/project; spawn/project.ts). Sem ele (Docker), a rota recusa. */
+  projects?: ProjectCreator;
   /** Ditado (/api/dictation e, para o auxiliar do host, /api/host/dictation/*; dictation/dictation.ts). */
   dictation?: DictationService;
   /** Atualizar o uso das contas sob demanda (POST /api/usage/refresh; accounts/usage-refresh.ts). */
@@ -516,6 +519,16 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       else if (path === '/api/spawn/folders') {
         if (!isRead) methodNotAllowed(res, 'GET');
         else (deps.spawnFolders ?? (async () => []))().then((folders) => sendJson(res, 200, { folders }), (err) => fail(res, err));
+      } else if (path === '/api/spawn/project') {
+        const projects = deps.projects;
+        if (!projects) sendJson(res, 403, { error: tr('criar projeto novo só funciona fora do Docker (o servidor precisa enxergar as pastas do computador)') });
+        else if (isRead) sendJson(res, 200, { dir: projects.dir() });
+        else if (method === 'POST') {
+          readJson(req)
+            .then((body) => projects.create((body as { name?: unknown } | null)?.name))
+            .then((info) => sendJson(res, 201, info))
+            .catch((err) => (err instanceof ProjectError ? sendJson(res, err.status, { error: err.message }) : fail(res, err)));
+        } else methodNotAllowed(res, 'GET, POST');
       } else if (path === '/api/spawn/attachments') {
         const store = deps.attachments;
         if (method !== 'POST') methodNotAllowed(res, 'POST');

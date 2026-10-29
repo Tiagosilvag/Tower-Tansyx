@@ -94,6 +94,22 @@ function fileToBase64(file: Blob): Promise<string> {
   });
 }
 
+/**
+ * O nome de pasta de um texto livre: "Meu App Novo!" vira "meu-app-novo" (minúsculas, sem acento, só letras, números,
+ * `.`, `_` e `-`). O servidor só aceita esse formato (server/spawn/project.ts).
+ */
+export function slugifyProject(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[^a-z0-9]+/, '')
+    .replace(/[.\-_]+$/, '')
+    .slice(0, 64);
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
@@ -134,6 +150,14 @@ export class SpawnPanel {
   private readonly accountList: HTMLElement;
   private readonly folderList: HTMLElement;
   private readonly otherBtn: HTMLButtonElement;
+  /** Projeto novo (do zero): nome da pasta, em vez de escolher uma que já existe. */
+  private readonly projectBtn: HTMLButtonElement;
+  private readonly projectBox: HTMLElement;
+  private readonly projectName: HTMLInputElement;
+  private readonly projectHint: HTMLElement;
+  private projectOn = false;
+  /** Onde o servidor cria os projetos novos (GET /api/spawn/project); '' até chegar. */
+  private projectDir = '';
   private readonly folder: HTMLInputElement;
   private readonly prompt: HTMLTextAreaElement;
   private readonly fileInput: HTMLInputElement;
@@ -184,6 +208,15 @@ export class SpawnPanel {
     });
     this.folderList = h('div', { class: 'ui-spawn__folders', role: 'radiogroup', attrs: { 'aria-label': tr('Projetos recentes') } });
     this.otherBtn = h('button', { class: 'ui-spawn__other', type: 'button', on: { click: () => this.showOther(true) } }, tr('+ Outra pasta'));
+    this.projectBtn = h('button', { class: 'ui-spawn__other', type: 'button', on: { click: () => this.setProjectMode(!this.projectOn) } }, tr('+ Projeto novo'));
+    this.projectName = h('input', {
+      class: 'ui-rename__input ui-spawn__path',
+      type: 'text',
+      attrs: { id: 'ui-spawn-project', placeholder: tr('Nome do projeto (ex.: minha-aplicacao)'), maxlength: 64, spellcheck: 'false', autocomplete: 'off', autocapitalize: 'none', 'aria-label': tr('Nome do projeto novo') },
+      on: { input: () => this.paintProjectHint() },
+    });
+    this.projectHint = h('p', { class: 'ui-rename__hint ui-spawn__project-hint' });
+    this.projectBox = h('div', { class: 'ui-spawn__project', hidden: true }, this.projectName, this.projectHint);
     this.folder = h('input', {
       class: 'ui-rename__input ui-spawn__path',
       type: 'text',
@@ -215,7 +248,7 @@ export class SpawnPanel {
     this.fileList = h('ul', { class: 'ui-spawn__files', attrs: { 'aria-label': tr('Anexos') } });
     this.submitBtn = h('button', { class: 'ui-btn ui-perm__btn ui-perm__btn--allow ui-spawn__go', type: 'button', on: { click: () => void this.submit() } }, tr('Começar'));
     this.status = h('p', { class: 'ui-rename__hint ui-spawn__status', attrs: { role: 'status', 'aria-live': 'polite' } });
-    for (const field of [this.folder, this.prompt] as HTMLElement[]) {
+    for (const field of [this.folder, this.prompt, this.projectName] as HTMLElement[]) {
       field.addEventListener('keydown', (e: KeyboardEvent) => {
         e.stopPropagation();
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -243,6 +276,8 @@ export class SpawnPanel {
         this.folderList,
         this.otherBtn,
         this.folder,
+        this.projectBtn,
+        this.projectBox,
         h('label', { class: 'ui-spawn__label', attrs: { for: 'ui-spawn-prompt' }, text: tr('Pedido') }),
         this.prompt,
         h('div', { class: 'ui-spawn__tools' }, this.dictate.el, attachBtn, this.fileInput),
@@ -361,7 +396,7 @@ export class SpawnPanel {
     this.folderList.replaceChildren(
       ...(this.query && !shown.length ? [h('p', { class: 'ui-rename__hint', text: tr('Nenhum projeto encontrado.') })] : []),
       ...shown.map((f) => {
-        const on = f.path === this.selected && !this.typing;
+        const on = f.path === this.selected && !this.typing && !this.projectOn;
         const when = ago(f.lastAt, now);
         return h(
           'button',
@@ -379,10 +414,11 @@ export class SpawnPanel {
       }),
     );
     if (!this.folders.length) this.showOther(true);
-    else if (!known && this.selected && !this.typing) this.showOther(true, this.selected);
+    else if (!known && this.selected && !this.typing && !this.projectOn) this.showOther(true, this.selected);
   }
 
   private pick(path: string): void {
+    this.setProjectMode(false);
     this.selected = path;
     this.typing = false;
     setHidden(this.folder, true);
@@ -391,6 +427,7 @@ export class SpawnPanel {
   }
 
   private showOther(on: boolean, value?: string): void {
+    if (on) this.setProjectMode(false);
     this.typing = on;
     setHidden(this.folder, !on);
     this.otherBtn.classList.toggle('is-on', on);
@@ -402,6 +439,79 @@ export class SpawnPanel {
         b.setAttribute('aria-checked', 'false');
       });
       if (value === undefined) this.folder.focus();
+    }
+  }
+
+  /** Liga ou desliga o modo "projeto novo": a pasta é criada na hora de começar, com o nome digitado aqui. */
+  private setProjectMode(on: boolean): void {
+    if (on === this.projectOn) return;
+    this.projectOn = on;
+    setHidden(this.projectBox, !on);
+    this.projectBtn.classList.toggle('is-on', on);
+    setText(this.submitBtn, on ? tr('Criar projeto e começar') : tr('Começar'));
+    this.prompt.placeholder = on ? tr('Descreva a ideia da aplicação (a primeira sessão começa com isso)') : tr('O que o agente deve fazer (opcional)');
+    if (on) {
+      this.typing = false;
+      setHidden(this.folder, true);
+      this.otherBtn.classList.remove('is-on');
+      this.paintProjectHint();
+      void this.loadProjectDir();
+      if (!matchMedia('(pointer: coarse)').matches) this.projectName.focus();
+    }
+    this.renderFolders();
+  }
+
+  private async loadProjectDir(): Promise<void> {
+    if (this.projectDir) return;
+    try {
+      this.projectDir = (await api<{ dir: string }>('/api/spawn/project')).dir;
+    } catch (err) {
+      // Docker ou sem liberação: o servidor explica por que não dá para criar projeto por aqui.
+      this.say((err as Error).message, true);
+    }
+    this.paintProjectHint();
+  }
+
+  private paintProjectHint(): void {
+    const raw = this.projectName.value.trim();
+    const slug = slugifyProject(raw);
+    const where = this.projectDir ? `${this.projectDir.replace(/[\\/]+$/, '')}/${slug || '…'}` : '';
+    const rename = slug && slug !== raw ? tr('Nome da pasta: {0}. ', [slug]) : '';
+    setText(this.projectHint, `${rename}${where ? tr('Será criada em {0}, com git. Para publicar no GitHub, peça ao agente na conversa.', [where]) : ''}`);
+  }
+
+  /** Cria a pasta (e o git) e abre a primeira sessão do Claude Code nela, já com a ideia digitada em "Pedido". */
+  private async submitProject(): Promise<void> {
+    const name = slugifyProject(this.projectName.value);
+    if (!name) return this.say(tr('Dê um nome ao projeto.'), true);
+    if (this.files.length) return this.say(tr('Anexos ainda não valem em projeto novo: tire-os, ou anexe pelo chat depois que a sessão abrir.'), true);
+    const terminals = this.ctx.terminals;
+    if (!terminals) return this.say(tr('O terminal ainda não está pronto.'), true);
+    this.busy = true;
+    this.submitBtn.disabled = true;
+    try {
+      this.say(tr('Criando a pasta…'));
+      const made = await api<{ name: string; path: string; git: boolean; note?: string }>('/api/spawn/project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      this.say(tr('Pasta criada. Abrindo a primeira sessão…'));
+      await terminals.newSession(made.path, this.account || undefined, undefined, this.prompt.value.trim() || undefined);
+      writePref(made.path);
+      this.say(made.note ? made.note : tr('Pronto: {0} criado. Se o Claude Code perguntar se confia na pasta, responda no terminal que abriu.', [made.path]), !!made.note);
+      this.prompt.value = '';
+      this.projectName.value = '';
+      this.setProjectMode(false);
+      this.selected = made.path;
+      void this.loadFolders();
+      this.ctx.announce(tr('Projeto novo criado.'));
+      this.hide();
+    } catch (err) {
+      this.say(tr('Não deu: {0}', [(err as Error).message]), true);
+    } finally {
+      this.busy = false;
+      this.submitBtn.disabled = false;
     }
   }
 
@@ -444,6 +554,7 @@ export class SpawnPanel {
   private async submit(): Promise<void> {
     if (this.busy) return;
     if (this.dictate.busy) return this.say(tr('Espere o ditado terminar.'), true);
+    if (this.projectOn) return this.submitProject();
     const folder = (this.typing ? this.folder.value : this.selected).trim();
     if (!folder) return this.say(tr('Escolha o projeto.'), true);
     this.busy = true;

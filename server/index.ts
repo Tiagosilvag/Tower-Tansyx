@@ -49,6 +49,7 @@ import { createCliRunner, createOpener, SpawnService, type SpawnAccount } from '
 import { findExecutable, runnableClaudeBin } from './claude-bin';
 import { AttachmentStore } from './spawn/attachments';
 import { hiddenFolders, recentFolders } from './spawn/folders';
+import { createProjectCreator } from './spawn/project';
 import { isDemoId } from '../shared/timeline';
 import { DictationService } from './dictation/dictation';
 import { createWhisperTranscriber, findWhisper } from './dictation/whisper';
@@ -396,6 +397,7 @@ const api = createApiHandler({
   usageRefresh: usageRefresher,
   spawn,
   attachments,
+  projects: spawnOn && !config.inDocker ? createProjectCreator() : undefined,
   dictation,
   deliveries,
   files: deliveryFiles,

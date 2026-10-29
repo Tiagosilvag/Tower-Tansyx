@@ -135,6 +135,16 @@ describe('PtyManager: conferir o processo antes de encerrar', () => {
   });
 });
 
+describe('PtyManager: pedido inicial (projeto novo)', () => {
+  it('conversa nova com pedido abre `claude -- "pedido"`; sem pedido, sem argumentos; resume ignora o pedido', () => {
+    const s = setup();
+    s.manager.create({ cwd: tmpdir(), prompt: '  Quero um app de agenda\nem Node  ' });
+    s.manager.create({ cwd: tmpdir() });
+    s.manager.create({ cwd: tmpdir(), prompt: 42 });
+    expect(s.spawned.map((x) => x.args)).toEqual([['--', 'Quero um app de agenda\nem Node'], [], []]);
+  });
+});
+
 describe('PtyManager: assumir', () => {
   it('encerra lá e retoma a mesma conversa aqui', async () => {
     const s = setup();

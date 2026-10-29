@@ -148,8 +148,8 @@ export class PtyPanel implements UiComponent, PtyControl {
     if (p) this.show(p, true);
   }
 
-  async newSession(cwd: string, account?: string, resume?: string): Promise<void> {
-    const p = await createPty(cwd, account, resume);
+  async newSession(cwd: string, account?: string, resume?: string, prompt?: string): Promise<void> {
+    const p = await createPty(cwd, account, resume, prompt);
     if (p) this.show(p, true);
   }
 

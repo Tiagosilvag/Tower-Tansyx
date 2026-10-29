@@ -121,6 +121,9 @@ const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 /** Id de agente principal: "<conta>:<pid>". */
 const MAIN_ID = /^(.+):(\d+)$/;
 
+/** Tamanho máximo do pedido inicial de uma conversa nova. */
+export const PROMPT_MAX = 8_000;
+
 const INHERITED_SESSION_VARS = SESSION_ENV_VARS;
 
 /**
@@ -227,7 +230,7 @@ export class PtyManager {
    * Abre uma sessão do Claude Code na pasta (`cwd` absoluto), na conta pedida (ou na padrão). Com `resume`, retoma
    * uma sessão encerrada daquela conta (`claude --resume`), mantendo a conversa.
    */
-  create(p: { cwd: unknown; account?: unknown; resume?: unknown; cols?: unknown; rows?: unknown }): PtyInfo {
+  create(p: { cwd: unknown; account?: unknown; resume?: unknown; prompt?: unknown; cols?: unknown; rows?: unknown }): PtyInfo {
     let plan = this.plan(p, this.takeovers.size);
     const resume = this.resumeOf(p.resume, plan.account.id);
     // A sessão pode ter mudado de pasta no meio (o agente criou um git worktree): quem manda é a pasta de onde ela
@@ -236,7 +239,9 @@ export class PtyManager {
       const real = this.opts.sessionCwd?.(plan.account.id, resume);
       if (real && real !== plan.cwd) plan = this.plan({ ...p, cwd: real }, this.takeovers.size);
     }
-    return this.spawn(plan, resume ? { resume } : {});
+    // O pedido inicial (projeto novo) só vale numa conversa nova: `claude -- "pedido"` já começa com ele digitado.
+    const prompt = !resume && typeof p.prompt === 'string' ? p.prompt.trim().slice(0, PROMPT_MAX) : '';
+    return this.spawn(plan, resume ? { resume } : prompt ? { prompt } : {});
   }
 
   /**
@@ -432,7 +437,7 @@ export class PtyManager {
     return { cwd, account, cols: clampInt(p.cols, 20, 400, 100), rows: clampInt(p.rows, 5, 200, 30) };
   }
 
-  private spawn(plan: SpawnPlan, p: { resume?: string; from?: string } = {}): PtyInfo {
+  private spawn(plan: SpawnPlan, p: { resume?: string; from?: string; prompt?: string } = {}): PtyInfo {
     const spawn = this.opts.spawn;
     if (!spawn) throw new PtyError(503, tr('terminal desligado: {0}', [this.opts.disabledReason ?? tr('indisponível')]));
     const { cwd, account, cols, rows } = plan;
@@ -441,7 +446,7 @@ export class PtyManager {
     if (account.isDefault) delete env.CLAUDE_CONFIG_DIR;
     else env.CLAUDE_CONFIG_DIR = account.dir;
 
-    const args = p.resume ? ['--resume', p.resume] : [];
+    const args = p.resume ? ['--resume', p.resume] : p.prompt ? ['--', p.prompt] : [];
     const tmux = this.opts.tmux;
     let proc: PtyProcess;
     let pid: number;

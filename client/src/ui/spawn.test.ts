@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ago, filterFolders, formatBytes, shortPath, spawnFolders } from './spawn';
+import { ago, filterFolders, formatBytes, shortPath, slugifyProject, spawnFolders } from './spawn';
 import { insertDictation, pickMimeType } from './dictation';
 
 describe('spawnFolders', () => {
@@ -30,6 +30,18 @@ describe('Novo agente: lista de projetos e anexos', () => {
     const now = 10_000_000;
     expect([ago(0, now), ago(now - 10_000, now), ago(now - 5 * 60_000, now), ago(now - 3 * 3_600_000, now), ago(now - 72 * 3_600_000, now)]).toEqual(['', 'agora', '5 min', '3 h', '3 d']);
     expect([formatBytes(900), formatBytes(2_048), formatBytes(3_500_000)]).toEqual(['900 B', '2 KB', '3,3 MB']);
+  });
+});
+
+describe('nome do projeto novo', () => {
+  it('vira um nome de pasta seguro: minúsculas, sem acento, só letras, números, ponto, hífen e sublinhado', () => {
+    expect(slugifyProject('Meu App Novo!')).toBe('meu-app-novo');
+    expect(slugifyProject('  Gestão de Pedidos 2  ')).toBe('gestao-de-pedidos-2');
+    expect(slugifyProject('api_v1.0')).toBe('api_v1.0');
+    expect(slugifyProject('../etc/passwd')).toBe('etc-passwd');
+    expect(slugifyProject('---x---')).toBe('x');
+    expect(slugifyProject('!!!')).toBe('');
+    expect(slugifyProject('a'.repeat(100))).toHaveLength(64);
   });
 });
 
