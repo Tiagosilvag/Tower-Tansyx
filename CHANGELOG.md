@@ -29,6 +29,9 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **O agente que está trabalhando fica destacado na lista.** Antes só quem esperava um shell ganhava cor. Agora a
+  linha de quem está trabalhando tem fundo com a cor do status, uma faixa pulsante na lateral e o nome em branco, na
+  barra lateral e na gaveta. A faixa para de pulsar com "reduzir movimento" e no modo Mínimo de Desempenho.
 - **Configurações › Desempenho: deixar o app mais leve.** Quatro modos. **Automático** (padrão) começa no Normal e,
   se o escritório ficar abaixo de 24 quadros por segundo por 10 segundos, passa para o Leve e avisa (nunca vai para
   o Mínimo sozinho). **Normal** é como era. **Leve** desenha o escritório a 30 quadros por segundo, com o canvas em

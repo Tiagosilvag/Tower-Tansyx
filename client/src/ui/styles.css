@@ -1684,6 +1684,37 @@
   background: rgba(255, 181, 71, 0.08);
 }
 
+/* Agente trabalhando: a linha fica destacada (fundo, faixa na lateral e nome mais forte), para ver de relance quem está ativo. */
+.ui-agent.is-working {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--st-working) 22%, transparent), color-mix(in srgb, var(--st-working) 7%, transparent));
+  box-shadow: inset 3px 0 0 var(--st-working);
+  animation: ui-working-stripe 2.4s ease-in-out infinite;
+}
+
+.ui-agent.is-working .ui-agent__name {
+  color: #fff;
+}
+
+.ui-agent.is-working.is-selected {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--st-working) 32%, transparent), color-mix(in srgb, var(--st-working) 12%, transparent));
+}
+
+@keyframes ui-working-stripe {
+  0%,
+  100% {
+    box-shadow: inset 3px 0 0 var(--st-working);
+  }
+  50% {
+    box-shadow: inset 3px 0 0 color-mix(in srgb, var(--st-working) 45%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-agent.is-working {
+    animation: none;
+  }
+}
+
 .ui-agent.is-waiting.is-selected {
   background: rgba(255, 181, 71, 0.16);
   box-shadow: inset 2px 0 0 var(--st-waiting);
