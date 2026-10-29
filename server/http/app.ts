@@ -182,12 +182,14 @@ export function sendJson(res: ServerResponse, status: number, body: unknown): vo
  * Anexo de entrega. Páginas e SVG vêm numa sandbox sem scripts (CSP), para não rodarem com o login do escritório;
  * PDF e imagens podem abrir dentro do modal (mesma origem).
  */
-function sendFile(res: ServerResponse, data: Buffer, type: string, name: string): void {
+export function sendFile(res: ServerResponse, data: Buffer, type: string, name: string): void {
   const active = /^text\/html|^image\/svg/.test(type);
   res.writeHead(200, {
     'Content-Type': type,
     'Content-Length': data.length,
-    'Cache-Control': 'private, max-age=300',
+    // Página ou SVG é reescrito no mesmo caminho (o agente republica o Artifact): sempre confere de novo, senão a prévia
+    // mostra a versão de minutos atrás. Imagem comum pode ficar no cache.
+    'Cache-Control': active ? 'private, no-cache' : 'private, max-age=300',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'SAMEORIGIN',
     'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(name)}`,

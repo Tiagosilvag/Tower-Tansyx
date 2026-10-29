@@ -12,6 +12,9 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **A prévia de página do Artifact no chat mostrava a versão antiga.** Quando o agente republicava a mesma página, o
+  navegador reaproveitava por 5 minutos a cópia anterior, porque o endereço da prévia não muda. Páginas HTML e SVG agora
+  são conferidas de novo a cada abertura; imagens comuns continuam no cache.
 - **No acesso por usuários, um anônimo errando senhas não tranca mais a equipe toda, e o acesso total não liga em
   HTTP na rede.** O freio de login passa a ser por IP (o `CF-Connecting-IP` atrás do túnel) e usuário, com um teto
   folgado por nome contra chute distribuído; `HABBLAUD_REMOTE_FULL=1` sem HTTPS próprio só sobe no loopback. A receita
