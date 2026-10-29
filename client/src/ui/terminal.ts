@@ -367,7 +367,8 @@ export interface TerminalFooter {
 }
 
 /** Linha de estado do rodapé, imitando o Claude Code, a partir do agente vivo no snapshot. */
-export function terminalFooter(agent: AgentInfo | undefined, agents: readonly AgentInfo[], now: number): TerminalFooter {
+/** `compacting`: o terminal do agente está compactando a conversa (PtyInfo.compacting): o transcript não diz isso, e sem ele o rodapé ficaria em "Pensando…". */
+export function terminalFooter(agent: AgentInfo | undefined, agents: readonly AgentInfo[], now: number, compacting = false): TerminalFooter {
   if (!agent || agent.status === 'offline') return { kind: 'ended', text: tr('Sessão encerrada') };
   if (agent.status === 'done') return { kind: 'ended', text: tr('Subagente concluído · sessão encerrada') };
   const wait = shellWaitIn(agent, agents, now);
@@ -376,6 +377,7 @@ export function terminalFooter(agent: AgentInfo | undefined, agents: readonly Ag
     const more = wait.jobs.length > 1 ? ` (+${wait.jobs.length - 1})` : '';
     return { kind: 'shell', text: label ? tr('Esperando o shell: {0}{1}', [label, more]) : tr('Esperando o shell terminar'), since: wait.since };
   }
+  if (compacting && agent.status === 'working') return { kind: 'working', text: tr('Compactando a conversa…'), since: agent.statusSince };
   switch (agent.status) {
     case 'working': {
       const act = agent.activity?.text?.trim().replace(/(?:…|\.{1,3})$/, '');
@@ -1603,7 +1605,8 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     const agent = this.ctx.agent(this.id);
     const provider = providerOf(agent ?? this.last);
     this.frames = spinnerFrames(provider);
-    const f = terminalFooter(agent, this.ctx.store.snapshot?.agents ?? [], now);
+    const compacting = !!agent && !!this.ctx.store.snapshot?.ptys?.some((p) => p.agentId === agent.id && p.compacting && p.exitedAt === undefined);
+    const f = terminalFooter(agent, this.ctx.store.snapshot?.agents ?? [], now, compacting);
     setVariant(this.status, 'is-', f.kind);
     setText(this.statusText, f.text);
     setTitle(this.status, f.text);

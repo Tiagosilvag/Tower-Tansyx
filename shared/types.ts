@@ -750,6 +750,8 @@ export interface PtyInfo {
   startedAt: number;
   exitedAt?: number;
   exitCode?: number;
+  /** A conversa está sendo compactada agora (visto na tela do terminal; o transcript não registra isso). */
+  compacting?: boolean;
 }
 
 /** Mensagem entregue ao plugin habblaud-mensagens (POST /api/mod/inbox). */

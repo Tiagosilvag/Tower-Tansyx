@@ -13,11 +13,21 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Chat: mostrar "Compactando a conversa…"
+- **Pedido:** durante a compactação o chat ficava só em "Pensando…" (prints do chat e do terminal interativo).
+- **Causa:** o Claude Code não escreve nada no transcript durante a compactação; só a tela do terminal mostra
+  "Compacting conversation…".
+- **Feito:** `CompactionWatch` no servidor lê a saída do pty e marca `PtyInfo.compacting`; rodapé e aba do chat mostram
+  "Compactando a conversa…". Testes em `server/pty/compaction.test.ts` e `terminal.test.ts`.
+- **Limite:** só sessões com pty do Habblaud; outras seguem em "Pensando…". A frase é a do Claude Code em inglês: se a versão
+  mudar o texto, ajustar `PHRASE`.
+- **Produção:** pendente de deploy.
+
 ### Kanban: colar print com Ctrl+V no cartão
 - **Pedido:** "quero poder dar CTRL+V e colar um print, igual faço aqui no chat".
 - **Feito:** o cartão aberto trata o evento de colar: imagem ou arquivos na área de transferência viram anexo (print ganha o
   nome `print-AAAA-MM-DD-HHMMSS.png`); texto colado continua normal nos campos. `pastedFileName` em `kanban-model.ts`, testado.
-- **Produção:** pendente de deploy.
+- **Produção:** pendente de deploy (commit `1f59bc6`).
 
 ### Kanban: anexar arquivos nos cartões
 - **Pedido:** "quero poder anexar arquivos nos cards do kanban".

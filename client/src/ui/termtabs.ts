@@ -15,7 +15,8 @@ import { tr } from '../../../shared/i18n';
 const CONFIRM_MS = 3000;
 
 /** O que mostrar ao lado do nome: a atividade de quem trabalha ou espera; o título da conversa de quem está parado. */
-function doingOf(a: AgentInfo): string {
+function doingOf(a: AgentInfo, compacting = false): string {
+  if (compacting && a.status === 'working') return tr('Compactando a conversa…');
   if (a.status === 'working' || a.status === 'waiting') return a.activity?.text ?? activityFallback(a);
   return a.title ?? '';
 }
@@ -76,7 +77,7 @@ export class TermTabs {
         b.dataset.id = a.id;
         updateStatusDot(b.firstElementChild as HTMLElement, a.status);
         setText(b.children[1] as HTMLElement, a.name);
-        const doing = doingOf(a);
+        const doing = doingOf(a, !!this.ctx.store.snapshot?.ptys?.some((p) => p.agentId === a.id && p.compacting && p.exitedAt === undefined));
         setText(b.children[2] as HTMLElement, doing);
         setHidden(b.children[2] as HTMLElement, !doing);
         const live = !!ctx.terminals?.interactive(a.id);

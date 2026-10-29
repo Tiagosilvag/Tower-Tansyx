@@ -220,6 +220,12 @@ describe('terminalFooter', () => {
     expect(terminalFooter(agent(), [], now).text).toBe('Trabalhando…');
   });
 
+  it('compactando: o rodapé diz que está compactando, em vez de "Pensando…"', () => {
+    const b = agent({ activity: { id: 'x', kind: 'think', icon: '💭', text: 'Pensando…', at: 0 } });
+    expect(terminalFooter(b, [b], now, true)).toEqual({ kind: 'working', text: 'Compactando a conversa…', since: 1_000 });
+    expect(terminalFooter(agent({ status: 'idle' }), [], now, true).kind).toBe('idle');
+  });
+
   it('esperando você, ocioso e encerrado', () => {
     const perm = { id: 'p1', tool: 'Bash', title: 'Bash(ls)' } as unknown as NonNullable<AgentInfo['permission']>;
     expect(terminalFooter(agent({ status: 'waiting', waitingFor: 'aprovar uma permissão', permission: perm }), [], now).text).toBe('Esperando você: aprovar uma permissão');

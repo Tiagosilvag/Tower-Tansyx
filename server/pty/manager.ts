@@ -22,6 +22,7 @@ import { frame } from '../http/sse';
 import { errMsg, log } from '../log';
 import { pidAlive } from '../sources/registry';
 import { readProcInfo, sameProcess, type ProcInfo, type RegisteredProc } from './procinfo';
+import { CompactionWatch } from './compaction';
 import { parsePromptSuggestion } from './suggestion';
 import { SESSION_PREFIX, type TmuxDriver } from './tmux';
 import { killWithConsoleReset } from './winkill';
@@ -157,6 +158,8 @@ interface Pty {
   /** Quando o cliente atual se anexou (um que cai logo ao anexar não é reanexado em laço). */
   attachedAt: number;
   screen: PtyScreen;
+  /** Vê na saída que a conversa está sendo compactada (PtyInfo.compacting). */
+  compaction: CompactionWatch;
   clients: Set<ServerResponse>;
   /** Conectando: guardam a saída nova numa fila até a tela guardada ficar pronta. */
   pending: Map<ServerResponse, string[]>;
@@ -403,6 +406,7 @@ export class PtyManager {
       for (const c of t.clients) c.end();
       for (const c of t.pending.keys()) c.end();
       t.screen.dispose();
+      t.compaction.dispose();
       if (t.info.exitedAt === undefined) {
         try {
           t.proc.kill();
@@ -488,7 +492,20 @@ export class PtyManager {
 
   /** Põe um terminal (novo ou reconhecido) na lista e liga a saída dele às telas conectadas. */
   private register(info: PtyInfo, proc: PtyProcess, cols: number, rows: number, tmux?: string): Pty {
-    const pty: Pty = { info, proc, tmux, attachedAt: this.now(), screen: this.createScreen(cols, rows), clients: new Set(), pending: new Map() };
+    const pty: Pty = {
+      info,
+      proc,
+      tmux,
+      attachedAt: this.now(),
+      screen: this.createScreen(cols, rows),
+      compaction: new CompactionWatch((active) => {
+        if (active) info.compacting = true;
+        else delete info.compacting;
+        this.opts.onChange();
+      }),
+      clients: new Set(),
+      pending: new Map(),
+    };
     this.ptys.set(info.id, pty);
     this.bind(pty, proc);
     return pty;
@@ -497,6 +514,7 @@ export class PtyManager {
   private bind(pty: Pty, proc: PtyProcess): void {
     proc.onData((data) => {
       pty.screen.write(data);
+      pty.compaction.feed(data);
       for (const queue of pty.pending.values()) queue.push(data);
       this.broadcast(pty, 'data', data);
     });
@@ -507,6 +525,8 @@ export class PtyManager {
         // O cliente caiu mas a sessão ainda existe (alguém o desconectou): anexa de novo, a não ser que ele caia logo.
         if (this.now() - pty.attachedAt > REATTACH_MIN_MS && this.tmuxAlive(pty.tmux) && this.reattach(pty)) return;
       }
+      pty.compaction.dispose();
+      delete pty.info.compacting;
       pty.info.exitedAt = this.now();
       pty.info.exitCode = exitCode;
       this.broadcast(pty, 'exit', { code: exitCode });
@@ -672,6 +692,7 @@ export class PtyManager {
     for (const c of t.clients) c.end();
     for (const c of t.pending.keys()) c.end();
     t.screen.dispose();
+    t.compaction.dispose();
     this.ptys.delete(id);
   }
 

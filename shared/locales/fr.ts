@@ -1562,6 +1562,7 @@ export const FR: Readonly<Record<string, string>> = {
   "Atualizar o Kanban": "Actualiser le Kanban",
   "Responsável: {0}": "Responsable : {0}",
   "{0} anexos": "{0} pièces jointes",
+  "Compactando a conversa…": "Compactage de la conversation…",
   "1 anexo": "1 pièce jointe",
   "Anexar arquivo": "Joindre un fichier",
   "Anexar arquivos": "Joindre des fichiers",

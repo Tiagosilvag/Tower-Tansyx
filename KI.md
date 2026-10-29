@@ -97,6 +97,14 @@ Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qu
   `paintPresenceFaces` põe pílulas (avatar + nome na cor da pessoa; "nome digitando…" quando digita; no máximo 2 e "+N") abaixo do nome do agente (`rows.ts`, barra lateral e gaveta).
 - Não bloqueia ninguém: é só aviso. Uma trava de "um escreve por vez" não existe (decisão: aviso primeiro).
 
+## 5b. Compactação visível no chat
+
+O transcript não registra nada enquanto o Claude Code compacta (só o `compact_boundary` no fim), e o office ficava em
+"Pensando…". `server/pty/compaction.ts` (`CompactionWatch`) olha a saída do pty por "Compacting conversation" (ignora escapes, aguenta
+frase partida) e marca `PtyInfo.compacting` por 5 s a cada redesenho; o cliente (`terminalFooter(..., compacting)` e `termtabs.ts`)
+troca o texto por "Compactando a conversa…". Só cobre sessões com pty do Habblaud; sessão rodando em outro terminal continua
+em "Pensando…" (sem como saber).
+
 ## 6. Kanban
 
 _Anexos nos cartões:_ metadados na tabela `card_files` (migração 4), bytes em `<dataDir>/kanban-files/<cartão>/<id do arquivo>` (nome
