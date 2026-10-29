@@ -119,6 +119,8 @@ export interface ApiDeps {
 
 /** GET /api/agents/:id/terminal (ids nunca contêm '/'). */
 const TERMINAL_ROUTE = /^\/api\/agents\/([^/]+)\/terminal$/;
+/** GET /api/agents/:id/terminal/earlier?before=N: a conversa anterior à já carregada. */
+const TERMINAL_EARLIER_ROUTE = /^\/api\/agents\/([^/]+)\/terminal\/earlier$/;
 /** POST /api/agents/:id/stop|takeover (terminal interativo). */
 const AGENT_ACTION_ROUTE = /^\/api\/agents\/[^/]+\/(stop|takeover)$/;
 
@@ -462,6 +464,31 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       else {
         const own = { account: url.searchParams.get('account') || undefined, session: url.searchParams.get('session') || undefined };
         sendJson(res, 200, modSummary(hub.current(), (id) => office.has(id), deps.version, own));
+      }
+      return true;
+    }
+    const earlierMatch = TERMINAL_EARLIER_ROUTE.exec(path);
+    if (earlierMatch) {
+      if (method !== 'GET') methodNotAllowed(res, 'GET');
+      else if (!terminals) {
+        sendJson(res, 403, { error: tr('terminal desligado: ele só funciona com o Habblaud acessível apenas pelo próprio computador') });
+      } else if (!trusted(req, 'terminal')) {
+        sendJson(res, 403, { error: denied(req, tr('o terminal só abre pelo próprio computador (http://localhost ou http://127.0.0.1)')) });
+      } else {
+        let id: string;
+        try {
+          id = decodeURIComponent(earlierMatch[1]);
+        } catch {
+          sendJson(res, 400, { error: tr('id inválido') });
+          return true;
+        }
+        const before = Number(url.searchParams.get('before'));
+        if (!Number.isInteger(before) || before < 0) sendJson(res, 400, { error: tr('before precisa ser um número inteiro') });
+        else {
+          const page = terminals.earlierOf(id, before);
+          if (typeof page === 'string') sendJson(res, 404, { error: page });
+          else sendJson(res, 200, { entries: page.entries, earlier: page.before });
+        }
       }
       return true;
     }

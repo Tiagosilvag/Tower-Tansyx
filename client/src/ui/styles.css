@@ -5040,6 +5040,31 @@ button.ui-term__think:hover,
   background: repeating-linear-gradient(90deg, var(--ui-line-strong) 0 4px, transparent 4px 6px);
 }
 
+.ui-term__earlier {
+  display: block;
+  margin: -6px auto 14px;
+  padding: 5px 12px;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ui-text);
+  font: 12px/1.2 var(--font-ui);
+  cursor: pointer;
+}
+
+.ui-term__earlier:hover:not(:disabled) {
+  border-color: var(--ui-accent);
+}
+
+.ui-term__earlier:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.ui-term__earlier[hidden] {
+  display: none;
+}
+
 .ui-term__placeholder {
   padding: 18% 12px 0;
   text-align: center;

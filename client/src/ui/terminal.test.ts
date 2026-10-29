@@ -55,6 +55,37 @@ function agent(p: Partial<AgentInfo> = {}): AgentInfo {
   };
 }
 
+describe('TerminalLog.prepend (conversa anterior)', () => {
+  it('põe as entradas mais antigas no começo, na ordem, sem repetir as que já existem', () => {
+    const log = new TerminalLog();
+    log.push([user('u3'), user('u4')]);
+    const r = log.prepend([user('u1'), user('u2'), user('u3')]);
+    expect(r.added.map((i) => i.key)).toEqual(['user:u1', 'user:u2']);
+    expect([...log.values()].map((i) => i.key)).toEqual(['user:u1', 'user:u2', 'user:u3', 'user:u4']);
+    expect(log.prepend([user('u1')]).added).toEqual([]);
+  });
+
+  it('o resultado solto na tela é juntado à ferramenta que chegou, e a linha solta some', () => {
+    const log = new TerminalLog();
+    log.push([result('r1', 't1'), user('u2')]);
+    expect([...log.values()].map((i) => i.type)).toEqual(['orphan', 'entry']);
+    const r = log.prepend([user('u0'), tool('t1')]);
+    expect(r.removed).toEqual(['result:r1']);
+    expect([...log.values()].map((i) => i.type)).toEqual(['entry', 'tool', 'entry']);
+    const t = [...log.values()][1];
+    expect(t.type === 'tool' && t.result?.id).toBe('r1');
+  });
+
+  it('ferramenta e resultado da mesma página saem juntos; resultado sem ferramenta continua solto', () => {
+    const log = new TerminalLog();
+    log.push([user('u9')]);
+    const r = log.prepend([result('r0', 'tX'), tool('t1'), result('r1', 't1')]);
+    expect(r.added.map((i) => i.type)).toEqual(['orphan', 'tool']);
+    const t = r.added[1];
+    expect(t.type === 'tool' && t.result?.id).toBe('r1');
+  });
+});
+
 describe('TerminalLog', () => {
   it('junta o resultado à ferramenta do mesmo lote', () => {
     const log = new TerminalLog();
@@ -123,6 +154,13 @@ describe('parseInit / parseAppend', () => {
     expect(init?.agentId).toBe('a1');
     expect(init?.truncated).toBe(true);
     expect(init?.entries.map(entryKey)).toEqual(['user:u1', 'result:r1']);
+  });
+
+  it('earlier: o ponto de corte da conversa anterior só vale como número positivo', () => {
+    const base = { agentId: 'a1', truncated: true, entries: [] };
+    expect(parseInit(JSON.stringify({ ...base, earlier: 4096 }))?.earlier).toBe(4096);
+    for (const earlier of [0, -5, 'x', null]) expect(parseInit(JSON.stringify({ ...base, earlier }))).not.toHaveProperty('earlier');
+    expect(parseInit(JSON.stringify(base))).not.toHaveProperty('earlier');
   });
 
   it('JSON inválido: init nulo e append vazio', () => {

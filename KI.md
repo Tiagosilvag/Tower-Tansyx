@@ -97,6 +97,15 @@ Ligado por `HABBLAUD_REMOTE_USERS=1`. Todos os usuários têm o mesmo poder e qu
   `paintPresenceFaces` põe pílulas (avatar + nome na cor da pessoa; "nome digitando…" quando digita; no máximo 2 e "+N") abaixo do nome do agente (`rows.ts`, barra lateral e gaveta).
 - Não bloqueia ninguém: é só aviso. Uma trava de "um escreve por vez" não existe (decisão: aviso primeiro).
 
+## 5a. Conversa anterior no chat
+
+O `init` do terminal carrega só o fim do transcript (4 MB / 500 entradas) e traz `earlier`: o byte onde começa a linha mais
+antiga carregada. O botão "Carregar conversa anterior" chama `GET /api/agents/:id/terminal/earlier?before=N` (ou
+`/api/sessions/:conta/:sessão/terminal/earlier`), que devolve até 500 entradas anteriores e o novo `earlier` (0 = começo)
+(`server/sources/earlier.ts`, `readEarlier`: janela de 4 MB, parser novo por página, corte sempre no começo de uma linha).
+No cliente, `TerminalLog.prepend` junta o resultado solto à ferramenta que chegou e o painel preserva a posição de leitura.
+Quem carrega páginas aumenta o teto de itens em tela (`keep`), senão a próxima mensagem as descartaria.
+
 ## 5b. Compactação visível no chat
 
 O transcript não registra nada enquanto o Claude Code compacta (só o `compact_boundary` no fim), e o office ficava em

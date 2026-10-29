@@ -16,6 +16,7 @@ import type { Activity, AgentInfo, TerminalEntry, TerminalInit } from '../../sha
 import { annotateImages } from '../deliveries/chatimages';
 import { errMsg, log } from '../log';
 import type { Office } from '../model/office';
+import { cutAtLine, readEarlier, type EarlierPage } from '../sources/earlier';
 import { FileTail } from '../sources/tail';
 import { createTerminalParser, type TerminalParser } from '../sources/terminal';
 import { sendJson } from './app';
@@ -117,22 +118,35 @@ class TranscriptSource implements ConversationSource {
     const offset = this.tail.seekTail(this.o.initTailBytes);
     const keep = this.o.initEntries;
     let entries: TerminalEntry[] = [];
+    // Byte (no arquivo) da linha de onde veio cada entrada: o ponto de corte do que ficou de fora, para ler para trás.
+    let starts: number[] = [];
+    let pos = offset;
     let dropped = false;
     for (let i = 0; i < MAX_INIT_READS; i++) {
       const r = this.tail.read();
-      parseInto(this.parser, r.lines, entries);
+      for (const line of r.lines) {
+        const first = entries.length;
+        parseInto(this.parser, [line], entries);
+        for (let k = first; k < entries.length; k++) starts.push(pos);
+        pos += Buffer.byteLength(line) + 1;
+      }
       // Descarta o excesso pelo caminho (transcript com muitas entradas pequenas).
       if (entries.length > keep * 2) {
-        entries = entries.slice(-keep);
+        const cut = cutAtLine(starts, keep);
+        entries = entries.slice(cut);
+        starts = starts.slice(cut);
         dropped = true;
       }
       if (!r.more) break;
     }
     if (entries.length > keep) {
-      entries = entries.slice(-keep);
+      const cut = cutAtLine(starts, keep);
+      entries = entries.slice(cut);
+      starts = starts.slice(cut);
       dropped = true;
     }
-    return { agentId: this.agentId, entries, truncated: offset > 0 || dropped };
+    const earlier = dropped ? (starts[0] ?? offset) : offset;
+    return { agentId: this.agentId, entries, truncated: earlier > 0, ...(earlier > 0 ? { earlier } : {}) };
   }
 
   poll(): PollResult {
@@ -246,6 +260,34 @@ export class TerminalStreams {
   attachSession(req: IncomingMessage, res: ServerResponse, streamId: string, path: string, createParser?: () => TerminalParser): void {
     const o = { transcriptPathOf: () => undefined, createParser: createParser ?? this.createParser, initTailBytes: this.initTailBytes, initEntries: this.initEntries };
     this.serve(req, res, streamId, new TranscriptSource(streamId, path, o, this.sessionPollMs));
+  }
+
+  /**
+   * Conversa anterior à que o `init` carregou, de um agente ao vivo: as até 500 entradas antes do byte `before`. Erro:
+   * a mensagem do 404 (agente ou transcript desconhecido).
+   */
+  earlierOf(agentId: string, before: number): EarlierPage | string {
+    const office = this.opts.office;
+    if (!office.has(agentId)) return tr('agente não encontrado');
+    const path = this.opts.transcriptPathOf(agentId);
+    if (!path) return tr('transcript do agente não encontrado');
+    const parserFor = this.opts.parserFor;
+    return this.earlierFrom(path, before, parserFor ? () => parserFor(agentId) ?? this.createParser() : this.createParser);
+  }
+
+  /** O mesmo para uma sessão do histórico (a rota já validou conta, id e caminho). */
+  earlierOfSession(path: string, before: number, createParser?: () => TerminalParser): EarlierPage | string {
+    return this.earlierFrom(path, before, createParser ?? this.createParser);
+  }
+
+  private earlierFrom(path: string, before: number, createParser: () => TerminalParser): EarlierPage | string {
+    try {
+      const page = readEarlier(path, before, createParser);
+      return { ...page, entries: page.entries.map((e) => this.mark(e)) };
+    } catch (err) {
+      log.warnOnce(`terminal-earlier-read:${errMsg(err)}`, tr('Terminal: não foi possível ler a conversa anterior ({0}).', [errMsg(err)]));
+      return tr('não foi possível ler o transcript');
+    }
   }
 
   /** Limite de terminais, `init` e o stream SSE de uma fonte já escolhida. */

@@ -373,6 +373,7 @@ describe('terminal: transporte', () => {
       await waitFor(() => expect(inits(s)).toHaveLength(1));
       const init = inits(s)[0];
       expect(init.truncated).toBe(true);
+      expect(init.earlier).toBeGreaterThan(0);
       expect(init.entries.at(-1)?.id).toBe('a6');
       expect(init.entries.length).toBeLessThan(6);
       s.close();
@@ -383,8 +384,39 @@ describe('terminal: transporte', () => {
       env.paths.set(MAIN, small);
       const t = await open(env.base, route(MAIN));
       await waitFor(() => expect(inits(t)).toHaveLength(1));
-      expect(inits(t)[0]).toEqual({ agentId: MAIN, entries: ['c2', 'c3', 'c4'].map((id) => user(id)), truncated: true });
+      // `earlier` = byte do começo da linha de c2 (cada linha tem 11 caracteres + a quebra): dali para trás é a conversa anterior
+      expect(inits(t)[0]).toEqual({ agentId: MAIN, entries: ['c2', 'c3', 'c4'].map((id) => user(id)), truncated: true, earlier: 12 });
       t.close();
+    } finally {
+      await env.close();
+    }
+  });
+
+  it('conversa anterior: o `earlier` do init leva à página anterior pela rota, até o começo, sem repetir nem perder', async () => {
+    const env = await serve({ streams: { initTailBytes: 60, initEntries: 3 } });
+    try {
+      const ids = Array.from({ length: 12 }, (_, i) => `m${String(i + 1).padStart(2, '0')}`);
+      const file = join(env.dir, 'longo.jsonl');
+      writeLines(file, ids.map(line));
+      env.paths.set(MAIN, file);
+      const s = await open(env.base, route(MAIN));
+      await waitFor(() => expect(inits(s)).toHaveLength(1));
+      const init = inits(s)[0];
+      s.close();
+      expect(init.earlier).toBeGreaterThan(0);
+      const vistos = init.entries.map((e) => e.id);
+      let before = init.earlier!;
+      for (let guarda = 0; before > 0 && guarda < 20; guarda++) {
+        const res = await fetch(`${env.base}${route(MAIN)}/earlier?before=${before}`);
+        expect(res.status).toBe(200);
+        const page = (await res.json()) as { entries: TerminalEntry[]; earlier: number };
+        vistos.unshift(...page.entries.map((e) => e.id));
+        expect(page.earlier).toBeLessThan(before);
+        before = page.earlier;
+      }
+      expect(vistos).toEqual(ids);
+      expect((await fetch(`${env.base}${route(MAIN)}/earlier?before=abc`)).status).toBe(400);
+      expect((await fetch(`${env.base}${route('nao:existe')}/earlier?before=10`)).status).toBe(404);
     } finally {
       await env.close();
     }

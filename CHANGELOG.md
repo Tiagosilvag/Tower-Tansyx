@@ -45,6 +45,9 @@ do meio (0.**3**.0).
   1×, sem partículas, sem efeitos de data comemorativa e sem a iluminação suave. **Mínimo** soma a isso a pausa do
   escritório com o terminal em tela cheia, no máximo 150 linhas no chat e nenhuma animação. Uma opção mostra no
   canto da tela os quadros por segundo e as linhas do chat, para comparar. Vale só para o seu navegador.
+- **O chat carrega a conversa anterior.** Conversas longas mostravam só o fim (últimas 500 entradas) e o aviso "Conversa
+  anterior não carregada". Agora há o botão **Carregar conversa anterior**: cada clique traz mais 500 entradas para o topo, sem
+  mexer no ponto em que você está lendo, até o começo da sessão. Vale para agentes ao vivo e para sessões do histórico.
 - **O Kanban ganhou a coluna Revisão**, entre Fazendo e Feito. Quando um agente move um cartão para lá pelo comando
   `tower-kanban`, o motivo é obrigatório (`--comment`) e vira um comentário no cartão; o comando recusa o movimento sem ele. As
   instruções dos agentes (CLAUDE.md das contas) foram atualizadas com esse padrão. Cartões que já existiam não mudam de coluna.

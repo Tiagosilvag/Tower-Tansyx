@@ -531,6 +531,14 @@ export interface TerminalInit {
   entries: TerminalEntry[];
   /** Há conversa anterior que não foi carregada (o transcript é maior do que a janela lida). */
   truncated: boolean;
+  /** Onde começa, no arquivo, o que foi carregado: o `before` do primeiro pedido de conversa anterior. Ausente = nada antes. */
+  earlier?: number;
+}
+
+/** Resposta de GET .../terminal/earlier?before=N: as entradas anteriores e o novo ponto de corte (0 = chegou ao começo). */
+export interface TerminalEarlier {
+  entries: TerminalEntry[];
+  earlier: number;
 }
 
 /**

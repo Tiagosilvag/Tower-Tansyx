@@ -13,6 +13,15 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 
 ## 2026-10-29
 
+### Chat: carregar a conversa anterior
+- **Pedido:** "Por que no chat ele não está carregando as conversas anteriores?" (print desta sessão com "Conversa anterior
+  não carregada").
+- **Causa:** o chat só lê o fim do transcript (4 MB / 500 entradas); esta sessão tem ~37 MB.
+- **Feito:** botão "Carregar conversa anterior" (+500 entradas por clique) para agentes e sessões do histórico; ver KI §5a.
+  Testes: `server/sources/earlier.test.ts`, rota em `server/http/terminal.test.ts`, `TerminalLog.prepend` em `terminal.test.ts`.
+- **Limite:** o transcript guarda também o que o Claude já resumiu na compactação, então dá para ver o que veio antes dela.
+- **Produção:** pendente de deploy.
+
 ### Kanban: coluna Revisão e padrão de comentário
 - **Pedido:** adicionar uma etapa de revisão no quadro; ao mover um cartão para ela, comentar o porquê; instruir os agentes no
   CLAUDE.md das contas.
@@ -22,7 +31,7 @@ Formato: `### AAAA-MM-DD — título` · **Pedido** · **Feito** · **Commits** 
 - **Decisões minhas:** a regra é aplicada no comando dos agentes (e pelas instruções), não na página: quem arrasta um cartão
   para Revisão na tela não é obrigado a comentar. Cartões antigos ficam onde estão.
 - **Em aberto:** sessões de agente já abertas só leem o CLAUDE.md novo ao reiniciar.
-- **Produção:** pendente de deploy.
+- **Produção:** no ar desde `c3155f0`.
 
 ### Chat: mostrar "Compactando a conversa…"
 - **Pedido:** durante a compactação o chat ficava só em "Pensando…" (prints do chat e do terminal interativo).

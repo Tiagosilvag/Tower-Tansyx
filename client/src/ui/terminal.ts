@@ -201,6 +201,43 @@ export class TerminalLog {
     return { added, attached };
   }
 
+  /**
+   * Conversa mais antiga que a já carregada, entrando no começo. Resultados que estavam sozinhos (a ferramenta era anterior à
+   * janela) são juntados à ferramenta que acabou de chegar, e a linha solta some (`removed`). `added` vem na ordem da tela.
+   */
+  prepend(entries: readonly TerminalEntry[]): { added: TerminalItem[]; removed: string[] } {
+    const added: TerminalItem[] = [];
+    const removed: string[] = [];
+    const orphans = new Map<string, string>();
+    for (const [key, item] of this.items) if (item.type === 'orphan') orphans.set(toolKey(item.result.toolUseId), key);
+    const tools = new Map<string, Extract<TerminalItem, { type: 'tool' }>>();
+    for (const e of entries) {
+      const key = entryKey(e);
+      if (this.seen.has(key)) continue;
+      this.seen.add(key);
+      if (e.kind === 'tool') {
+        const item: Extract<TerminalItem, { type: 'tool' }> = { type: 'tool', key, tool: e };
+        const orphanKey = orphans.get(key);
+        const orphan = orphanKey === undefined ? undefined : this.items.get(orphanKey);
+        if (orphanKey !== undefined && orphan?.type === 'orphan') {
+          item.result = orphan.result;
+          this.items.delete(orphanKey);
+          removed.push(orphanKey);
+        }
+        tools.set(key, item);
+        added.push(item);
+      } else if (e.kind === 'result') {
+        const tool = tools.get(toolKey(e.toolUseId));
+        if (tool && !tool.result) tool.result = e;
+        else added.push({ type: 'orphan', key, result: e });
+      } else {
+        added.push({ type: 'entry', key, entry: e });
+      }
+    }
+    this.items = new Map<string, TerminalItem>([...added.map((i): [string, TerminalItem] => [i.key, i]), ...this.items]);
+    return { added, removed };
+  }
+
   /** Descarta os itens mais antigos até sobrar `limit`; devolve as chaves removidas. */
   trim(limit: number): string[] {
     const removed: string[] = [];
@@ -252,7 +289,8 @@ export function parseInit(data: unknown): TerminalInit | null {
   const obj = parseJson(data);
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
   const o = obj as Record<string, unknown>;
-  return { agentId: typeof o.agentId === 'string' ? o.agentId : '', entries: sanitizeEntries(o.entries), truncated: o.truncated === true };
+  const earlier = typeof o.earlier === 'number' && Number.isFinite(o.earlier) && o.earlier > 0 ? o.earlier : undefined;
+  return { agentId: typeof o.agentId === 'string' ? o.agentId : '', entries: sanitizeEntries(o.entries), truncated: o.truncated === true, ...(earlier === undefined ? {} : { earlier }) };
 }
 
 /** Dados do evento `append`. */
@@ -747,6 +785,11 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   /** Já recebeu um `init` desta conexão (ou de uma anterior, no mesmo agente). */
   private loaded = false;
   private truncated = false;
+  /** Byte de onde pedir a conversa anterior (0 = não há mais); vem do `init` e anda para trás a cada página. */
+  private earlier = 0;
+  private loadingEarlier = false;
+  /** Quantos itens a tela mantém ao chegar mensagem nova: sobe quando o usuário carrega conversa anterior (senão a que ele pediu sairia). */
+  private keep = 0;
   private log = new TerminalLog();
   private rows = new Map<string, HTMLElement>();
   private tools = new Map<string, ToolRefs>();
@@ -797,6 +840,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   private scroll: HTMLElement;
   private list: HTMLElement;
   private note: HTMLElement;
+  private earlierBtn: HTMLButtonElement;
   private placeholder: HTMLElement;
   private newBtn: HTMLButtonElement;
   private status: HTMLElement;
@@ -916,9 +960,10 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.alertText = h('span', { class: 'ui-term__alert-text', text: OPEN_ERROR });
     this.alertEl = h('div', { class: 'ui-term__alert', role: 'alert', hidden: true }, this.alertText, retry);
     this.note = h('p', { class: 'ui-term__note', text: tr('Conversa anterior não carregada'), hidden: true });
+    this.earlierBtn = h('button', { class: 'ui-term__earlier', type: 'button', text: tr('Carregar conversa anterior'), hidden: true, on: { click: () => void this.loadEarlier() } });
     this.list = h('div', { class: 'ui-term__list' });
     this.placeholder = h('p', { class: 'ui-term__placeholder' });
-    this.scroll = h('div', { class: 'ui-term__scroll', tabIndex: 0, attrs: { 'aria-label': tr('Conversa da sessão') } }, this.note, this.list, this.placeholder);
+    this.scroll = h('div', { class: 'ui-term__scroll', tabIndex: 0, attrs: { 'aria-label': tr('Conversa da sessão') } }, this.note, this.earlierBtn, this.list, this.placeholder);
     this.scroll.addEventListener('scroll', () => this.onScroll(), { passive: true });
     this.newBtn = h('button', { class: 'ui-term__new', type: 'button', hidden: true, on: { click: () => this.jumpToEnd() } });
 
@@ -1204,6 +1249,8 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.conn = 'open';
     this.loaded = true;
     this.truncated = data.truncated;
+    this.earlier = data.earlier ?? 0;
+    this.keep = 0;
     this.unread = 0;
     this.ingest(data.entries, true);
     // A conversa foi remontada: a busca refaz os destaques (mantendo o resultado atual, se ele ainda existir).
@@ -1217,11 +1264,66 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.renderState();
   }
 
+  /** Pede ao servidor as entradas anteriores às que a tela já tem e as põe no topo, sem mexer no que o usuário está lendo. */
+  private async loadEarlier(): Promise<void> {
+    const id = this.id;
+    if (id === null || this.loadingEarlier || this.earlier <= 0) return;
+    this.loadingEarlier = true;
+    setText(this.earlierBtn, tr('Carregando…'));
+    this.earlierBtn.disabled = true;
+    const base = this.session ? sessionTerminalUrl(this.session.account, this.session.sessionId) : terminalUrl(id);
+    try {
+      const res = await fetch(`${base}/earlier?before=${this.earlier}`, { credentials: 'same-origin', cache: 'no-store' });
+      const body = (await res.json().catch(() => ({}))) as { entries?: unknown; earlier?: unknown; error?: string };
+      if (!res.ok) throw new Error(body.error ?? tr('erro {0}', [res.status]));
+      if (this.id !== id) return; // abriu outra conversa enquanto esperava
+      const next = typeof body.earlier === 'number' && Number.isFinite(body.earlier) && body.earlier > 0 ? body.earlier : 0;
+      this.prependEntries(sanitizeEntries(body.entries));
+      this.earlier = next;
+      this.truncated = next > 0;
+      setText(this.earlierBtn, tr('Carregar conversa anterior'));
+    } catch (err) {
+      setText(this.earlierBtn, tr('Não deu para carregar ({0}). Tentar de novo', [(err as Error).message]));
+    } finally {
+      this.loadingEarlier = false;
+      this.earlierBtn.disabled = false;
+      if (this.id === id) this.renderState();
+    }
+  }
+
+  /** Põe entradas mais antigas no topo, mantendo na tela o que o usuário estava vendo. */
+  private prependEntries(entries: readonly TerminalEntry[]): void {
+    const { added, removed } = this.log.prepend(entries);
+    for (const key of removed) {
+      this.rows.get(key)?.remove();
+      this.rows.delete(key);
+    }
+    const height = this.scroll.scrollHeight;
+    const top = this.scroll.scrollTop;
+    const now = this.ctx.now();
+    const frag = document.createDocumentFragment();
+    const fresh = new Map<string, HTMLElement>();
+    for (const item of added) {
+      const el = this.buildRow(item, now);
+      el.dataset.key = item.key;
+      fresh.set(item.key, el);
+      frag.append(el);
+    }
+    // A ordem do Map é a da tela (a busca e o filtro andam por ela): as linhas novas vão na frente.
+    this.rows = new Map([...fresh, ...this.rows]);
+    this.list.prepend(frag);
+    this.keep = Math.max(this.keep, this.log.size);
+    this.follow = false;
+    this.applyFilter();
+    if (this.folded) this.runSearch(false);
+    this.scroll.scrollTop = top + (this.scroll.scrollHeight - height);
+  }
+
   /** Aplica um lote: cria as linhas novas num fragmento, junta resultados e descarta as linhas mais antigas. */
   private ingest(entries: readonly TerminalEntry[], initial: boolean): void {
     for (const e of entries) if (e.at > this.lastEntryAt) this.lastEntryAt = e.at;
     const batch = this.log.push(entries);
-    const evicted = this.log.trim(domLimit);
+    const evicted = this.log.trim(Math.max(domLimit, this.keep));
     if (evicted.length) {
       const before = this.follow ? 0 : this.scroll.scrollHeight;
       for (const key of evicted) {
@@ -1573,6 +1675,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     setHidden(this.alertEl, this.conn !== 'failed');
     setText(this.alertText, this.session ? SESSION_OPEN_ERROR : OPEN_ERROR);
     setHidden(this.note, !(this.loaded && this.truncated));
+    setHidden(this.earlierBtn, !(this.loaded && this.truncated && this.earlier > 0));
     const empty = this.rows.size === 0;
     const filteredOut = !empty && this.visibleRows === 0;
     setHidden(this.placeholder, !(empty || filteredOut) || this.conn === 'failed');

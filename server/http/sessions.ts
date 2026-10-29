@@ -26,7 +26,7 @@ export interface SessionRoutesDeps {
 
 const RECENT_ROUTE = '/api/sessions/recent';
 /** GET /api/sessions/:conta/:sessionId/terminal (segmentos sem '/'; um %2F só aparece depois de decodificar). */
-const TERMINAL_ROUTE = /^\/api\/sessions\/([^/]+)\/([^/]+)\/terminal$/;
+const TERMINAL_ROUTE = /^\/api\/sessions\/([^/]+)\/([^/]+)\/terminal(\/earlier)?$/;
 
 /** Por que a trava recusa a requisição (undefined = liberada): os mesmos textos do terminal do agente. */
 export function sessionsLockError(enabled: boolean, host: string | undefined, trusted?: boolean): string | undefined {
@@ -77,5 +77,11 @@ export function handleSessionsRoute(req: IncomingMessage, res: ServerResponse, p
   if (account === undefined || sessionId === undefined) return sendJson(res, 400, { error: tr('endereço inválido') });
   const found = history.resolve(account, sessionId);
   if ('error' in found) return sendJson(res, found.status, { error: found.error });
+  if (terminalMatch![3]) {
+    const before = Number(new URL(req.url ?? '/', 'http://x').searchParams.get('before'));
+    if (!Number.isInteger(before) || before < 0) return sendJson(res, 400, { error: tr('before precisa ser um número inteiro') });
+    const page = terminals.earlierOfSession(found.path, before, found.createParser);
+    return typeof page === 'string' ? sendJson(res, 404, { error: page }) : sendJson(res, 200, { entries: page.entries, earlier: page.before });
+  }
   terminals.attachSession(req, res, `session:${account}:${sessionId}`, found.path, found.createParser);
 }
