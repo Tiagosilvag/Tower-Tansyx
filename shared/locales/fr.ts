@@ -666,6 +666,8 @@ export const FR: Readonly<Record<string, string>> = {
   "Compactar": "Compacter",
   "Não deu para compactar": "Impossible de compacter",
   "Para compactar, use \"Assumir daqui\": só dá para compactar sessões abertas pelo Habblaud": "Pour compacter, utilisez « Reprendre d'ici » : seules les sessions ouvertes par Habblaud peuvent être compactées",
+  "Recolher os botões": "Replier les boutons",
+  "Mostrar os botões": "Afficher les boutons",
   "Ver {0}": "Voir {0}",
 
   // client/src/ui/terminal.ts

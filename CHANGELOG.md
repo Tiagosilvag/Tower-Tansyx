@@ -18,6 +18,9 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **Celular: fileira de botões recolhível.** Na barra de cima, um botão com seta mostra ou esconde a fileira de botões (Kanban,
+  estatísticas, entregas, histórico, novo agente, configurações, ajuda, usuário). Fechada (o padrão), o escritório ganha essa
+  altura; um ponto laranja avisa se há entregas novas escondidas. A escolha fica salva no navegador.
 - **Celular: barra superior, cabeçalho do chat e caixa de mensagem.** A barra do alto passou a caber em duas linhas (botões um
   pouco menores no celular); o cabeçalho do chat quebra em duas linhas em vez de esconder o nome do agente e os botões de
   expandir e fechar; a caixa de mensagem mostra o texto numa linha própria, com os botões (anexar, ditar, pausar, compactar,

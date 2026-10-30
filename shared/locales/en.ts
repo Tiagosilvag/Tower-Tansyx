@@ -703,6 +703,8 @@ export const EN: Readonly<Record<string, string>> = {
   "Compactar": "Compact",
   "Não deu para compactar": "Couldn't compact",
   "Para compactar, use \"Assumir daqui\": só dá para compactar sessões abertas pelo Habblaud": "To compact, use \"Take over from here\": only sessions opened by Habblaud can be compacted",
+  "Recolher os botões": "Collapse the buttons",
+  "Mostrar os botões": "Show the buttons",
   "Ver {0}": "View {0}",
 
   // client/src/ui/termactions.ts

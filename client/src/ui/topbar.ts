@@ -30,6 +30,24 @@ const COUNTERS: { key: Exclude<keyof Counters, 'shells'>; singular: string; plur
 ];
 const WAITING_HINT = COUNTERS.find((c) => c.key === 'waiting')!.hint;
 
+const BAR_KEY = 'habblaud.topbar.open';
+
+function readBarOpen(): boolean {
+  try {
+    return localStorage.getItem(BAR_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeBarOpen(open: boolean): void {
+  try {
+    localStorage.setItem(BAR_KEY, open ? '1' : '0');
+  } catch {
+    /* sem armazenamento: vale só nesta abertura */
+  }
+}
+
 export class TopBar implements UiComponent {
   readonly el: HTMLElement;
   private pill: HTMLElement;
@@ -57,6 +75,8 @@ export class TopBar implements UiComponent {
   readonly panelGroup: HTMLElement;
 
   private readonly right = h('div', { class: 'ui-topbar__right' });
+  /** Celular: recolhe e mostra a fileira de botões (o estado fica em `is-bar-open` na raiz e no navegador). */
+  private readonly foldBtn: HTMLButtonElement;
 
   constructor(private ctx: UiContext) {
     // Marca: usa o logo do projeto se existir; senão, o prédio em pixels.
@@ -142,6 +162,8 @@ export class TopBar implements UiComponent {
     );
     this.panelGroup = panelGroup;
 
+    this.foldBtn = h('button', { class: 'ui-icon-btn ui-topbar__fold', type: 'button' });
+    this.foldBtn.addEventListener('click', () => this.setBarOpen(!ctx.root.classList.contains('is-bar-open'), true));
     this.el = h(
       'header',
       { class: 'ui-topbar', role: 'banner' },
@@ -159,9 +181,21 @@ export class TopBar implements UiComponent {
       counterWrap,
       this.usage.el,
       this.usageRefresh.el,
+      this.foldBtn,
       this.right,
     );
     this.right.append(viewGroup, panelGroup);
+    this.setBarOpen(readBarOpen());
+  }
+
+  private setBarOpen(open: boolean, save = false): void {
+    this.ctx.root.classList.toggle('is-bar-open', open);
+    this.foldBtn.innerHTML = open ? ICONS.chevronUp : ICONS.chevronDown;
+    const label = open ? tr('Recolher os botões') : tr('Mostrar os botões');
+    setAttr(this.foldBtn, 'aria-label', label);
+    setTitle(this.foldBtn, label);
+    setAttr(this.foldBtn, 'aria-expanded', String(open));
+    if (save) writeBarOpen(open);
   }
 
   /** Acrescenta um selo à linha de status da marca, depois da versão (ex.: o chip do Habblaud World). */

@@ -13408,3 +13408,50 @@ html.is-replay #world {
 .ui-term__prompt--mic > :is(.ui-msg__attach, .ui-dictate, .ui-msg__pause, .ui-msg__compact, .ui-msg__send) {
   flex: none;
 }
+
+/* Celular: a fileira de botões (ajustar, Kanban, estatísticas, entregas, histórico, novo agente, configurações, ajuda, usuário) é
+   recolhível. Fechada, sobra só a marca e os cartões de uso, e o escritório ganha a altura da fileira; a escolha fica no navegador. */
+.ui-topbar__fold {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .ui-topbar__fold {
+    display: inline-grid;
+    flex: none;
+    order: 1;
+    margin-left: auto;
+    width: 40px;
+    height: 36px;
+    position: relative;
+  }
+
+  /* Entregas novas escondidas na fileira recolhida: um ponto laranja avisa. */
+  .ui-root:not(.is-bar-open) .ui-topbar:has(.ui-deliv-badge:not([hidden])) .ui-topbar__fold::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #f5b45a;
+    box-shadow: 0 0 0 2px var(--ui-bg);
+  }
+
+  .ui-topbar__right {
+    display: none;
+  }
+
+  .ui-root.is-bar-open {
+    --top-h: 154px;
+  }
+
+  .ui-root.is-bar-open .ui-topbar__right {
+    display: flex;
+    flex: 1 0 100%;
+    order: 5;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+}

@@ -6,6 +6,18 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Celular: fileira de botões recolhível
+
+- **Problema:** no celular a fileira de botões da barra superior ocupava uma linha inteira e tirava espaço do escritório.
+- **Decisão do dono:** os botões devem ser retráteis no celular para liberar espaço.
+- **O que foi feito / Arquivos novos:** botão de seta na barra superior mostra/esconde a fileira; padrão recolhido; estado salvo no
+  navegador; ponto laranja avisa entregas novas escondidas. A altura da barra muda junto (menor recolhida, maior aberta). Só no celular.
+- **Testes:** typecheck, traduções, testes da interface e build. Sem navegador na máquina: não conferido em tela.
+- **Limite conhecido:** as alturas da barra (recolhida e aberta) são estimadas pelos prints; podem precisar de ajuste fino.
+- **Para subir / Pendente:** aguardando deploy e um print novo. [CONFIRMAR visual]
+
+---
+
 ## 30/10/2026 — Celular: ajustes de layout (skill impeccable, modo adapt)
 
 - **Problema:** em prints de iPhone, a barra superior ocupava três linhas (acima da altura fixa), o cabeçalho do chat estourava para a
