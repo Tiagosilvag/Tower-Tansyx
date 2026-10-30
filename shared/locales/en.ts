@@ -705,6 +705,10 @@ export const EN: Readonly<Record<string, string>> = {
   "Para compactar, use \"Assumir daqui\": só dá para compactar sessões abertas pelo Habblaud": "To compact, use \"Take over from here\": only sessions opened by Habblaud can be compacted",
   "Recolher os botões": "Collapse the buttons",
   "Mostrar os botões": "Show the buttons",
+  "Renomear a sessão": "Rename the session",
+  "Nome da sessão": "Session name",
+  "Renomeação pedida: o novo nome aparece aqui em instantes.": "Rename requested: the new name shows up here shortly.",
+  "Não deu para renomear": "Could not rename",
   "Ver {0}": "View {0}",
 
   // client/src/ui/termactions.ts
@@ -2457,11 +2461,11 @@ export const EN: Readonly<Record<string, string>> = {
   "Branch": "Branch",
   "Contexto da sessão": "Session context",
   "Espere o agente terminar para trocar o modelo.": "Wait for the agent to finish before switching the model.",
+  "Espere o agente terminar para compactar.": "Wait for the agent to finish before compacting.",
   "Iniciada há": "Started",
   "Modelo da sessão": "Session model",
   "Modo de permissão": "Permission mode",
   "Não deu para pausar": "Could not pause",
-  "Espere o agente terminar para compactar.": "Wait for the agent to finish before compacting.",
   "Não deu para trocar o modelo": "Could not switch the model",
   "Para pausar, use \"Assumir daqui\": só dá para pausar sessões abertas pelo Habblaud": "To pause, use \"Take over\": only sessions opened by Habblaud can be paused",
   "Para trocar o modelo, use \"Assumir daqui\": só dá para trocar em sessões abertas pelo Habblaud.": "To switch the model, use \"Take over\": only sessions opened by Habblaud can be switched.",

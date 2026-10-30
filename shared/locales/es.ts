@@ -705,6 +705,10 @@ export const ES: Readonly<Record<string, string>> = {
   "Para compactar, use \"Assumir daqui\": só dá para compactar sessões abertas pelo Habblaud": "Para compactar, usa \"Tomar desde aquí\": solo se pueden compactar sesiones abiertas por Habblaud",
   "Recolher os botões": "Recoger los botones",
   "Mostrar os botões": "Mostrar los botones",
+  "Renomear a sessão": "Renombrar la sesión",
+  "Nome da sessão": "Nombre de la sesión",
+  "Renomeação pedida: o novo nome aparece aqui em instantes.": "Cambio de nombre pedido: el nombre nuevo aparece aquí en instantes.",
+  "Não deu para renomear": "No se pudo renombrar",
   "Ver {0}": "Ver {0}",
 
   // client/src/ui/termactions.ts
@@ -2457,11 +2461,11 @@ export const ES: Readonly<Record<string, string>> = {
   "Branch": "Rama",
   "Contexto da sessão": "Contexto de la sesión",
   "Espere o agente terminar para trocar o modelo.": "Espera a que el agente termine para cambiar el modelo.",
+  "Espere o agente terminar para compactar.": "Espera a que el agente termine para compactar.",
   "Iniciada há": "Iniciada hace",
   "Modelo da sessão": "Modelo de la sesión",
   "Modo de permissão": "Modo de permisos",
   "Não deu para pausar": "No se pudo pausar",
-  "Espere o agente terminar para compactar.": "Espera a que el agente termine para compactar.",
   "Não deu para trocar o modelo": "No se pudo cambiar el modelo",
   "Para pausar, use \"Assumir daqui\": só dá para pausar sessões abertas pelo Habblaud": "Para pausar, usa \"Asumir desde aquí\": solo se pueden pausar sesiones abiertas por Habblaud",
   "Para trocar o modelo, use \"Assumir daqui\": só dá para trocar em sessões abertas pelo Habblaud.": "Para cambiar el modelo, usa \"Asumir desde aquí\": solo se puede en sesiones abiertas por Habblaud.",

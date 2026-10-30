@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { choiceOf, compactTokens, contextPercent, contextWindow, modelLabel, PAUSE_KEYS, switchModelKeys } from './session-info';
+import { choiceOf, compactTokens, contextPercent, contextWindow, modelLabel, PAUSE_KEYS, renameKeys, renameName, switchModelKeys } from './session-info';
+
+describe('renomear a sessão', () => {
+  it('limpa quebras de linha e teclas de controle e limita o tamanho', () => {
+    expect(renameName('  Meu\nprojeto\x1b[A  novo ')).toBe('Meu projeto [A novo');
+    expect(renameName('a'.repeat(200))).toHaveLength(90);
+  });
+  it('nome vazio não renomeia', () => {
+    expect(renameName('  \n\t ')).toBeNull();
+  });
+  it('digita o /rename depois de limpar a linha', () => {
+    expect(renameKeys('Nome')).toBe('\x15/rename Nome');
+  });
+});
 
 describe('modelLabel', () => {
   it('formata os nomes do padrão claude-<família>-<maior>-<menor>', () => {

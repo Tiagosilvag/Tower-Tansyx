@@ -43,7 +43,8 @@ import { newSessionChoices } from './newsession';
 import { askQuestionNodes, PermissionCard } from './permission';
 import { canRenameRoom } from './roomrename';
 import { accountChipLabel, accountProvider, CODEX_LIVE_HINT, codexApprovalLabel, providerOf } from './provider';
-import { ptyControllable } from './ptyapi';
+import { ptyControllable, ptyOfAgent, sendPtyKeys } from './ptyapi';
+import { renameKeys, renameName, RENAME_MAX } from './session-info';
 import { createAgentRow, updateAgentRow } from './rows';
 import { SocialSection } from './social';
 import { TERMINAL_UNAVAILABLE_HINT, type TerminalControl } from './terminal';
@@ -202,6 +203,11 @@ class AgentView {
   private name: HTMLElement;
   private role: HTMLElement;
   private title: HTMLElement;
+  private titleBox: HTMLElement;
+  private titleBtn: HTMLButtonElement;
+  private titleInput: HTMLInputElement;
+  private titleForm: HTMLFormElement;
+  private titleMsg: HTMLElement;
   private accChip: HTMLElement;
   private accName: HTMLElement;
   private accProv: HTMLElement;
@@ -275,6 +281,22 @@ class AgentView {
     this.name = h('h2', { class: 'ui-hero__name' });
     this.role = h('span', { class: 'ui-role' });
     this.title = h('p', { class: 'ui-hero__title' });
+    // Lápis: manda /rename para a sessão (o Claude Code grava o título; o Habblaud só passa a ler o novo).
+    this.titleBtn = iconButton(ICONS.pencil, tr('Renomear a sessão'), () => this.editTitle(), 'ui-icon-btn--sm ui-hero__title-edit');
+    this.titleInput = h('input', {
+      class: 'ui-rename__input',
+      type: 'text',
+      attrs: { maxlength: String(RENAME_MAX), 'aria-label': tr('Nome da sessão'), autocomplete: 'off' },
+      on: { keydown: (e) => e.key === 'Escape' && (e.stopPropagation(), this.closeTitle()) },
+    });
+    this.titleMsg = h('p', { class: 'ui-rename__hint is-error', attrs: { role: 'status' }, hidden: true });
+    this.titleForm = h(
+      'form',
+      { class: 'ui-hero__title-form', hidden: true, on: { submit: (e) => (e.preventDefault(), void this.saveTitle()) } },
+      this.titleInput,
+      this.titleMsg,
+    );
+    this.titleBox = h('div', { class: 'ui-hero__titlebox' }, this.title, this.titleBtn, this.titleForm);
     this.accChip = createAccountChip('md');
     this.accName = h('span', { class: 'ui-hero__acc-name' });
     this.accProv = createProviderTag('ui-prov--xs');
@@ -409,7 +431,7 @@ class AgentView {
       { class: 'ui-drawer__view ui-agent-view' },
       h('div', { class: 'ui-hero' }, this.avatar, heroText),
       this.character.el,
-      this.title,
+      this.titleBox,
       this.gone,
       statusRow,
       this.termBtn,
@@ -540,8 +562,13 @@ class AgentView {
     setText(this.role, roleLabel(a));
     setVariant(this.role, 'ui-role--', a.kind);
     setText(this.title, a.title ?? '');
-    setHidden(this.title, !a.title);
+    setHidden(this.title, !a.title || !this.titleForm.hidden);
     setTitle(this.title, a.title ?? '');
+    // Só renomeia com a sessão rodando aqui e parada: o /rename é digitado no terminal dela.
+    const canRename = !!live && !!ptyOfAgent(this.ctx.store, a.id) && a.status !== 'working' && ptyControllable(a);
+    if (this.titleForm.hidden === false && (!canRename || this.titleAgent !== a.id)) this.closeTitle();
+    setHidden(this.titleBtn, !canRename || !this.titleForm.hidden);
+    setHidden(this.titleBox, !a.title && !canRename);
     updateAccountChip(this.accChip, account, a.account, a.provider);
     setText(this.accName, account?.name ?? a.account);
     updateProviderTag(this.accProv, provider, account?.name ?? '');
@@ -672,6 +699,42 @@ class AgentView {
     if (key === this.alertQuestionsKey) return;
     this.alertQuestionsKey = key;
     this.alertQuestions.replaceChildren(...askQuestionNodes(qs));
+  }
+
+  private titleAgent = '';
+
+  private editTitle(): void {
+    this.titleAgent = this.id;
+    this.titleInput.value = this.last?.title ?? '';
+    setHidden(this.titleMsg, true);
+    setHidden(this.titleForm, false);
+    setHidden(this.title, true);
+    setHidden(this.titleBtn, true);
+    this.titleInput.focus();
+    this.titleInput.select();
+  }
+
+  private closeTitle(): void {
+    setHidden(this.titleForm, true);
+    setHidden(this.title, !this.last?.title);
+    setHidden(this.titleBtn, false);
+  }
+
+  private async saveTitle(): Promise<void> {
+    const name = renameName(this.titleInput.value);
+    const pty = ptyOfAgent(this.ctx.store, this.id);
+    if (!name || !pty) return this.closeTitle();
+    try {
+      // O comando e o Enter vão separados: o Claude Code trata um bloco com Enter no meio como texto colado.
+      await sendPtyKeys(pty.id, renameKeys(name));
+      await new Promise((r) => setTimeout(r, 200));
+      await sendPtyKeys(pty.id, '\r');
+      this.closeTitle();
+      this.ctx.announce(tr('Renomeação pedida: o novo nome aparece aqui em instantes.'));
+    } catch (err) {
+      setText(this.titleMsg, `${tr('Não deu para renomear')}: ${err instanceof Error ? err.message : ''}`);
+      setHidden(this.titleMsg, false);
+    }
   }
 
   private renderTerminalButton(live: boolean, provider = providerOf(this.last)): void {

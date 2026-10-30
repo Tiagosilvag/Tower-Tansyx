@@ -6,6 +6,19 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Nome da sessão editável
+
+- **Problema:** o texto embaixo do nome do agente (título da sessão, vindo do primeiro prompt) não podia ser mudado.
+- **Decisão do dono:** lápis ao lado do título que manda `/rename` para a sessão, como o Compactar manda `/compact`.
+- **O que foi feito / Arquivos novos:** lápis e campo no painel do agente (`client/src/ui/drawer.ts`); `renameName` (uma linha, sem
+  teclas de controle, até 90 caracteres) e `renameKeys` em `client/src/ui/session-info.ts`; o comando e o Enter vão em envios
+  separados. O título novo volta pelo histórico da própria sessão, então vale também no histórico e no Claude Code.
+- **Testes:** testes de `renameName`/`renameKeys`; tipos. Interface e envio real do `/rename` não conferidos no navegador. [CONFIRMAR]
+- **Limite conhecido:** só aparece com a sessão aberta pelo Tower e parada; sessão sem terminal ou do histórico fica só leitura.
+- **Para subir / Pendente:** aguardando deploy.
+
+---
+
 ## 30/10/2026 — iPhone: texto grande depois de girar o aparelho
 
 - **Problema:** ao deitar o celular e voltar, as letras do chat ficavam no tamanho ampliado da posição deitada.

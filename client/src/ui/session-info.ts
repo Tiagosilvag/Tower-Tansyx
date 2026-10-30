@@ -56,6 +56,20 @@ export const PAUSE_KEYS = '\x1b';
 /** Comando que compacta a conversa do Claude Code (o Enter vai depois, em outro envio). */
 export const COMPACT_COMMAND = '/compact';
 
+export const RENAME_MAX = 90;
+
+/** Nome novo da sessão pronto para o /rename: uma linha só, sem teclas de controle; vazio vira null. */
+export function renameName(raw: string): string | null {
+  // eslint-disable-next-line no-control-regex
+  const name = raw.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, RENAME_MAX);
+  return name || null;
+}
+
+/** Limpa o que estiver digitado na linha (Ctrl+U) e digita o /rename; o Enter vai depois, em outro envio. */
+export function renameKeys(name: string): string {
+  return `\x15/rename ${name}`;
+}
+
 /** Troca o modelo: limpa o que estiver digitado na linha (Ctrl+U) e manda o /model. */
 export function switchModelKeys(modelId: string): string {
   return `\x15/model ${modelId}\r`;

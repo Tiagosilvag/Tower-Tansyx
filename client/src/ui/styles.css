@@ -13455,3 +13455,24 @@ html.is-replay #world {
     justify-content: space-between;
   }
 }
+
+/* Nome da sessão (embaixo do nome do agente): lápis no canto e campo para digitar o nome novo. */
+.ui-hero__titlebox {
+  position: relative;
+  margin-top: 12px;
+}
+
+.ui-hero__titlebox .ui-hero__title {
+  margin-top: 0;
+  padding-right: 34px;
+}
+
+.ui-hero__title-edit {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.ui-hero__title-form {
+  margin: 0;
+}

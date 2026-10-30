@@ -1,6 +1,6 @@
 # KI — Tower Tansyx
 
-Última atualização: 29/10/2026. O histórico do que foi feito está no [`Diario-de-Projeto.md`](Diario-de-Projeto.md).
+Última atualização: 30/10/2026. O histórico do que foi feito está no [`Diario-de-Projeto.md`](Diario-de-Projeto.md).
 
 > Este arquivo é commitado em repositório **público**. Por isso fica só o que é seguro para qualquer leitor: nada de credenciais,
 > infraestrutura (hosts, IPs, portas, caminhos do servidor, deploy), esquema de banco, endpoints internos, fluxos de autenticação,
@@ -29,7 +29,8 @@
 
 - **Rodando:** tudo o que consta no diário até 29/10/2026 (contas, marcação, presença, Entregas com texto, Kanban com Revisão e
   anexos, compactação, conversa anterior, filtro "Só prompts" por padrão, janela de documentos `.md`).
-- **Pronto esperando subir:** nada de código; só documentação.
+- **Pronto esperando subir:** correção do texto grande no iPhone e **renomear a sessão** pelo lápis no painel do agente (manda
+  `/rename` ao Claude Code; só com a sessão aberta pelo Tower e parada). [CONFIRMAR no aparelho / em uso real]
 - **Riscos de negócio e entrega:**
   - O repositório é público e o histórico do git ainda contém versões antigas do KI e do diário com detalhes de ambiente
     (sem credenciais). Reescrever o histórico ou criar repositório novo só com ordem do dono.

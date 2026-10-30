@@ -668,6 +668,10 @@ export const FR: Readonly<Record<string, string>> = {
   "Para compactar, use \"Assumir daqui\": só dá para compactar sessões abertas pelo Habblaud": "Pour compacter, utilisez « Reprendre d'ici » : seules les sessions ouvertes par Habblaud peuvent être compactées",
   "Recolher os botões": "Replier les boutons",
   "Mostrar os botões": "Afficher les boutons",
+  "Renomear a sessão": "Renommer la session",
+  "Nome da sessão": "Nom de la session",
+  "Renomeação pedida: o novo nome aparece aqui em instantes.": "Renommage demandé : le nouveau nom apparaît ici dans un instant.",
+  "Não deu para renomear": "Impossible de renommer",
   "Ver {0}": "Voir {0}",
 
   // client/src/ui/terminal.ts
@@ -2473,11 +2477,11 @@ export const FR: Readonly<Record<string, string>> = {
   "Branch": "Branche",
   "Contexto da sessão": "Contexte de la session",
   "Espere o agente terminar para trocar o modelo.": "Attendez que l'agent ait fini pour changer de modèle.",
+  "Espere o agente terminar para compactar.": "Attendez que l'agent ait fini pour compacter.",
   "Iniciada há": "Démarrée il y a",
   "Modelo da sessão": "Modèle de la session",
   "Modo de permissão": "Mode de permission",
   "Não deu para pausar": "Impossible de mettre en pause",
-  "Espere o agente terminar para compactar.": "Attendez que l'agent ait fini pour compacter.",
   "Não deu para trocar o modelo": "Impossible de changer de modèle",
   "Para pausar, use \"Assumir daqui\": só dá para pausar sessões abertas pelo Habblaud": "Pour mettre en pause, utilisez « Reprendre d'ici » : seules les sessions ouvertes par Habblaud peuvent l'être",
   "Para trocar o modelo, use \"Assumir daqui\": só dá para trocar em sessões abertas pelo Habblaud.": "Pour changer de modèle, utilisez « Reprendre d'ici » : seules les sessions ouvertes par Habblaud le permettent.",
