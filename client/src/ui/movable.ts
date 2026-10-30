@@ -254,9 +254,9 @@ export class Movable {
     else if (!was) queueMicrotask(() => this.opts.onChange?.(true));
   }
 
-  /** Limite de cima: a borda da tela (a barra da janela continua alcançável). A janela pode cobrir a barra superior. */
+  /** Limite de cima: logo abaixo da barra superior, sem o vão (a janela não a cobre). */
   private minTop(): number {
-    return 0;
+    return this.barHeight();
   }
 
   /** Onde termina a barra superior: janela que começa acima disso sobe para cima dela (classe `is-over-bar`). */
@@ -279,7 +279,7 @@ export class Movable {
     // A altura encolhe para a janela não passar da borda de baixo.
     const h = Math.max(MIN_H, Math.min(b.h, innerHeight - y - 8));
     this.box = { x, y, w, h };
-    this.el.classList.toggle('is-over-bar', y < this.topInset());
+    this.el.classList.toggle('is-over-bar', y < this.barHeight());
     const s = this.el.style;
     s.left = `${Math.round(x)}px`;
     s.top = `${Math.round(y)}px`;

@@ -6,6 +6,16 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Janelas voltam a respeitar a barra superior (com margem menor)
+
+- **Problema:** as janelas podiam cobrir a barra superior (pedido de 30/10/2026); o dono mudou de ideia.
+- **Decisão do dono:** voltar a respeitar a barra superior, mas com a margem menor (colada nela, sem o vão de antes).
+- **O que foi feito:** o limite de cima das janelas móveis é a altura da barra (`Movable.minTop`), sem o vão; expandida ocupa a tela abaixo da barra (`client/src/ui/styles.css`).
+- **Testes:** tipos e testes do cliente; visual não conferido. [CONFIRMAR]
+- **Para subir / Pendente:** aguardando deploy.
+
+---
+
 ## 30/10/2026 — Barra lateral do escritório sempre por cima das janelas
 
 - **Problema:** com o chat aberto na parte de cima, a janela cobria a barra lateral "Escritório".
