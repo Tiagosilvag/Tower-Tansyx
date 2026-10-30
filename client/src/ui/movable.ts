@@ -85,8 +85,9 @@ export class Movable {
         const w = this.el.offsetWidth;
         const h = this.el.offsetHeight;
         const cur = this.shown ?? this.box;
-        if (!w || !h || (w === cur.w && h === cur.h)) return;
-        this.box = { ...this.box, w, h };
+        // A caixa mostrada tem frações (a barra lateral aberta encolhe as janelas); o navegador mede em pixels inteiros.
+        if (!w || !h || (w === Math.round(cur.w) && h === Math.round(cur.h))) return;
+        this.box = { ...this.box, w: w / Movable.squeeze().k, h };
         this.scheduleSave();
         this.opts.onMove?.();
       }).observe(el);
