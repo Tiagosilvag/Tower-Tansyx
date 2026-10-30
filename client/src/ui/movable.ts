@@ -118,6 +118,18 @@ export class Movable {
     return side.offsetLeft + side.offsetWidth + side.offsetLeft;
   }
 
+  /** Barra lateral aberta: a borda dela e a escala (<1) com que a tela útil encolhe; fechada, 0 e 1. */
+  private static squeeze(): { edge: number; k: number } {
+    const edge = Movable.sidebarEdge();
+    return { edge, k: edge > 0 ? (innerWidth - edge) / innerWidth : 1 };
+  }
+
+  /** O retângulo na tela (já encolhido) como caixa guardada (sem encolher). */
+  private static unsqueeze(r: { left: number; top: number; width: number; height: number }): Box {
+    const { edge, k } = Movable.squeeze();
+    return { x: edge > 0 ? (r.left - edge) / k : r.left, y: r.top, w: r.width / k, h: r.height };
+  }
+
   /** Marca a janela como a mais usada agora. */
   touch(): void {
     this.used = Date.now();
@@ -203,7 +215,7 @@ export class Movable {
       e.preventDefault();
       e.stopPropagation();
       const r = this.el.getBoundingClientRect();
-      if (!this.box) this.float({ x: r.left, y: r.top, w: r.width, h: r.height }, true);
+      if (!this.box) this.float(Movable.unsqueeze(r), true);
       this.sizing = { id: e.pointerId, edge, sx: e.clientX, sy: e.clientY, start: { ...this.box! } };
       this.el.classList.add('is-resizing');
       g.setPointerCapture(e.pointerId);
@@ -211,7 +223,7 @@ export class Movable {
     g.addEventListener('pointermove', (e) => {
       const z = this.sizing;
       if (!z || z.id !== e.pointerId) return;
-      const dx = e.clientX - z.sx;
+      const dx = (e.clientX - z.sx) / Movable.squeeze().k;
       const dy = e.clientY - z.sy;
       const b = { ...z.start };
       if (edge.includes('e')) b.w = Math.max(MIN_W, z.start.w + dx);
@@ -259,11 +271,12 @@ export class Movable {
       if (Math.abs(e.clientX - d.sx) < DRAG_THRESHOLD && Math.abs(e.clientY - d.sy) < DRAG_THRESHOLD) return;
       d.moving = true;
       const r = this.el.getBoundingClientRect();
-      this.float({ x: r.left, y: r.top, w: r.width, h: r.height }, true);
+      this.float(Movable.unsqueeze(r), true);
       this.el.classList.add('is-dragging');
     }
     e.preventDefault();
-    if (this.box) this.apply({ ...this.box, x: e.clientX - d.dx, y: e.clientY - d.dy });
+    const { edge, k } = Movable.squeeze();
+    if (this.box) this.apply({ ...this.box, x: edge > 0 ? (e.clientX - d.dx - edge) / k : e.clientX - d.dx, y: e.clientY - d.dy });
   }
 
   private onUp(e: PointerEvent, handle: HTMLElement): void {
@@ -311,13 +324,15 @@ export class Movable {
     // A altura encolhe para a janela não passar da borda de baixo.
     const h = Math.max(MIN_H, Math.min(b.h, innerHeight - y - 8));
     this.box = { x, y, w, h };
-    // Barra lateral aberta: a borda esquerda é empurrada para a direita e a janela encolhe (a direita fica onde estava).
+    // Barra lateral aberta: a tela útil encolhe para o que sobra à direita dela e todas as janelas encolhem na mesma
+    // proporção (as que ficam lado a lado continuam lado a lado). Fechada, a conta devolve a caixa guardada.
     const edge = Movable.sidebarEdge();
     let sx = x;
     let sw = w;
-    if (edge > x) {
-      sx = Math.min(edge, innerWidth - MIN_W);
-      sw = Math.max(MIN_W, x + w - sx);
+    if (edge > 0) {
+      const k = (innerWidth - edge) / innerWidth;
+      sw = Math.max(MIN_W, Math.min(w * k, innerWidth - edge));
+      sx = Math.min(edge + x * k, innerWidth - sw);
     }
     this.shown = { x: sx, y, w: sw, h };
     this.el.classList.toggle('is-over-bar', y < this.barHeight());

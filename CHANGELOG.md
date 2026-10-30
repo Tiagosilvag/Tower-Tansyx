@@ -12,8 +12,8 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
-- **A barra lateral empurra as janelas.** Com a barra do escritório aberta, o chat, o Kanban e os documentos encolhem para
-  ficar ao lado dela em vez de ficar por baixo, e voltam ao tamanho que tinham quando ela recolhe.
+- **A barra lateral empurra as janelas.** Com a barra do escritório aberta, todas as janelas abertas (chats, Kanban e
+  documentos) encolhem na mesma proporção para ficar ao lado dela em vez de ficar por baixo, e voltam ao tamanho que tinham quando ela recolhe.
 - **Organizar as janelas, como os Snap Layouts do Windows.** Um botão de grade na barra do chat, do Kanban e dos documentos abre as
   divisões da tela (colunas, terços, quartos, uma grande e duas pequenas). "Esta janela" encaixa só ela na zona clicada; "Todas as
   janelas" distribui as abertas na divisão, da mais usada para a menos usada.
