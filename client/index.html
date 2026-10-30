@@ -33,6 +33,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #12151d; }
+      /* iOS: ao girar o aparelho o Safari aumenta o texto sozinho e não volta ao desvirar. */
+      html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
       #world, #city, #visit { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; image-rendering: pixelated; }
       #world[hidden], #city[hidden], #visit[hidden] { display: none; }
       #ui { position: fixed; inset: 0; pointer-events: none; }

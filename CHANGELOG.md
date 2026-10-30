@@ -18,6 +18,8 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **iPhone: o texto ficava grande depois de girar o aparelho.** Ao deitar e voltar o celular, o Safari aumentava as letras
+  sozinho e não desfazia. O aumento automático foi desligado (`text-size-adjust`).
 - **Celular: fileira de botões recolhível.** Na barra de cima, um botão com seta mostra ou esconde a fileira de botões (Kanban,
   estatísticas, entregas, histórico, novo agente, configurações, ajuda, usuário). Fechada (o padrão), o escritório ganha essa
   altura; um ponto laranja avisa se há entregas novas escondidas. A escolha fica salva no navegador.

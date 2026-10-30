@@ -6,6 +6,18 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — iPhone: texto grande depois de girar o aparelho
+
+- **Problema:** ao deitar o celular e voltar, as letras do chat ficavam no tamanho ampliado da posição deitada.
+- **Decisão do dono:** corrigir.
+- **O que foi feito / Arquivos novos:** regra `text-size-adjust: 100%` no `html` da página (`client/index.html`); é o aumento automático de
+  texto do Safari ao girar.
+- **Testes:** build. Sem iPhone nem navegador na máquina: não conferido. [CONFIRMAR no aparelho]
+- **Limite conhecido:** se ainda ficar grande, a causa é outra (ex.: zoom da página), e precisa de novo print.
+- **Para subir / Pendente:** aguardando deploy.
+
+---
+
 ## 30/10/2026 — Celular: fileira de botões recolhível
 
 - **Problema:** no celular a fileira de botões da barra superior ocupava uma linha inteira e tirava espaço do escritório.
