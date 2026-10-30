@@ -6,6 +6,19 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Janelas flutuantes sem o limite da barra superior
+
+- **Problema:** o chat (terminal) e o Kanban não subiam acima da barra superior, nem arrastando, nem esticando, nem expandindo.
+- **Decisão do dono:** remover o limite para as janelas poderem ocupar a tela inteira.
+- **O que foi feito / Arquivos novos:** `client/src/ui/movable.ts` passou a limitar só na borda da tela; a janela que começa acima do
+  fim da barra recebe a classe `is-over-bar` e sobe de camada (por cima da barra). O expandir do terminal, do Kanban e do documento
+  usa a tela toda. Vale também para a janela de documentos, que usa a mesma peça.
+- **Testes:** tipos, testes do cliente e build. Comportamento na tela não conferido (sem navegador). [CONFIRMAR]
+- **Limite conhecido:** posições salvas continuam valendo; a barra da janela fica sempre alcançável (não sai pela borda de cima).
+- **Para subir / Pendente:** aguardando deploy.
+
+---
+
 ## 30/10/2026 — Compactação não aparecia no chat
 
 - **Problema:** durante a compactação o chat ficava em "Pensando…", sem o aviso "Compactando a conversa…".

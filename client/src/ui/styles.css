@@ -7712,8 +7712,8 @@ html.is-replay #world {
 
 /* Terminal expandido na tela toda do Habblaud (botão ao lado do fechar). */
 .ui-term.is-max {
-  z-index: 46;
-  inset: calc(var(--top-h) + var(--gap)) var(--gap) var(--gap) !important;
+  z-index: 56;
+  inset: var(--gap) !important;
   width: auto !important;
   height: auto !important;
   resize: none;
@@ -11961,8 +11961,8 @@ html.is-replay #world {
 
 /* Expandida na tela toda do Habblaud (botão ao lado do fechar), como o terminal. */
 .ui-dialog.ui-kb.is-max {
-  z-index: 47;
-  inset: calc(var(--top-h) + var(--gap)) var(--gap) var(--gap) !important;
+  z-index: 56;
+  inset: var(--gap) !important;
   width: auto !important;
   height: auto !important;
   margin: 0;
@@ -13138,8 +13138,8 @@ html.is-replay #world {
 }
 
 .ui-dialog.ui-doc.is-max {
-  z-index: 47;
-  inset: calc(var(--top-h) + var(--gap)) var(--gap) var(--gap) !important;
+  z-index: 56;
+  inset: var(--gap) !important;
   width: auto !important;
   height: auto !important;
   margin: 0;
@@ -13480,4 +13480,11 @@ html.is-replay #world {
 .ui-hero__title-edit:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Janela móvel (terminal, Kanban, documento) que sobe até a barra superior fica por cima dela, para poder ocupar a tela toda. */
+.ui-term.is-over-bar,
+.ui-dialog.ui-kb.is-over-bar,
+.ui-dialog.ui-doc.is-over-bar {
+  z-index: 56 !important;
 }

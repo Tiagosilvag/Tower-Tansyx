@@ -12,6 +12,8 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Chat, Kanban e documentos podem cobrir a barra superior.** Dá para arrastar e esticar essas janelas até a borda de cima da
+  tela, e o botão de expandir agora ocupa a tela inteira, barra superior incluída.
 - **Renomear a sessão.** Um lápis ao lado do título da sessão, no painel do agente, manda `/rename` para o Claude Code. Aparece
   com a sessão aberta pelo Habblaud; fica apagado enquanto o agente trabalha.
 - **Histórico do cartão do Kanban mais legível.** Cada evento ganha um bloco com fundo e faixa colorida, o nome de quem agiu
