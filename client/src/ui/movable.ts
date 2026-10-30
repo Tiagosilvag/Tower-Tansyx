@@ -265,6 +265,11 @@ export class Movable {
     return (parseFloat(s.getPropertyValue('--top-h')) || 0) + (parseFloat(s.getPropertyValue('--gap')) || 0);
   }
 
+  /** Altura da barra superior (sem o vão): a divisão da tela começa logo abaixo dela. */
+  barHeight(): number {
+    return parseFloat(getComputedStyle(this.el).getPropertyValue('--top-h')) || 0;
+  }
+
   /** Aplica a caixa, mantendo a janela inteira dentro da tela (sem passar das laterais nem da borda de baixo). */
   private apply(b: Box): void {
     const w = Math.max(MIN_W, Math.min(b.w, innerWidth));

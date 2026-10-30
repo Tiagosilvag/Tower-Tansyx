@@ -28,12 +28,12 @@ describe('divisões da tela', () => {
     for (const l of LAYOUTS) expect(l.zones.reduce((n, z) => n + z.w * z.h, 0), l.id).toBeCloseTo(1, 5);
   });
 
-  it('duas colunas: margem de 8 px na borda e vão de 8 px no meio', () => {
+  it('duas colunas: margem de 8 px nas laterais, colada na barra em cima e vão de 8 px no meio', () => {
     const [a, b] = LAYOUTS[0]!.zones.map((z) => zoneBox(z, AREA));
     expect(a!.x).toBe(8);
     expect(b!.x - (a!.x + a!.w)).toBe(8);
     expect(b!.x + b!.w).toBe(AREA.w - 8);
-    expect(a!.y).toBe(AREA.y + 8);
+    expect(a!.y).toBe(AREA.y);
   });
 
   it('janela i vai para a zona i; a sobra de um dos lados fica de fora', () => {

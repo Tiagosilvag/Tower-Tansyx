@@ -108,11 +108,13 @@ export function layoutTitle(id: LayoutId): string {
 
 /** Margem na borda da tela e vão entre as janelas, em px. */
 const MARGIN = 8;
+/** Em cima a janela fica colada na barra superior, como quem a puxa para lá na mão. */
+const MARGIN_TOP = 0;
 const GAP = 8;
 
 /** Zona em pixels dentro da área (a tela abaixo da barra superior), com margem na borda e vão entre as zonas. */
 export function zoneBox(z: Zone, area: Box): Box {
-  const inner = { x: area.x + MARGIN, y: area.y + MARGIN, w: area.w - MARGIN * 2, h: area.h - MARGIN * 2 };
+  const inner = { x: area.x + MARGIN, y: area.y + MARGIN_TOP, w: area.w - MARGIN * 2, h: area.h - MARGIN - MARGIN_TOP };
   const EPS = 0.001;
   const left = inner.x + z.x * inner.w + (z.x > EPS ? GAP / 2 : 0);
   const top = inner.y + z.y * inner.h + (z.y > EPS ? GAP / 2 : 0);
@@ -129,7 +131,7 @@ export function assignZones<T>(windows: readonly T[], zones: readonly Zone[]): A
 }
 
 function areaOf(m: Movable): Box {
-  const top = m.topInset();
+  const top = m.barHeight();
   return { x: 0, y: top, w: innerWidth, h: Math.max(0, innerHeight - top) };
 }
 

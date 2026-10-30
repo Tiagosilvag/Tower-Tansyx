@@ -13,7 +13,7 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
   apresentadas, escolheu a 1 (seletor na barra da janela); arrastar até a borda ficou para depois, se fizer falta.
 - **O que foi feito / Arquivos novos:** `client/src/ui/layouts.ts` (oito divisões, cálculo das zonas e o seletor) e botão de grade nas
   barras do chat, do terminal interativo, do Kanban e dos documentos; `Movable` ganhou `snap`, a lista das janelas abertas e a ordem
-  de uso. As zonas usam a tela abaixo da barra superior, com margem e vão de 8 px; a janela encaixada sai da tela cheia e guarda a
+  de uso. As zonas usam a tela abaixo da barra superior, com margem de 8 px nas laterais e embaixo, colada na barra em cima, e vão de 8 px; a janela encaixada sai da tela cheia e guarda a
   posição como qualquer movimento. Janela esticada ou arrastada depois volta a ser livre.
 - **Testes:** `layouts.test.ts` (zonas dentro da área, sem sobreposição, somando 100%, margens, distribuição). A interface do seletor
   não foi conferida no navegador. [CONFIRMAR]
