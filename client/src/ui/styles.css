@@ -13264,3 +13264,147 @@ html.is-replay #world {
     animation: none;
   }
 }
+
+/* ============================================================================================================
+   Celular (ajuste a partir de prints de iPhone, 390 px): barra superior em duas linhas, cabeçalho do chat que quebra em vez
+   de estourar, caixa de mensagem com o texto em linha própria e botões de toque maiores, e copiar sem cobrir o texto.
+   ============================================================================================================ */
+
+/* Barra superior: com Kanban e o menu do usuário, marca + botões passaram da primeira linha e a barra virou três linhas
+   (acima da altura fixa). Botões e espaços um pouco menores devolvem a primeira linha inteira para os dois grupos. */
+@media (max-width: 480px) {
+  .ui-topbar__right {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .ui-topbar__right .ui-icon-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .ui-topbar__right .ui-btn-group {
+    padding: 1px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Cabeçalho do chat: nome do agente e fechar na primeira linha; modelo, contexto, busca e ações na seguinte. */
+  .ui-term__bar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 44px;
+    row-gap: 4px;
+    padding: 6px 6px 8px 10px;
+  }
+
+  .ui-term__bar .ui-term__who {
+    flex: 1 1 0;
+    min-width: 96px;
+    padding-left: 8px;
+  }
+
+  .ui-term__bar > .ui-term__max,
+  .ui-term__bar > .ui-term__close {
+    order: 1;
+  }
+
+  .ui-term__bar > .ui-term__chips,
+  .ui-term__bar > .ui-term__find,
+  .ui-term__bar > .ui-termact {
+    order: 2;
+  }
+
+  .ui-term__bar > .ui-termact {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  /* Caixa de mensagem: o texto ocupa a linha toda; os botões descem para uma linha alinhada à direita, com alvo de toque. */
+  .ui-term__prompt--mic {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .ui-term__prompt--mic > .ui-term__caret {
+    flex: 0 0 2ch;
+    align-self: flex-start;
+  }
+
+  .ui-msg--terminal .ui-term__prompt--mic > .ui-msg__input {
+    flex: 1 1 calc(100% - 3ch);
+    min-width: 0;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .ui-term__prompt--mic .ui-msg__attach,
+  .ui-term__prompt--mic .ui-dictate {
+    width: 40px;
+    height: 36px;
+  }
+
+  .ui-term__prompt--mic .ui-msg__pause,
+  .ui-term__prompt--mic .ui-msg__compact {
+    min-height: 36px;
+    padding: 0 12px;
+  }
+
+  .ui-msg--terminal .ui-msg__send {
+    min-width: 48px;
+    height: 36px;
+    font-size: 15px;
+  }
+}
+
+/* Telas de toque: não há hover, então o "copiar" nunca aparecia sem cobrir o texto. Passa a ser um ícone pequeno e discreto
+   numa coluna reservada à direita da mensagem. */
+@media (hover: none) {
+  .ui-term__row--user,
+  .ui-term__row--assistant,
+  .ui-term__call,
+  .ui-term__result {
+    padding-right: 34px;
+  }
+
+  .ui-term__copy {
+    opacity: 0.55;
+    pointer-events: auto;
+    width: 28px;
+    height: 28px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .ui-term__copy > :not(.ui-term__copy-icon):not(.ui-term__copy-done) {
+    display: none;
+  }
+}
+
+/* A linha do prompt tem número variável de botões (anexar, ditar, pausar, compactar, enviar): em grade de colunas fixas os que
+   sobravam caíam para uma segunda linha. Em linha flexível o texto ocupa o que sobra e os botões ficam na ponta. */
+.ui-term__prompt--mic {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.ui-term__prompt--mic > .ui-term__caret {
+  flex: 0 0 2ch;
+  align-self: flex-start;
+}
+
+.ui-term__prompt--mic > .ui-msg__input {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+}
+
+.ui-term__prompt--mic > :is(.ui-msg__attach, .ui-dictate, .ui-msg__pause, .ui-msg__compact, .ui-msg__send) {
+  flex: none;
+}

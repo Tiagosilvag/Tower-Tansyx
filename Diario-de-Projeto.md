@@ -6,6 +6,24 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Celular: ajustes de layout (skill impeccable, modo adapt)
+
+- **Problema:** em prints de iPhone, a barra superior ocupava três linhas (acima da altura fixa), o cabeçalho do chat estourava para a
+  direita (nome do agente e botões de expandir/fechar sumiam), a caixa de mensagem quebrava os botões em linhas soltas (agravado pelo
+  botão Compactar) e o botão de copiar cobria o texto.
+- **Decisão do dono:** melhorar layout e visual do celular usando a skill impeccable.
+- **O que foi feito / Arquivos novos:** só CSS (`client/src/ui/styles.css`, bloco no fim): barra superior em duas linhas, cabeçalho
+  do chat que quebra, caixa de mensagem em linha flexível (texto em linha própria no celular, botões maiores), copiar discreto em
+  telas de toque. A skill não estava ativa nesta conta; li as instruções dela na pasta de plugins da outra conta.
+- **Testes:** typecheck, build e testes da interface. Sem navegador na máquina: nada foi conferido em tela. A skill pede verificar no
+  render; fica como pendência.
+- **Limite conhecido:** altura da barra superior segue fixa; com muitos botões novos ela pode estourar de novo. Mapa do escritório
+  não foi alterado (o vazio acima dele é a área livre, ele já está centralizado).
+- **Para subir / Pendente:** aguardando deploy e um print novo do celular para a segunda rodada. [CONFIRMAR visual]
+- **Lição:** **cada botão novo na barra superior exige conferir o celular; a barra tem altura fixa.**
+
+---
+
 ## 30/10/2026 — Botão Compactar no chat
 
 - **Problema:** só dava para ver a compactação acontecendo; não havia como pedi-la pelo chat.
