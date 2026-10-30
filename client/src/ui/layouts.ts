@@ -132,7 +132,8 @@ export function assignZones<T>(windows: readonly T[], zones: readonly Zone[]): A
 
 function areaOf(m: Movable): Box {
   const top = m.barHeight();
-  return { x: 0, y: top, w: innerWidth, h: Math.max(0, innerHeight - top) };
+  const { x, w } = Movable.freeArea();
+  return { x, y: top, w, h: Math.max(0, innerHeight - top) };
 }
 
 // ------------------------------------------------------------------ seletor

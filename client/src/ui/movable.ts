@@ -119,6 +119,12 @@ export class Movable {
     return side.offsetLeft + side.offsetWidth + side.offsetLeft;
   }
 
+  /** A parte da tela que as janelas podem ocupar: da borda da barra lateral aberta (se houver) até a direita. */
+  static freeArea(): { x: number; w: number } {
+    const { edge } = Movable.squeeze();
+    return { x: edge, w: innerWidth - edge };
+  }
+
   /** Barra lateral aberta: a borda dela e a escala (<1) com que a tela útil encolhe; fechada, 0 e 1. */
   private static squeeze(): { edge: number; k: number } {
     const edge = Movable.sidebarEdge();
@@ -147,7 +153,8 @@ export class Movable {
   snap(b: Box): void {
     if (!this.allowed()) return;
     this.toggleMaximize(false);
-    this.float(b, true);
+    // `b` é um retângulo na tela (dentro de `freeArea()`); a caixa guardada é a de antes do encolhimento da barra lateral.
+    this.float(Movable.unsqueeze({ left: b.x, top: b.y, width: b.w, height: b.h }), true);
     this.scheduleSave();
     this.opts.onMove?.();
   }

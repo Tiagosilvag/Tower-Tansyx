@@ -31,6 +31,8 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **Divisões da tela com a barra lateral aberta.** As janelas passam a se dividir só na área à direita da barra, em vez
+  de contar a tela inteira e ser encolhidas de novo.
 - **Mensagem depois de Pausar não era entregue.** Com a sessão parada pelo Esc, o plugin de mensagens a recusava
   ("the session was stopped…"). Agora, depois de Pausar, e também quando essa recusa aparece, a mensagem é digitada no terminal
   do Habblaud (só em sessões abertas por ele).
