@@ -145,7 +145,9 @@ export class Movable {
   /** Janelas abertas e encaixáveis agora, da mais usada para a menos usada. */
   static openWindows(): Movable[] {
     return [...Movable.all]
-      .filter((m) => m.el.isConnected && !m.el.hidden && m.el.getClientRects().length > 0 && m.allowed())
+      // A gaveta fechada continua no layout (só fora da tela e com visibility: hidden): sem esse teste ela tomaria uma
+      // zona da divisão e um chat de verdade ficaria de fora.
+      .filter((m) => m.el.isConnected && !m.el.hidden && m.el.getClientRects().length > 0 && getComputedStyle(m.el).visibility !== 'hidden' && m.allowed())
       .sort((a, b) => b.used - a.used);
   }
 

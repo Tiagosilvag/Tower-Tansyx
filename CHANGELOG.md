@@ -32,6 +32,8 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **"Todas as janelas" deixava um chat de fora.** A gaveta do agente, mesmo fechada, contava como uma janela e tomava uma zona
+  da divisão; com três chats, um deles ficava sem ser organizado e atrás dos outros. Agora só entram as janelas visíveis.
 - **Divisões da tela com a barra lateral aberta.** As janelas passam a se dividir só na área à direita da barra, em vez
   de contar a tela inteira e ser encolhidas de novo.
 - **Mensagem depois de Pausar não era entregue.** Com a sessão parada pelo Esc, o plugin de mensagens a recusava
