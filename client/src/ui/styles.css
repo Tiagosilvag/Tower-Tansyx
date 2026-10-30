@@ -13622,3 +13622,18 @@ html.is-replay #world {
     z-index: 57;
   }
 }
+
+/* Barra lateral aberta: as janelas empurradas para a direita encolhem em vez de ficar por baixo dela (as soltas são
+   ajustadas em ui/movable.ts) e voltam ao tamanho de antes quando ela recolhe. */
+@media (min-width: 761px) {
+  .has-sidebar .ui-dialog:is(.ui-kb, .ui-doc):not(.is-floating):not(.is-max) {
+    left: calc(var(--side-w) + var(--gap) * 2);
+    max-width: calc(100vw - var(--side-w) - var(--gap) * 3);
+  }
+}
+
+@media (min-width: 761px) and (max-width: 900px) {
+  .has-sidebar .ui-term:not(.is-floating):not(.is-max) {
+    left: calc(var(--side-w) + var(--gap) * 2);
+  }
+}

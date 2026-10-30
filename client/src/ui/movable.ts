@@ -37,6 +37,8 @@ export class Movable {
   private static all = new Set<Movable>();
   private used = 0;
   private box: Box | null = null;
+  /** O que aparece de fato: a caixa guardada empurrada para fora da barra lateral aberta (a guardada não muda). */
+  private shown: Box | null = null;
   private max = false;
   private sizing: { id: number; edge: Edge; sx: number; sy: number; start: Box } | null = null;
   private drag: { id: number; dx: number; dy: number; sx: number; sy: number; moving: boolean } | null = null;
@@ -62,6 +64,7 @@ export class Movable {
     }
     for (const edge of EDGES) el.append(this.edgeHandle(edge));
     Movable.all.add(this);
+    Movable.watchSidebar();
     // Clicar em qualquer ponto da janela a torna a mais usada (a primeira na ordem de "Todas as janelas").
     el.addEventListener('pointerdown', () => this.touch(), true);
     const saved = load(opts.key);
@@ -81,12 +84,38 @@ export class Movable {
         if (!this.box || this.max || this.drag?.moving || this.sizing || this.el.hidden) return;
         const w = this.el.offsetWidth;
         const h = this.el.offsetHeight;
-        if (!w || !h || (w === this.box.w && h === this.box.h)) return;
+        const cur = this.shown ?? this.box;
+        if (!w || !h || (w === cur.w && h === cur.h)) return;
         this.box = { ...this.box, w, h };
         this.scheduleSave();
         this.opts.onMove?.();
       }).observe(el);
     }
+  }
+
+  private static watching = false;
+
+  /** A barra lateral abre e fecha: as janelas soltas encolhem para não ficar por baixo dela e voltam quando ela recolhe. */
+  private static watchSidebar(): void {
+    if (Movable.watching || typeof MutationObserver !== 'function') return;
+    const root = document.querySelector('.ui-root');
+    if (!root) return;
+    Movable.watching = true;
+    let was = Movable.sidebarEdge();
+    new MutationObserver(() => {
+      const now = Movable.sidebarEdge();
+      if (now === was) return;
+      was = now;
+      for (const m of Movable.all) if (m.box && !m.max) m.apply(m.box);
+    }).observe(root, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  /** Borda direita (mais o vão) da barra lateral aberta; 0 com ela fechada ou em tela estreita, onde ela cobre tudo. */
+  private static sidebarEdge(): number {
+    const root = document.querySelector('.ui-root');
+    const side = root?.classList.contains('has-sidebar') ? document.querySelector<HTMLElement>('.ui-sidebar') : null;
+    if (!side || innerWidth <= 760) return 0;
+    return side.offsetLeft + side.offsetWidth + side.offsetLeft;
   }
 
   /** Marca a janela como a mais usada agora. */
@@ -137,6 +166,7 @@ export class Movable {
     if (saved && this.allowed()) this.float(saved, false);
     else if (this.box) {
       this.box = null;
+      this.shown = null;
       this.el.classList.remove('is-floating');
       for (const p of ['left', 'top', 'width', 'height']) this.el.style.removeProperty(p);
     }
@@ -156,6 +186,7 @@ export class Movable {
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = null;
     this.box = null;
+    this.shown = null;
     this.el.classList.remove('is-floating');
     for (const p of ['left', 'top', 'width', 'height']) this.el.style.removeProperty(p);
     this.opts.onChange?.(false);
@@ -272,6 +303,7 @@ export class Movable {
 
   /** Aplica a caixa, mantendo a janela inteira dentro da tela (sem passar das laterais nem da borda de baixo). */
   private apply(b: Box): void {
+    Movable.watchSidebar();
     const w = Math.max(MIN_W, Math.min(b.w, innerWidth));
     const x = Math.max(0, Math.min(innerWidth - w, b.x));
     // O limite de cima vence o de baixo: numa janela baixa demais, a barra continua alcançável.
@@ -279,11 +311,20 @@ export class Movable {
     // A altura encolhe para a janela não passar da borda de baixo.
     const h = Math.max(MIN_H, Math.min(b.h, innerHeight - y - 8));
     this.box = { x, y, w, h };
+    // Barra lateral aberta: a borda esquerda é empurrada para a direita e a janela encolhe (a direita fica onde estava).
+    const edge = Movable.sidebarEdge();
+    let sx = x;
+    let sw = w;
+    if (edge > x) {
+      sx = Math.min(edge, innerWidth - MIN_W);
+      sw = Math.max(MIN_W, x + w - sx);
+    }
+    this.shown = { x: sx, y, w: sw, h };
     this.el.classList.toggle('is-over-bar', y < this.barHeight());
     const s = this.el.style;
-    s.left = `${Math.round(x)}px`;
+    s.left = `${Math.round(sx)}px`;
     s.top = `${Math.round(y)}px`;
-    s.width = `${Math.round(w)}px`;
+    s.width = `${Math.round(sw)}px`;
     s.height = `${Math.round(h)}px`;
   }
 
