@@ -53,6 +53,10 @@ export class MessageComposer {
   private states = new Map<string, SendState>();
   /** Ferramenta de cada agente que recebeu mensagem (o texto da entrega e do prazo muda no Codex). */
   private providers = new Map<string, Provider>();
+  /** Agentes pausados por aqui: o plugin de mensagens recusa a sessão parada, então a próxima mensagem vai pelo terminal. */
+  private paused = new Set<string>();
+  /** Último texto mandado pelo plugin a cada agente, para reenviar pelo terminal se a sessão estiver parada. */
+  private lastText = new Map<string, string>();
   /** Ferramenta do agente da caixa. */
   private provider: Provider = 'claude';
   /** O que a caixa mostra agora ("<agente>|<pronta>"): ao mudar, o conteúdo vem do rascunho. */
@@ -429,6 +433,7 @@ export class MessageComposer {
     if (!pty) return;
     try {
       await sendPtyKeys(pty.id, PAUSE_KEYS);
+      this.paused.add(this.agentId);
       this.ctx.announce(tr('Pausa enviada: o agente para e espera a sua próxima mensagem.'));
     } catch (err) {
       this.ctx.announce(`${tr('Não deu para pausar')}: ${err instanceof Error ? err.message : ''}`);
@@ -441,6 +446,12 @@ export class MessageComposer {
     if (this.mode.kind !== 'ready' || !canSend(raw) || this.states.get(agentId)?.phase === 'sending') return;
     this.providers.set(agentId, this.provider);
     this.setState(agentId, { phase: 'sending', at: Date.now() });
+    if (this.paused.has(agentId) && (await this.typeInTerminal(agentId, messageText(raw)))) {
+      this.paused.delete(agentId);
+      this.afterTyped(agentId, raw);
+      return;
+    }
+    this.lastText.set(agentId, messageText(raw));
     let r: { message: OutboxMessage } | { error: string };
     try {
       r = await this.ctx.store.sendMessage(agentId, messageText(raw));
@@ -468,6 +479,33 @@ export class MessageComposer {
     if (!isSettled(m.status)) this.poll(agentId, m.id, Date.now());
   }
 
+  /** Digita a mensagem no terminal do Habblaud (o texto e o Enter vão separados, como no Compactar). */
+  private async typeInTerminal(agentId: string, text: string): Promise<boolean> {
+    const pty = ptyOfAgent(this.ctx.store, agentId);
+    if (!pty) return false;
+    try {
+      await sendPtyKeys(pty.id, text);
+      await new Promise((r) => setTimeout(r, 200));
+      await sendPtyKeys(pty.id, '\r');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private afterTyped(agentId: string, raw: string): void {
+    if ((this.drafts.get(agentId) ?? '') === raw) {
+      this.drafts.delete(agentId);
+      if (this.agentId === agentId && this.box.value === raw) {
+        this.box.value = '';
+        this.resize();
+      }
+    }
+    this.suggestions.delete(agentId);
+    this.paintSuggestion();
+    this.setState(agentId, { phase: 'delivered', at: Date.now() });
+  }
+
   /** Consulta a situação até ela se resolver (ou o prazo acabar). Para quando outro envio toma a linha de situação. */
   private poll(agentId: string, id: string, since: number): void {
     const step = async () => {
@@ -482,6 +520,14 @@ export class MessageComposer {
       if (cur?.id !== id) return;
       const now = Date.now();
       if (m === null) return this.setState(agentId, { phase: 'failed', id, error: LOST_ERROR, at: now });
+      // Sessão parada (Esc no terminal): o plugin não entrega; digita a mesma mensagem pelo terminal do Habblaud.
+      if (m?.status === 'failed' && /was stopped|nobody has sent input/i.test(m.error ?? '')) {
+        const text = this.lastText.get(agentId);
+        if (text && (await this.typeInTerminal(agentId, text))) {
+          this.lastText.delete(agentId);
+          return this.setState(agentId, { phase: 'delivered', at: Date.now() });
+        }
+      }
       if (m && (m.status !== cur.phase || m.error !== cur.error)) this.setState(agentId, { phase: m.status, id, error: m.error, at: now });
       if (m && isSettled(m.status)) return;
       const elapsed = now - since;

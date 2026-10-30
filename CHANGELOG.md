@@ -31,6 +31,9 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **Mensagem depois de Pausar não era entregue.** Com a sessão parada pelo Esc, o plugin de mensagens a recusava
+  ("the session was stopped…"). Agora, depois de Pausar, e também quando essa recusa aparece, a mensagem é digitada no terminal
+  do Habblaud (só em sessões abertas por ele).
 - **Compactação voltou a aparecer no chat.** O rodapé ficava em "Pensando…" porque o Claude Code redesenha só o contador e a
   frase "Compacting conversation" não passava de novo pelo fluxo. Agora o servidor também confere a tela do terminal.
 - **iPhone: o texto ficava grande depois de girar o aparelho.** Ao deitar e voltar o celular, o Safari aumentava as letras
