@@ -727,7 +727,8 @@ export const ES: Readonly<Record<string, string>> = {
   "Duas linhas": "Dos filas",
   "Quatro cantos": "Cuatro esquinas",
   "Apaga esta mensagem e a resposta que veio depois, como se não tivessem existido. A conversa do Claude Code volta a antes dela.": "Elimina este mensaje y la respuesta posterior, como si no hubieran existido. La conversación de Claude Code vuelve a antes de él.",
-  "Mensagem apagada na sessão. Ela ainda aparece neste chat.": "Mensaje eliminado de la sesión. Aún aparece en este chat.",
+  "Mensagem apagada na sessão.": "Mensaje eliminado de la sesión.",
+  "Apagada da sessão: o agente não a vê mais": "Eliminado de la sesión: el agente ya no lo ve",
   "Não deu para apagar a mensagem": "No se pudo eliminar el mensaje",
   "Ver {0}": "Ver {0}",
 

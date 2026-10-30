@@ -13679,3 +13679,24 @@ html.is-replay #world {
   opacity: 0.5;
   cursor: wait;
 }
+
+/* Mensagem apagada da sessão (terminal.ts): continua no arquivo da conversa, então fica riscada e avisada. */
+.ui-term__row.is-removed {
+  opacity: 0.45;
+  text-decoration: line-through;
+  position: relative;
+}
+
+.ui-term__removed {
+  position: absolute;
+  right: 6px;
+  top: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(16, 19, 27, 0.94);
+  border: 1px solid var(--ui-line-strong);
+  font: 500 11px/1.4 var(--font-ui);
+  color: var(--ui-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
