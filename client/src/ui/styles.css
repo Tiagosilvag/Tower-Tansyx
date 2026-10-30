@@ -13615,3 +13615,10 @@ html.is-replay #world {
   background: var(--ui-accent);
   outline-color: var(--ui-accent);
 }
+
+/* A barra lateral do escritório fica sempre por cima das janelas flutuantes (chat, Kanban, documentos). */
+@media (min-width: 761px) {
+  .ui-sidebar {
+    z-index: 57;
+  }
+}

@@ -6,6 +6,16 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Barra lateral do escritório sempre por cima das janelas
+
+- **Problema:** com o chat aberto na parte de cima, a janela cobria a barra lateral "Escritório".
+- **Decisão do dono:** a barra lateral tem de sobrepor sempre os chats.
+- **O que foi feito:** em telas largas, `.ui-sidebar` passou a ter camada acima das janelas flutuantes (`client/src/ui/styles.css`). Em tela estreita nada muda.
+- **Testes:** só CSS; não conferido no navegador. [CONFIRMAR]
+- **Para subir / Pendente:** aguardando deploy junto com `e9e1fd6`.
+
+---
+
 ## 30/10/2026 — Organizar as janelas (divisões da tela)
 
 - **Problema:** para ver vários chats ao mesmo tempo, cada janela tinha de ser arrumada na mão.
