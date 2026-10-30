@@ -8,6 +8,7 @@ import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
 import { CardDialog } from './kanban-card';
+import { layoutButton } from './layouts';
 import { maximizeButton, Movable } from './movable';
 import { ago, shortPath } from './spawn';
 import { usersApi } from './users';
@@ -119,6 +120,7 @@ export class KanbanPanel implements UiComponent {
       this.actionsEl,
       h('label', { class: 'ui-kb__search' }, h('span', { text: '⌕', attrs: { 'aria-hidden': 'true' } }), this.searchTask),
       this.refreshBtn,
+      layoutButton(() => this.movable),
       maximizeButton(() => this.movable),
       close,
     );

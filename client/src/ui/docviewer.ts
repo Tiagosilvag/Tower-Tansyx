@@ -5,6 +5,7 @@ import { tr } from '../../../shared/i18n';
 import { copyText, h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
 import { renderMarkdown } from './markdown';
+import { layoutButton } from './layouts';
 import { maximizeButton, Movable } from './movable';
 
 /** Caminho de markdown escrito como código no chat: sem espaços, termina em .md ou .markdown. */
@@ -65,6 +66,7 @@ class DocWindow {
       this.refreshBtn,
       this.copyBtn,
       this.exportBtn,
+      layoutButton(() => this.movable),
       maximizeButton(() => this.movable),
       close,
     );

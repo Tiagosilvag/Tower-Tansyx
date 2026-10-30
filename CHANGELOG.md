@@ -12,6 +12,9 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Organizar as janelas, como os Snap Layouts do Windows.** Um botão de grade na barra do chat, do Kanban e dos documentos abre as
+  divisões da tela (colunas, terços, quartos, uma grande e duas pequenas). "Esta janela" encaixa só ela na zona clicada; "Todas as
+  janelas" distribui as abertas na divisão, da mais usada para a menos usada.
 - **Janelas móveis não passam mais das laterais.** Chat, Kanban e documentos ficam inteiros dentro da tela ao arrastar ou esticar
   (antes deixavam até quase toda a largura para fora).
 - **Contadores da barra superior recolhíveis.** Uma setinha no início do resumo (salas, agentes, trabalhando, subagentes)

@@ -6,6 +6,23 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Organizar as janelas (divisões da tela)
+
+- **Problema:** para ver vários chats ao mesmo tempo, cada janela tinha de ser arrumada na mão.
+- **Decisão do dono:** como os Snap Layouts do Windows, com encaixar uma janela e arrumar todas de uma vez. Das três opções
+  apresentadas, escolheu a 1 (seletor na barra da janela); arrastar até a borda ficou para depois, se fizer falta.
+- **O que foi feito / Arquivos novos:** `client/src/ui/layouts.ts` (oito divisões, cálculo das zonas e o seletor) e botão de grade nas
+  barras do chat, do terminal interativo, do Kanban e dos documentos; `Movable` ganhou `snap`, a lista das janelas abertas e a ordem
+  de uso. As zonas usam a tela abaixo da barra superior, com margem e vão de 8 px; a janela encaixada sai da tela cheia e guarda a
+  posição como qualquer movimento. Janela esticada ou arrastada depois volta a ser livre.
+- **Testes:** `layouts.test.ts` (zonas dentro da área, sem sobreposição, somando 100%, margens, distribuição). A interface do seletor
+  não foi conferida no navegador. [CONFIRMAR]
+- **Limite conhecido:** botão escondido em tela estreita (até 760 px); a divisão não se ajusta sozinha se a janela do navegador mudar de
+  tamanho depois; sem arrastar até a borda.
+- **Para subir / Pendente:** aguardando deploy.
+
+---
+
 ## 30/10/2026 — Janelas móveis não passam mais das laterais
 
 - **Problema:** as janelas (chat, Kanban, documentos) podiam ser arrastadas para fora pelas laterais, ficando só 80 px visíveis.

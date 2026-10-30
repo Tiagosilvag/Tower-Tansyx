@@ -10,6 +10,7 @@ import type { UiComponent, UiContext, WindowOptions } from './context';
 import { presenceStrip } from './presence';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
+import { layoutButton } from './layouts';
 import { maximizeButton, Movable } from './movable';
 import { closePty, createPty, stopAgent, takeoverAgent } from './ptyapi';
 import type { PtyPane } from './ptypane';
@@ -87,6 +88,7 @@ export class PtyPanel implements UiComponent, PtyControl {
       this.stateEl,
       h('span', { class: 'ui-pty__live', text: tr('interativo') }),
       this.actions.el,
+      layoutButton(() => this.movable),
       maximizeButton(() => this.movable, () => requestAnimationFrame(() => this.pane?.refit(true))),
       close,
     );

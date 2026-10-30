@@ -13517,3 +13517,101 @@ html.is-replay #world {
 .ui-dialog.ui-doc.is-over-bar {
   z-index: 56 !important;
 }
+
+/* Seletor de divisões da tela (ui/layouts.ts): encaixa a janela numa zona ou distribui todas as abertas. */
+.ui-kb__bar .ui-term__layout {
+  color: var(--kb-ink);
+}
+
+@media (max-width: 760px) {
+  .ui-term__layout {
+    display: none;
+  }
+}
+
+.ui-snap {
+  position: fixed;
+  z-index: 70;
+  box-sizing: border-box;
+  max-width: calc(100vw - 16px);
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--ui-line-strong);
+  background: #161a24;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  color: var(--ui-text);
+}
+
+.ui-snap__tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.ui-snap__tab {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ui-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ui-snap__tab.is-on {
+  border-color: var(--ui-line-strong);
+  background: var(--ui-bg-soft);
+  color: var(--ui-text);
+}
+
+.ui-snap__tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ui-snap__hint {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--ui-faint);
+}
+
+.ui-snap__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 460px;
+}
+
+.ui-snap__layout {
+  position: relative;
+  width: 96px;
+  height: 60px;
+  border-radius: 5px;
+}
+
+.ui-snap__zone {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-radius: 3px;
+  border: 2px solid #161a24;
+  background: rgba(255, 255, 255, 0.16);
+  outline: 1px solid var(--ui-line-strong);
+  outline-offset: -2px;
+  cursor: pointer;
+}
+
+.ui-snap__zone:hover,
+.ui-snap__zone:focus-visible {
+  background: var(--ui-accent);
+  outline-color: var(--ui-accent);
+}
+
+/* Em "Todas as janelas" a divisão inteira é uma escolha só: a prévia acende junto. */
+.ui-snap.is-all .ui-snap__layout:hover .ui-snap__zone,
+.ui-snap.is-all .ui-snap__layout:focus-within .ui-snap__zone {
+  background: var(--ui-accent);
+  outline-color: var(--ui-accent);
+}

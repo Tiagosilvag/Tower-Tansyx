@@ -4,6 +4,8 @@
 import { ICONS } from './icons';
 import { tr } from '../../../shared/i18n';
 
+/** Avisa os botões de expandir que alguma janela entrou ou saiu da tela cheia (o ícone muda). */
+const MAX_EVENT = 'habblaud:window-max';
 const DRAG_THRESHOLD = 4;
 const MIN_W = 300;
 const MIN_H = 160;
@@ -12,7 +14,7 @@ const MIN_H = 160;
 const EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
 type Edge = (typeof EDGES)[number];
 
-interface Box {
+export interface Box {
   x: number;
   y: number;
   w: number;
@@ -31,6 +33,9 @@ export interface MovableOptions {
 }
 
 export class Movable {
+  /** Todas as janelas móveis criadas (as abertas são as visíveis): o seletor de divisões distribui entre elas. */
+  private static all = new Set<Movable>();
+  private used = 0;
   private box: Box | null = null;
   private max = false;
   private sizing: { id: number; edge: Edge; sx: number; sy: number; start: Box } | null = null;
@@ -56,6 +61,9 @@ export class Movable {
       });
     }
     for (const edge of EDGES) el.append(this.edgeHandle(edge));
+    Movable.all.add(this);
+    // Clicar em qualquer ponto da janela a torna a mais usada (a primeira na ordem de "Todas as janelas").
+    el.addEventListener('pointerdown', () => this.touch(), true);
     const saved = load(opts.key);
     if (saved && this.allowed()) this.float(saved, false);
     addEventListener('resize', () => {
@@ -81,6 +89,27 @@ export class Movable {
     }
   }
 
+  /** Marca a janela como a mais usada agora. */
+  touch(): void {
+    this.used = Date.now();
+  }
+
+  /** Janelas abertas e encaixáveis agora, da mais usada para a menos usada. */
+  static openWindows(): Movable[] {
+    return [...Movable.all]
+      .filter((m) => m.el.isConnected && !m.el.hidden && m.el.getClientRects().length > 0 && m.allowed())
+      .sort((a, b) => b.used - a.used);
+  }
+
+  /** Encaixa a janela na caixa (sai da tela cheia, se estava, e guarda a posição como qualquer movimento). */
+  snap(b: Box): void {
+    if (!this.allowed()) return;
+    this.toggleMaximize(false);
+    this.float(b, true);
+    this.scheduleSave();
+    this.opts.onMove?.();
+  }
+
   get floating(): boolean {
     return this.box !== null;
   }
@@ -95,6 +124,7 @@ export class Movable {
     if (next === this.max) return;
     this.max = next;
     this.el.classList.toggle('is-max', next);
+    document.dispatchEvent(new Event(MAX_EVENT));
     this.opts.onMove?.();
   }
 
@@ -230,7 +260,7 @@ export class Movable {
   }
 
   /** Onde termina a barra superior: janela que começa acima disso sobe para cima dela (classe `is-over-bar`). */
-  private barBottom(): number {
+  topInset(): number {
     const s = getComputedStyle(this.el);
     return (parseFloat(s.getPropertyValue('--top-h')) || 0) + (parseFloat(s.getPropertyValue('--gap')) || 0);
   }
@@ -244,7 +274,7 @@ export class Movable {
     // A altura encolhe para a janela não passar da borda de baixo.
     const h = Math.max(MIN_H, Math.min(b.h, innerHeight - y - 8));
     this.box = { x, y, w, h };
-    this.el.classList.toggle('is-over-bar', y < this.barBottom());
+    this.el.classList.toggle('is-over-bar', y < this.topInset());
     const s = this.el.style;
     s.left = `${Math.round(x)}px`;
     s.top = `${Math.round(y)}px`;
@@ -277,6 +307,8 @@ export function maximizeButton(get: () => Movable | undefined, onToggle?: () => 
     onToggle?.();
   });
   sync();
+  const onMax = () => (b.isConnected ? sync() : document.removeEventListener(MAX_EVENT, onMax));
+  document.addEventListener(MAX_EVENT, onMax);
   return b;
 }
 

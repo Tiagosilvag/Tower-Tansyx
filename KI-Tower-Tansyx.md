@@ -30,7 +30,8 @@
 - **Rodando:** tudo o que consta no diário até 29/10/2026 (contas, marcação, presença, Entregas com texto, Kanban com Revisão e
   anexos, compactação, conversa anterior, filtro "Só prompts" por padrão, janela de documentos `.md`).
 - **Pronto esperando subir:** correção do texto grande no iPhone e **renomear a sessão** pelo lápis no painel do agente (manda
-  `/rename` ao Claude Code; só com a sessão aberta pelo Tower e parada). [CONFIRMAR no aparelho / em uso real]
+  `/rename` ao Claude Code; só com a sessão aberta pelo Tower e parada), janelas móveis que não passam das laterais e o
+  **seletor de divisões da tela** (organizar as janelas). [CONFIRMAR no aparelho / em uso real]
 - **Riscos de negócio e entrega:**
   - O repositório é público e o histórico do git ainda contém versões antigas do KI e do diário com detalhes de ambiente
     (sem credenciais). Reescrever o histórico ou criar repositório novo só com ordem do dono.
@@ -85,6 +86,10 @@ repositório.
 
 ## 5. Funcionalidades
 
+- **Janelas móveis e divisões da tela:** chat, terminal, Kanban e documentos são janelas flutuantes (`client/src/ui/movable.ts`):
+  arrastam, esticam, expandem na tela toda (barra superior incluída) e não passam das laterais. O botão de grade na barra de cada
+  uma (`client/src/ui/layouts.ts`) abre oito divisões (colunas, terços, quartos...): encaixa só a janela ou distribui todas as
+  abertas, da mais usada para a menos usada. Escondido em tela estreita; não reajusta sozinho se o navegador mudar de tamanho.
 - **Marcação de quem escreveu:** o chat mostra o prompt com degradê leve na cor do usuário, faixa fina e nome. O servidor guarda só
   (hora, texto normalizado, usuário) por 30 dias e casa com o transcript; o agente nunca recebe o nome. Não marca mensagem digitada
   fora da página nem registrada muito depois do envio; duas pessoas com o mesmo texto quase junto podem ter as marcas trocadas.

@@ -18,6 +18,7 @@ import { presenceStrip } from './presence';
 import { copyText, h, iconButton, prefersReducedMotion, setAttr, setHidden, setText, setTitle, setVariant } from './dom';
 import { calendarDayDiff, formatClock, formatDateTime, formatDuration, formatElapsed, relativeTime } from './format';
 import { ICONS } from './icons';
+import { layoutButton } from './layouts';
 import { maximizeButton, Movable } from './movable';
 import type { PtyControl } from './pty';
 import { TermActions } from './termactions';
@@ -914,6 +915,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
       this.chips.el,
       this.findBtn,
       ...(this.actions ? [this.actions.el] : []),
+      layoutButton(() => this.movable),
       maximizeButton(() => this.movable),
       close,
     );
