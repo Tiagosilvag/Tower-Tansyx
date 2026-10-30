@@ -33,11 +33,12 @@ const WAITING_HINT = COUNTERS.find((c) => c.key === 'waiting')!.hint;
 const BAR_KEY = 'habblaud.topbar.open';
 const COUNTERS_KEY = 'habblaud.topbar.counters.folded';
 
+/** Começa recolhido; só abre se a pessoa já tiver escolhido mostrar. */
 function readCountersFolded(): boolean {
   try {
-    return localStorage.getItem(COUNTERS_KEY) === '1';
+    return localStorage.getItem(COUNTERS_KEY) !== '0';
   } catch {
-    return false;
+    return true;
   }
 }
 
