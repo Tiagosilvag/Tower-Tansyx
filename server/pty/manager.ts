@@ -498,11 +498,16 @@ export class PtyManager {
       tmux,
       attachedAt: this.now(),
       screen: this.createScreen(cols, rows),
-      compaction: new CompactionWatch((active) => {
-        if (active) info.compacting = true;
-        else delete info.compacting;
-        this.opts.onChange();
-      }),
+      compaction: new CompactionWatch(
+        (active) => {
+          if (active) info.compacting = true;
+          else delete info.compacting;
+          this.opts.onChange();
+        },
+        undefined,
+        // Com tmux, a tela dele diz se a linha da compactação continua lá mesmo sem ser redesenhada.
+        tmux && this.opts.tmux ? () => this.opts.tmux!.capture(tmux) : undefined,
+      ),
       clients: new Set(),
       pending: new Map(),
     };

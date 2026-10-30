@@ -91,7 +91,7 @@ repositório.
 - **Presença em tempo real:** avatares/pílulas de quem mais está com o agente aberto (barra do chat, do terminal e linha do agente) e
   "está digitando…". Só em memória; some sozinha se a pessoa para de avisar. É só aviso: não bloqueia ninguém.
 - **Compactação visível:** o transcript não registra nada durante a compactação; o servidor lê a saída do terminal do agente e o chat
-  mostra "Compactando a conversa…". Só cobre sessões abertas no terminal interativo do Habblaud. Depende do texto em inglês do
+  mostra "Compactando a conversa…" (com tmux, confere também a tela do terminal, porque o Claude Code redesenha só o contador). Só cobre sessões abertas no terminal interativo do Habblaud. Depende do texto em inglês do
   Claude Code ("Compacting conversation"). Botão **Compactar** na caixa de mensagem (`client/src/ui/composer.ts`): dois toques,
   só com o agente parado e sessão do terminal interativo; envia `/compact` e o Enter em envios separados (um bloco com Enter no
   meio pode ser tratado como texto colado). [CONFIRMAR em uso real]

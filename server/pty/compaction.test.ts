@@ -49,6 +49,50 @@ describe('CompactionWatch', () => {
     expect(eventos).toEqual([true, false]);
   });
 
+  it('acha a frase quando o espaço vem como movimento do cursor', () => {
+    const { w, eventos } = montar();
+    w.feed('✻ Compacting\x1b[1Cconversation…');
+    expect(eventos).toEqual([true]);
+  });
+
+  describe('com a tela do terminal', () => {
+    const linha = '✻ Compacting conversation… (1m 10s · ↓ 4.6k tokens)';
+
+    it('continua ativa enquanto a linha está na tela, mesmo sem redesenho', () => {
+      let tela = linha;
+      const eventos: boolean[] = [];
+      const w = new CompactionWatch((a) => eventos.push(a), undefined, () => tela);
+      w.feed('Compacting conversation…');
+      vi.advanceTimersByTime(COMPACTION_TTL_MS * 3);
+      expect(w.active).toBe(true);
+      tela = 'Conversation compacted';
+      vi.advanceTimersByTime(COMPACTION_TTL_MS);
+      expect(eventos).toEqual([true, false]);
+    });
+
+    it('vê a linha na tela mesmo quando a frase não passou pelo fluxo', () => {
+      const eventos: boolean[] = [];
+      const w = new CompactionWatch((a) => eventos.push(a), undefined, () => `\x1b[35m${linha}\x1b[39m`);
+      w.feed('1m 10s');
+      expect(eventos).toEqual([true]);
+    });
+
+    it('texto que só cita a frase, sem contador, não conta na tela', () => {
+      const eventos: boolean[] = [];
+      const w = new CompactionWatch((a) => eventos.push(a), undefined, () => 'falamos do Compacting conversation hoje');
+      w.feed('qualquer coisa');
+      expect(eventos).toEqual([]);
+    });
+
+    it('não consulta a tela mais de uma vez por intervalo', () => {
+      const probe = vi.fn(() => '');
+      const w = new CompactionWatch(() => {}, undefined, probe);
+      w.feed('a');
+      w.feed('b');
+      expect(probe).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('dispose cancela o prazo sem avisar', () => {
     const { w, eventos } = montar();
     w.feed('Compacting conversation…');

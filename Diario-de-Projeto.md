@@ -6,6 +6,21 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Compactação não aparecia no chat
+
+- **Problema:** durante a compactação o chat ficava em "Pensando…", sem o aviso "Compactando a conversa…".
+- **Decisão do dono:** corrigir.
+- **O que foi feito / Arquivos novos:** a detecção (`server/pty/compaction.ts`) dependia de a frase "Compacting conversation" ser
+  redesenhada; o Claude Code redesenha só o contador, e o aviso expirava em 5 s. Agora, com tmux, o servidor confere a linha com
+  contador na tela do terminal para renovar e para detectar; a frase aceita espaço como movimento de cursor. Sem tmux, vale o
+  comportamento antigo.
+- **Testes:** testes novos em `compaction.test.ts` (tela renova, tela diz que acabou, texto que só cita a frase não conta, limite de
+  consultas). Não testado com uma compactação real. [CONFIRMAR em uso real]
+- **Limite conhecido:** depende do texto em inglês do Claude Code e da linha com contador na tela visível.
+- **Para subir / Pendente:** aguardando deploy.
+
+---
+
 ## 30/10/2026 — Nome da sessão editável
 
 - **Problema:** o texto embaixo do nome do agente (título da sessão, vindo do primeiro prompt) não podia ser mudado.

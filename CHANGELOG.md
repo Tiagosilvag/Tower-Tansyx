@@ -20,6 +20,8 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **Compactação voltou a aparecer no chat.** O rodapé ficava em "Pensando…" porque o Claude Code redesenha só o contador e a
+  frase "Compacting conversation" não passava de novo pelo fluxo. Agora o servidor também confere a tela do terminal.
 - **iPhone: o texto ficava grande depois de girar o aparelho.** Ao deitar e voltar o celular, o Safari aumentava as letras
   sozinho e não desfazia. O aumento automático foi desligado (`text-size-adjust`).
 - **Celular: fileira de botões recolhível.** Na barra de cima, um botão com seta mostra ou esconde a fileira de botões (Kanban,
