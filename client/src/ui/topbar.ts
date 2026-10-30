@@ -31,6 +31,23 @@ const COUNTERS: { key: Exclude<keyof Counters, 'shells'>; singular: string; plur
 const WAITING_HINT = COUNTERS.find((c) => c.key === 'waiting')!.hint;
 
 const BAR_KEY = 'habblaud.topbar.open';
+const COUNTERS_KEY = 'habblaud.topbar.counters.folded';
+
+function readCountersFolded(): boolean {
+  try {
+    return localStorage.getItem(COUNTERS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeCountersFolded(folded: boolean): void {
+  try {
+    localStorage.setItem(COUNTERS_KEY, folded ? '1' : '0');
+  } catch {
+    /* sem armazenamento: vale só nesta abertura */
+  }
+}
 
 function readBarOpen(): boolean {
   try {
@@ -123,6 +140,21 @@ export class TopBar implements UiComponent {
       this.counters.set('shells', { el: this.shellsBtn, value, label });
       counterWrap.insertBefore(this.shellsBtn, this.counters.get('waiting')!.el);
     }
+
+    // Recolher os contadores: só o "precisa de você" continua à vista enquanto houver alguém esperando.
+    const foldCounters = h('button', { class: 'ui-counters__fold', type: 'button' });
+    const setFolded = (folded: boolean, save = false): void => {
+      counterWrap.classList.toggle('is-folded', folded);
+      foldCounters.innerHTML = folded ? ICONS.chevronRight : ICONS.chevronLeft;
+      const label = folded ? tr('Mostrar os contadores') : tr('Recolher os contadores');
+      setAttr(foldCounters, 'aria-label', label);
+      setTitle(foldCounters, label);
+      setAttr(foldCounters, 'aria-expanded', String(!folded));
+      if (save) writeCountersFolded(folded);
+    };
+    foldCounters.addEventListener('click', () => setFolded(!counterWrap.classList.contains('is-folded'), true));
+    counterWrap.prepend(foldCounters);
+    setFolded(readCountersFolded());
 
     this.usage = new UsageCards(ctx);
     this.usageRefresh = new UsageRefreshButton(ctx);

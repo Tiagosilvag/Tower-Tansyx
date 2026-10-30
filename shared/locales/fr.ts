@@ -658,6 +658,8 @@ export const FR: Readonly<Record<string, string>> = {
   "os documentos do chat só abrem pelo próprio computador (http://localhost)": "les documents du chat ne s'ouvrent que depuis l'ordinateur lui-même (http://localhost)",
   "Atualizar o documento": "Actualiser le document",
   "Copiar o texto": "Copier le texte",
+  "Mostrar os contadores": "Afficher les compteurs",
+  "Recolher os contadores": "Replier les compteurs",
   "Exportar o .md": "Exporter le .md",
   "Documento grande: só o começo aparece aqui. Use Abrir para ver tudo.": "Document volumineux : seul le début s'affiche ici. Utilisez Ouvrir pour tout voir.",
   "Compactação pedida: o chat mostra \"Compactando a conversa…\" até terminar.": "Compactage demandé : le chat affiche « Compactage de la conversation… » jusqu'à la fin.",

@@ -834,6 +834,35 @@
   border: 1px solid var(--ui-line);
 }
 
+.ui-counters__fold {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 18px;
+  height: 30px;
+  margin-right: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-faint);
+  cursor: pointer;
+}
+
+.ui-counters__fold:hover {
+  background: var(--ui-bg-hover);
+  color: var(--ui-text);
+}
+
+.ui-counters__fold:focus-visible {
+  outline: 2px solid var(--ui-accent);
+}
+
+/* Recolhido: só o botão e, havendo alguém esperando, o "precisa de você". */
+.ui-counters.is-folded .ui-counter:not(.ui-counter--waiting.is-active) {
+  display: none;
+}
+
 .ui-counter {
   display: flex;
   flex-direction: column;

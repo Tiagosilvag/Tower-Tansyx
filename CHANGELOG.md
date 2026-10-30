@@ -12,6 +12,8 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Contadores da barra superior recolhíveis.** Uma setinha no início do resumo (salas, agentes, trabalhando, subagentes)
+  recolhe os números; o "precisa de você" continua à vista enquanto houver alguém esperando. A escolha fica salva.
 - **Chat, Kanban e documentos podem cobrir a barra superior.** Dá para arrastar e esticar essas janelas até a borda de cima da
   tela, e o botão de expandir agora ocupa a tela inteira, barra superior incluída.
 - **Renomear a sessão.** Um lápis ao lado do título da sessão, no painel do agente, manda `/rename` para o Claude Code. Aparece
