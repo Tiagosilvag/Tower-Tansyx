@@ -18,6 +18,11 @@ do meio (0.**3**.0).
 
 ### Corrigido
 
+- **Celular: barra superior, cabeçalho do chat e caixa de mensagem.** A barra do alto passou a caber em duas linhas (botões um
+  pouco menores no celular); o cabeçalho do chat quebra em duas linhas em vez de esconder o nome do agente e os botões de
+  expandir e fechar; a caixa de mensagem mostra o texto numa linha própria, com os botões (anexar, ditar, pausar, compactar,
+  enviar) numa linha de baixo e com alvo de toque maior; o botão de copiar deixou de cobrir o texto nas telas de toque. Os
+  botões da caixa de mensagem também não caem mais para uma segunda linha no computador.
 - **A janela do documento .md aparecia transparente.** Ela era criada fora do contêiner da interface, onde as cores do
   tema não existem; agora nasce dentro dele e usa o mesmo painel escuro do chat.
 - **A prévia de página do Artifact no chat mostrava a versão antiga.** Quando o agente republicava a mesma página, o
