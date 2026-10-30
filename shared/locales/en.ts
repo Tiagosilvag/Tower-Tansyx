@@ -2461,6 +2461,7 @@ export const EN: Readonly<Record<string, string>> = {
   "Modelo da sessão": "Session model",
   "Modo de permissão": "Permission mode",
   "Não deu para pausar": "Could not pause",
+  "Espere o agente terminar para compactar.": "Wait for the agent to finish before compacting.",
   "Não deu para trocar o modelo": "Could not switch the model",
   "Para pausar, use \"Assumir daqui\": só dá para pausar sessões abertas pelo Habblaud": "To pause, use \"Take over\": only sessions opened by Habblaud can be paused",
   "Para trocar o modelo, use \"Assumir daqui\": só dá para trocar em sessões abertas pelo Habblaud.": "To switch the model, use \"Take over\": only sessions opened by Habblaud can be switched.",

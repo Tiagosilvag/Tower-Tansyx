@@ -2477,6 +2477,7 @@ export const FR: Readonly<Record<string, string>> = {
   "Modelo da sessão": "Modèle de la session",
   "Modo de permissão": "Mode de permission",
   "Não deu para pausar": "Impossible de mettre en pause",
+  "Espere o agente terminar para compactar.": "Attendez que l'agent ait fini pour compacter.",
   "Não deu para trocar o modelo": "Impossible de changer de modèle",
   "Para pausar, use \"Assumir daqui\": só dá para pausar sessões abertas pelo Habblaud": "Pour mettre en pause, utilisez « Reprendre d'ici » : seules les sessions ouvertes par Habblaud peuvent l'être",
   "Para trocar o modelo, use \"Assumir daqui\": só dá para trocar em sessões abertas pelo Habblaud.": "Pour changer de modèle, utilisez « Reprendre d'ici » : seules les sessions ouvertes par Habblaud le permettent.",

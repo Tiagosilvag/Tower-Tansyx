@@ -6,7 +6,7 @@ import type { UiContext } from './context';
 import { h, setHidden, setText } from './dom';
 import { formatDuration } from './format';
 import { ptyOfAgent, sendPtyKeys } from './ptyapi';
-import { choiceOf, compactTokens, contextPercent, contextWindow, MODEL_CHOICES, modelLabel, switchModelKeys } from './session-info';
+import { choiceOf, COMPACT_COMMAND, compactTokens, contextPercent, contextWindow, MODEL_CHOICES, modelLabel, switchModelKeys } from './session-info';
 
 const LOCALE = intlLocale();
 
@@ -45,6 +45,8 @@ export class SessionChips {
   private readonly modelPop: HTMLElement;
   private readonly ctxPop: HTMLElement;
   private agent: AgentInfo | null = null;
+  private compactTimer: ReturnType<typeof setTimeout> | null = null;
+  private compactArmed = false;
 
   constructor(private readonly ctx: UiContext) {
     this.modelBtn = h('button', { class: 'ui-term__chip', type: 'button', attrs: { 'aria-haspopup': 'dialog', 'aria-expanded': 'false' } });
@@ -82,6 +84,53 @@ export class SessionChips {
   closeAll(): void {
     close(this.modelPop);
     close(this.ctxPop);
+    this.disarmCompact();
+  }
+
+  private disarmCompact(): void {
+    if (this.compactTimer) clearTimeout(this.compactTimer);
+    this.compactTimer = null;
+    this.compactArmed = false;
+  }
+
+  /** Compactar: dois toques (o primeiro pede a confirmação), porque a conversa passa a valer só pelo resumo. */
+  private compactButton(a: AgentInfo): HTMLButtonElement {
+    const pty = ptyOfAgent(this.ctx.store, a.id);
+    const busy = a.status === 'working' || a.status === 'waiting' || !!pty?.compacting;
+    const b = h('button', { class: `ui-sesspop__compact${this.compactArmed ? ' is-confirm' : ''}`, type: 'button', text: this.compactArmed ? tr('Confirmar?') : tr('Compactar') });
+    b.disabled = !pty || busy;
+    b.title = !pty
+      ? tr('Para compactar, use "Assumir daqui": só dá para compactar sessões abertas pelo Habblaud')
+      : busy
+        ? tr('Espere o agente terminar para compactar.')
+        : tr('Compactar a conversa: manda /compact para a sessão (resume o histórico e libera contexto)');
+    b.addEventListener('click', () => void this.compact());
+    return b;
+  }
+
+  private async compact(): Promise<void> {
+    const a = this.agent;
+    const pty = a ? ptyOfAgent(this.ctx.store, a.id) : undefined;
+    if (!pty) return;
+    if (!this.compactArmed) {
+      this.compactArmed = true;
+      this.compactTimer = setTimeout(() => {
+        this.disarmCompact();
+        if (isOpen(this.ctxPop)) this.fillCtx();
+      }, 4000);
+      return this.fillCtx();
+    }
+    this.disarmCompact();
+    close(this.ctxPop);
+    try {
+      // O comando e o Enter vão separados: o Claude Code trata um bloco com Enter no meio como texto colado.
+      await sendPtyKeys(pty.id, COMPACT_COMMAND);
+      await new Promise((r) => setTimeout(r, 200));
+      await sendPtyKeys(pty.id, '\r');
+      this.ctx.announce(tr('Compactação pedida: o chat mostra "Compactando a conversa…" até terminar.'));
+    } catch (err) {
+      this.ctx.announce(`${tr('Não deu para compactar')}: ${err instanceof Error ? err.message : ''}`);
+    }
   }
 
   private toggle(pop: HTMLElement, anchor: HTMLElement, fill: () => void): void {
@@ -145,6 +194,7 @@ export class SessionChips {
       h('div', { class: 'ui-sesspop__sub', text: tr('{0} de {1} tokens ({2}%)', [compactTokens(tokens, LOCALE), compactTokens(win, LOCALE), pct]) }),
       meter,
       h('div', { class: 'ui-sesspop__sub', text: tr('Restam cerca de {0} tokens antes de compactar.', [compactTokens(Math.max(0, win - tokens), LOCALE)]) }),
+      this.compactButton(a),
       h('dl', { class: 'ui-sesspop__kv' }, ...rows.flatMap(([k, v]) => [h('dt', { text: k }), h('dd', { text: v })])),
       h('p', { class: 'ui-sesspop__note', text: tr('Valores lidos do transcript da sessão. A janela de contexto é estimada pelo modelo.') }),
     );

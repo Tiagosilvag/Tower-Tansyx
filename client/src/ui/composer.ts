@@ -27,7 +27,7 @@ import type { UiContext } from './context';
 import { DictationButton, dictationAvailable, insertDictation } from './dictation';
 import { ICONS } from './icons';
 import { attachToMessage, ptyOfAgent, sendPtyKeys } from './ptyapi';
-import { COMPACT_COMMAND, PAUSE_KEYS } from './session-info';
+import { PAUSE_KEYS } from './session-info';
 import { h, setAttr, setHidden, setText, setTitle } from './dom';
 import { access } from '../net/access';
 import { tr } from '../../../shared/i18n';
@@ -73,8 +73,6 @@ export class MessageComposer {
   private attachBtn: HTMLButtonElement;
   /** Só no terminal, com o agente trabalhando: manda Esc para a sessão (precisa do terminal do Habblaud). */
   private pauseBtn: HTMLButtonElement;
-  private compactBtn: HTMLButtonElement;
-  private compactTimer: ReturnType<typeof setTimeout> | null = null;
   private fileInput: HTMLInputElement;
   /**
    * A sugestão de próximo prompt do Claude Code (o texto cinza do campo de entrada dele, que o Tab aceita), lida da tela
@@ -177,12 +175,9 @@ export class MessageComposer {
       tr('Pausar'),
     );
     this.pauseBtn.addEventListener('click', () => void this.pause());
-    // Compactar: dois toques (o primeiro pede a confirmação), porque a conversa passa a valer só pelo resumo.
-    this.compactBtn = h('button', { class: 'ui-msg__compact', type: 'button', hidden: true, text: tr('Compactar'), attrs: { 'aria-label': tr('Compactar a conversa') } });
-    this.compactBtn.addEventListener('click', () => void this.compact());
     this.row = h('div', { class: `ui-msg__row${term ? ' ui-term__prompt ui-term__prompt--mic' : ''}` });
     if (term) this.row.append(h('span', { class: 'ui-term__caret', text: '>', attrs: { 'aria-hidden': 'true' } }));
-    this.row.append(this.box, this.attachBtn, this.fileInput, this.dictate.el, this.pauseBtn, this.compactBtn, this.sendBtn);
+    this.row.append(this.box, this.attachBtn, this.fileInput, this.dictate.el, this.pauseBtn, this.sendBtn);
     // Clique na "linha do prompt" (fora do botão) põe o cursor na caixa, como num terminal.
     this.row.addEventListener('mousedown', (e) => {
       if (e.target === this.row && !this.box.disabled) {
@@ -237,12 +232,6 @@ export class MessageComposer {
     setHidden(this.pauseBtn, !(term && ready && agent?.status === 'working'));
     this.pauseBtn.disabled = !pty;
     setTitle(this.pauseBtn, pty ? tr('Pausar o que o agente está fazendo (manda Esc para a sessão)') : tr('Para pausar, use "Assumir daqui": só dá para pausar sessões abertas pelo Habblaud'));
-    // Compactar: só no terminal, com o agente parado (não trabalhando) e sem estar compactando.
-    const compacting = !!pty?.compacting;
-    setHidden(this.compactBtn, !(term && ready && agent && agent.status !== 'working' && !compacting));
-    this.compactBtn.disabled = !pty;
-    if (!pty) this.resetCompact();
-    setTitle(this.compactBtn, pty ? tr('Compactar a conversa: manda /compact para a sessão (resume o histórico e libera contexto)') : tr('Para compactar, use "Assumir daqui": só dá para compactar sessões abertas pelo Habblaud'));
     // Consulta em cache (30 s): o Mac pode instalar o Whisper ou parar o auxiliar com a página aberta.
     void dictationAvailable().then((ok) => {
       if (ok === this.canDictate) return;
@@ -443,34 +432,6 @@ export class MessageComposer {
       this.ctx.announce(tr('Pausa enviada: o agente para e espera a sua próxima mensagem.'));
     } catch (err) {
       this.ctx.announce(`${tr('Não deu para pausar')}: ${err instanceof Error ? err.message : ''}`);
-    }
-  }
-
-  private resetCompact(): void {
-    if (this.compactTimer) clearTimeout(this.compactTimer);
-    this.compactTimer = null;
-    this.compactBtn.classList.remove('is-confirm');
-    setText(this.compactBtn, tr('Compactar'));
-  }
-
-  private async compact(): Promise<void> {
-    const pty = ptyOfAgent(this.ctx.store, this.agentId);
-    if (!pty) return;
-    if (!this.compactBtn.classList.contains('is-confirm')) {
-      this.compactBtn.classList.add('is-confirm');
-      setText(this.compactBtn, tr('Confirmar?'));
-      this.compactTimer = setTimeout(() => this.resetCompact(), 4000);
-      return;
-    }
-    this.resetCompact();
-    try {
-      // O comando e o Enter vão separados: o Claude Code trata um bloco com Enter no meio como texto colado.
-      await sendPtyKeys(pty.id, COMPACT_COMMAND);
-      await new Promise((r) => setTimeout(r, 200));
-      await sendPtyKeys(pty.id, '\r');
-      this.ctx.announce(tr('Compactação pedida: o chat mostra "Compactando a conversa…" até terminar.'));
-    } catch (err) {
-      this.ctx.announce(`${tr('Não deu para compactar')}: ${err instanceof Error ? err.message : ''}`);
     }
   }
 
