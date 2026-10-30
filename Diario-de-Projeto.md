@@ -6,6 +6,17 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Janelas móveis não passam mais das laterais
+
+- **Problema:** as janelas (chat, Kanban, documentos) podiam ser arrastadas para fora pelas laterais, ficando só 80 px visíveis.
+- **Decisão do dono:** remover essa possibilidade.
+- **O que foi feito / Arquivos novos:** `client/src/ui/movable.ts`: a posição horizontal fica entre 0 e a largura da tela menos a da janela.
+- **Testes:** tipos, testes do cliente e build. Comportamento na tela não conferido. [CONFIRMAR]
+- **Limite conhecido:** em tela mais estreita que a largura mínima da janela (300 px) ela ainda encosta na esquerda e corta a direita.
+- **Para subir / Pendente:** aguardando deploy.
+
+---
+
 ## 30/10/2026 — Janelas flutuantes sem o limite da barra superior
 
 - **Problema:** o chat (terminal) e o Kanban não subiam acima da barra superior, nem arrastando, nem esticando, nem expandindo.

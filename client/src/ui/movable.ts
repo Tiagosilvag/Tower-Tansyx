@@ -5,8 +5,6 @@ import { ICONS } from './icons';
 import { tr } from '../../../shared/i18n';
 
 const DRAG_THRESHOLD = 4;
-/** Quanto da janela precisa continuar visível na tela. */
-const KEEP_VISIBLE = 80;
 const MIN_W = 300;
 const MIN_H = 160;
 
@@ -237,10 +235,10 @@ export class Movable {
     return (parseFloat(s.getPropertyValue('--top-h')) || 0) + (parseFloat(s.getPropertyValue('--gap')) || 0);
   }
 
-  /** Aplica a caixa, mantendo um pedaço da janela (e a barra) dentro da tela. */
+  /** Aplica a caixa, mantendo a janela inteira dentro da tela (sem passar das laterais nem da borda de baixo). */
   private apply(b: Box): void {
     const w = Math.max(MIN_W, Math.min(b.w, innerWidth));
-    const x = Math.min(innerWidth - KEEP_VISIBLE, Math.max(KEEP_VISIBLE - w, b.x));
+    const x = Math.max(0, Math.min(innerWidth - w, b.x));
     // O limite de cima vence o de baixo: numa janela baixa demais, a barra continua alcançável.
     const y = Math.max(this.minTop(), Math.min(innerHeight - MIN_H, b.y));
     // A altura encolhe para a janela não passar da borda de baixo.

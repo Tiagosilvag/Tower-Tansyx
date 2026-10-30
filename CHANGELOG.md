@@ -12,6 +12,8 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Janelas móveis não passam mais das laterais.** Chat, Kanban e documentos ficam inteiros dentro da tela ao arrastar ou esticar
+  (antes deixavam até quase toda a largura para fora).
 - **Contadores da barra superior recolhíveis.** Uma setinha no início do resumo (salas, agentes, trabalhando, subagentes)
   recolhe os números; o "precisa de você" continua à vista enquanto houver alguém esperando. Começam recolhidos; a escolha fica salva.
 - **Chat, Kanban e documentos podem cobrir a barra superior.** Dá para arrastar e esticar essas janelas até a borda de cima da
