@@ -6,6 +6,7 @@
 //   GET  /api/pty/:id/suggestion       {suggestion: string | null}: a sugestão de prompt do Claude Code na tela (só no tmux)
 //   POST /api/pty/:id/attach           {name, type?, data (base64)}: grava o arquivo em ~/.habblaud/attachments e devolve {path}
 //   POST /api/agents/:id/stop          encerra o agente (aqui ou noutro terminal)
+//   POST /api/agents/:id/removed       {from}: o chat esconde, para todos, as mensagens de `from` até agora (botão Excluir)
 //   POST /api/agents/:id/takeover      assume a sessão: encerra lá e retoma aqui
 // Quem controla um terminal destes executa comandos na máquina: só conexões do próprio computador, com Host
 // local e (quando o navegador manda) Origin da mesma origem. A borda (http/guard.ts) já exige JSON nos POST. Com
@@ -19,7 +20,7 @@ import { isRemoteRequest } from './remote';
 import { tr } from '../../shared/i18n';
 
 /** /api/agents/:id/(stop|takeover) (ids nunca contêm '/'). */
-const AGENT_ACTION_ROUTE = /^\/api\/agents\/([^/]+)\/(stop|takeover)$/;
+const AGENT_ACTION_ROUTE = /^\/api\/agents\/([^/]+)\/(stop|takeover|removed)$/;
 
 function isLoopbackAddress(addr: string | undefined): boolean {
   if (!addr) return false;
@@ -58,7 +59,7 @@ export function ptyRequestProblem(req: IncomingMessage, remoteFull = false): str
  */
 export function createPtyRoutes(
   ptys: PtyManager,
-  opts: { remoteFull?: boolean; typed?: (req: IncomingMessage, id: string, data: string) => void } = {},
+  opts: { remoteFull?: boolean; typed?: (req: IncomingMessage, id: string, data: string) => void; removed?: (agentId: string, from: number) => boolean } = {},
 ): (req: IncomingMessage, res: ServerResponse, path: string) => void {
   const fail = (res: ServerResponse, err: unknown) => {
     if (res.headersSent) return void res.destroy();
@@ -92,6 +93,12 @@ export function createPtyRoutes(
       const id = decode(action[1]);
       if (action[2] === 'stop') {
         await ptys.stop(id);
+        return noContent(res);
+      }
+      if (action[2] === 'removed') {
+        const from = Number(body?.from);
+        if (!Number.isFinite(from) || from < 0) throw new HttpError(400, tr('hora inválida'));
+        if (!opts.removed?.(id, from)) throw new HttpError(404, tr('conversa não encontrada'));
         return noContent(res);
       }
       return sendJson(res, 201, await ptys.takeover(id, { cols: body?.cols, rows: body?.rows }));

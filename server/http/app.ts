@@ -125,7 +125,7 @@ const TERMINAL_ROUTE = /^\/api\/agents\/([^/]+)\/terminal$/;
 /** GET /api/agents/:id/terminal/earlier?before=N: a conversa anterior à já carregada. */
 const TERMINAL_EARLIER_ROUTE = /^\/api\/agents\/([^/]+)\/terminal\/earlier$/;
 /** POST /api/agents/:id/stop|takeover (terminal interativo). */
-const AGENT_ACTION_ROUTE = /^\/api\/agents\/[^/]+\/(stop|takeover)$/;
+const AGENT_ACTION_ROUTE = /^\/api\/agents\/[^/]+\/(stop|takeover|removed)$/;
 
 /** PUT|DELETE /api/agents/:id/character: personagem do projeto (ver Office.setCharacter). */
 const CHARACTER_ROUTE = /^\/api\/agents\/([^/]+)\/character$/;

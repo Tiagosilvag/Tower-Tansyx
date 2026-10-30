@@ -727,9 +727,16 @@ export const EN: Readonly<Record<string, string>> = {
   "Duas linhas": "Two rows",
   "Quatro cantos": "Four corners",
   "Apaga esta mensagem e a resposta que veio depois, como se não tivessem existido. A conversa do Claude Code volta a antes dela.": "Deletes this message and the reply after it, as if they never existed. The Claude Code conversation goes back to before it.",
-  "Mensagem apagada na sessão.": "Message deleted from the session.",
-  "Apagada da sessão: o agente não a vê mais": "Deleted from the session: the agent no longer sees it",
   "Não deu para apagar a mensagem": "Could not delete the message",
+  "Apagar esta mensagem?": "Delete this message?",
+  "A mensagem e a resposta do agente depois dela somem do chat de todos os sócios, e o Claude Code volta a conversa para antes dela. Não dá para desfazer.": "The message and the agent’s reply after it disappear from every partner’s chat, and Claude Code rolls the conversation back to before it. This cannot be undone.",
+  "Apagar de vez": "Delete for good",
+  "Mensagem apagada.": "Message deleted.",
+  "hora inválida": "invalid time",
+  "conversa não encontrada": "conversation not found",
+  "removed.json ilegível ({0}); começando do zero.": "removed.json unreadable ({0}); starting from scratch.",
+  "Não deu para guardar as mensagens apagadas ({0}).": "Could not save the deleted messages ({0}).",
+  "Terminal: não foi possível reler a conversa ({0}).": "Terminal: could not reread the conversation ({0}).",
   "Ver {0}": "View {0}",
 
   // client/src/ui/termactions.ts

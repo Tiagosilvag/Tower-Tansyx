@@ -690,9 +690,16 @@ export const FR: Readonly<Record<string, string>> = {
   "Duas linhas": "Deux lignes",
   "Quatro cantos": "Quatre coins",
   "Apaga esta mensagem e a resposta que veio depois, como se não tivessem existido. A conversa do Claude Code volta a antes dela.": "Supprime ce message et la réponse qui suit, comme s’ils n’avaient jamais existé. La conversation de Claude Code revient à avant lui.",
-  "Mensagem apagada na sessão.": "Message supprimé de la session.",
-  "Apagada da sessão: o agente não a vê mais": "Supprimé de la session : l’agent ne le voit plus",
   "Não deu para apagar a mensagem": "Impossible de supprimer le message",
+  "Apagar esta mensagem?": "Supprimer ce message ?",
+  "A mensagem e a resposta do agente depois dela somem do chat de todos os sócios, e o Claude Code volta a conversa para antes dela. Não dá para desfazer.": "Le message et la réponse de l’agent qui suit disparaissent du chat de tous les associés, et Claude Code ramène la conversation à avant lui. Action irréversible.",
+  "Apagar de vez": "Supprimer définitivement",
+  "Mensagem apagada.": "Message supprimé.",
+  "hora inválida": "heure invalide",
+  "conversa não encontrada": "conversation introuvable",
+  "removed.json ilegível ({0}); começando do zero.": "removed.json illisible ({0}) ; on repart de zéro.",
+  "Não deu para guardar as mensagens apagadas ({0}).": "Impossible d’enregistrer les messages supprimés ({0}).",
+  "Terminal: não foi possível reler a conversa ({0}).": "Terminal : impossible de relire la conversation ({0}).",
   "Ver {0}": "Voir {0}",
 
   // client/src/ui/terminal.ts

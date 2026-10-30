@@ -12,7 +12,7 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
-- **Excluir a última mensagem.** Na última mensagem sua do chat, com o agente parado e a sessão aberta pelo Tower, o botão "Excluir" (dois cliques) volta a conversa do Claude Code para antes dela. No chat do Tower ela fica riscada, com o aviso "Apagada da sessão" (a marca fica guardada neste navegador).
+- **Excluir a última mensagem.** Na última mensagem sua do chat, com o agente parado e a sessão aberta pelo Tower, o botão "Excluir" abre uma janela de confirmação; confirmando, a conversa do Claude Code volta a antes dela e a mensagem (com a resposta que veio depois) some do chat de todos os sócios. Não dá para desfazer.
 - **A barra lateral empurra as janelas.** Com a barra do escritório aberta, todas as janelas abertas (chats, Kanban e
   documentos) encolhem na mesma proporção para ficar ao lado dela em vez de ficar por baixo, e voltam ao tamanho que tinham quando ela recolhe.
 - **Organizar as janelas, como os Snap Layouts do Windows.** Um botão de grade na barra do chat, do Kanban e dos documentos abre as

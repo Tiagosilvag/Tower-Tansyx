@@ -19,6 +19,7 @@ import { UserAuth, UserSessions, UserThrottle } from './users/auth';
 import { createUsersRoutes } from './users/http';
 import { UserStore } from './users/store';
 import { SenderLog } from './users/senders';
+import { RemovedStore } from './terminal/removed';
 import { KanbanFiles } from './kanban/files';
 import { Presence } from './users/presence';
 import { createPresenceRoutes } from './users/presence-http';
@@ -220,8 +221,17 @@ let senders: SenderLog | undefined;
 const typed = new TypedLines();
 // Terminal: só existe com bind local (ver terminalOffReason em config.ts).
 // Cada agente com o parser da ferramenta dele (o do Claude Code por padrão).
+// Mensagens apagadas pelo botão "Excluir" do chat, em <dataDir>/removed.json.
+const removed = new RemovedStore(join(config.dataDir, 'removed.json'));
+removed.load();
 const terminals = config.terminal
-  ? new TerminalStreams({ office, transcriptPathOf: (id) => agents.transcriptPathOf(id), parserFor: (id) => agents.parserFor(id), annotate: (e) => senders?.annotate(e) ?? e })
+  ? new TerminalStreams({
+      office,
+      transcriptPathOf: (id) => agents.transcriptPathOf(id),
+      parserFor: (id) => agents.parserFor(id),
+      annotate: (e) => senders?.annotate(e) ?? e,
+      hides: (path, e) => removed.hides(path, e),
+    })
   : undefined;
 // Histórico do terminal (sessões recentes, abertas ou encerradas, de todas as ferramentas): mesma trava.
 const history = config.terminal
@@ -459,7 +469,17 @@ const api = createApiHandler({
   timeline: createTimelineHandler({ dir: timelineDir, recording: !!timeline }),
   permissions: permissions ? createPermissionRoutes(permissions) : undefined,
   messages: messages ? createMessageRoutes(messages, { sent: (req, text) => noteSender(req, text) }) : undefined,
-  pty: ptys ? createPtyRoutes(ptys, { remoteFull: !!config.remote?.full, typed: (req, id, data) => noteTyped(req, id, data) }) : undefined,
+  pty: ptys ? createPtyRoutes(ptys, {
+        remoteFull: !!config.remote?.full,
+        typed: (req, id, data) => noteTyped(req, id, data),
+        removed: (id, from) => {
+          const path = agents.transcriptPathOf(id);
+          if (!path) return false;
+          removed.add(path, from, Date.now());
+          terminals?.refresh(path);
+          return true;
+        },
+      }) : undefined,
   usageRefresh: usageRefresher,
   spawn,
   attachments,

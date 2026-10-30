@@ -9,10 +9,10 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 ## 30/10/2026 — Excluir a última mensagem
 
 - **Problema:** não havia como desfazer uma mensagem enviada por engano.
-- **Decisão do dono:** só permitir com o agente parado (pausado) ou quando for a última mensagem; fazer da forma mais simples.
-- **O que foi feito:** botão "Excluir" na última mensagem do usuário (`client/src/ui/terminal.ts`, passos em `DELETE_LAST_STEPS` de `session-info.ts`): manda ao terminal o seletor de voltar a conversa do Claude Code (Esc Esc, mensagem anterior, restaurar conversa) e limpa o texto devolvido. Dois cliques; só com a sessão aberta pelo Tower e o agente parado. O caminho foi testado numa sessão descartável do Claude Code (v2.1.314).
-- **Limite conhecido:** o arquivo da conversa só cresce, então a mensagem continua no chat do Tower, embora o agente já não a veja. Depois do primeiro uso o dono estranhou ela seguir aparecendo sem aviso: agora fica riscada, com "Apagada da sessão: o agente não a vê mais". A marca (faixa de horas) fica só no navegador de quem apagou; outros sócios e outros navegadores ainda a veem sem marca. Guardar no servidor ficou de fora. Depende do menu do Claude Code, que pode mudar entre versões.
-- **Testes:** passos testados em `session-info.test.ts`; o botão não foi conferido no navegador. [CONFIRMAR]
+- **Decisão do dono:** só permitir com o agente parado (pausado) ou quando for a última mensagem. Primeiro a versão simples (só as teclas); como a mensagem seguia aparecendo no chat sem aviso, passou a **sumir de vez para todos os sócios**, com janela pedindo confirmação.
+- **O que foi feito:** botão "Excluir" na última mensagem do usuário (`client/src/ui/terminal.ts`, passos em `DELETE_LAST_STEPS` de `session-info.ts`, janela em `client/src/ui/confirm.ts`): manda ao terminal o seletor de voltar a conversa do Claude Code (Esc Esc, mensagem anterior, restaurar conversa), limpa o texto devolvido e avisa o servidor. O servidor (`server/terminal/removed.ts`) guarda, por conversa, a faixa de horas apagada em arquivo no diretório de dados e `TerminalStreams` (`server/http/terminal.ts`) deixa de enviar essas entradas, inclusive na conversa anterior, e reenvia a conversa às telas abertas. O arquivo da conversa do Claude Code não é alterado (ele só cresce e o Claude Code o mantém aberto).
+- **Limite conhecido:** a mensagem some do Tower, mas continua no arquivo da conversa. Depende do menu do Claude Code (testado na v2.1.314), que pode mudar. Não dá para desfazer pela interface.
+- **Testes:** `removed.test.ts` (faixa, conversa certa, arquivo) e `session-info.test.ts`; o caminho das teclas foi conferido numa sessão descartável do Claude Code; botão, janela e o sumiço no chat não foram vistos no navegador. [CONFIRMAR]
 - **Para subir / Pendente:** aguardando deploy.
 
 ---

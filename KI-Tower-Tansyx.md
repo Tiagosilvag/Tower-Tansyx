@@ -90,6 +90,10 @@ repositório.
   arrastam, esticam, expandem na tela toda (barra superior incluída) e não passam das laterais. O botão de grade na barra de cada
   uma (`client/src/ui/layouts.ts`) abre oito divisões (colunas, terços, quartos...): encaixa só a janela ou distribui todas as
   abertas, da mais usada para a menos usada. Escondido em tela estreita; não reajusta sozinho se o navegador mudar de tamanho.
+- **Excluir a última mensagem:** botão no chat (só a última mensagem do usuário, agente parado, sessão aberta pelo Tower), com janela de
+  confirmação. Faz o Claude Code voltar a conversa (`DELETE_LAST_STEPS`, `client/src/ui/session-info.ts`) e o servidor passa a esconder
+  as entradas apagadas para todos (`server/terminal/removed.ts`, filtro em `server/http/terminal.ts`). O transcript não é alterado.
+  Depende do menu de voltar a conversa do Claude Code. [CONFIRMAR em uso real]
 - **Marcação de quem escreveu:** o chat mostra o prompt com degradê leve na cor do usuário, faixa fina e nome. O servidor guarda só
   (hora, texto normalizado, usuário) por 30 dias e casa com o transcript; o agente nunca recebe o nome. Não marca mensagem digitada
   fora da página nem registrada muito depois do envio; duas pessoas com o mesmo texto quase junto podem ter as marcas trocadas.

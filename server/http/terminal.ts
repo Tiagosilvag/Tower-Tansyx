@@ -57,6 +57,8 @@ export interface TerminalOptions {
   demoEntries?: (agent: AgentInfo, history: Activity[]) => TerminalEntry[];
   /** Marca de quem escreveu cada prompt (users/senders.ts); só o modo de usuários liga. */
   annotate?: (e: TerminalEntry) => TerminalEntry;
+  /** Entrada apagada pelo botão "Excluir" (terminal/removed.ts): não vai para a tela de ninguém. `path` = transcript da conversa. */
+  hides?: (path: string | undefined, e: TerminalEntry) => boolean;
   maxStreams?: number;
   initTailBytes?: number;
   initEntries?: number;
@@ -203,6 +205,9 @@ class DemoSource implements ConversationSource {
 interface Stream {
   res: ServerResponse;
   timer: ReturnType<typeof setInterval> | null;
+  source: ConversationSource;
+  /** Transcript da conversa que esta conexão mostra (muda no /clear). */
+  pathOf: () => string | undefined;
 }
 
 export class TerminalStreams {
@@ -249,7 +254,7 @@ export class TerminalStreams {
   attach(req: IncomingMessage, res: ServerResponse, agentId: string): void {
     const source = this.sourceFor(agentId);
     if (typeof source === 'string') return sendJson(res, 404, { error: source });
-    this.serve(req, res, agentId, source);
+    this.serve(req, res, agentId, source, () => this.opts.transcriptPathOf(agentId));
   }
 
   /**
@@ -259,7 +264,7 @@ export class TerminalStreams {
    */
   attachSession(req: IncomingMessage, res: ServerResponse, streamId: string, path: string, createParser?: () => TerminalParser): void {
     const o = { transcriptPathOf: () => undefined, createParser: createParser ?? this.createParser, initTailBytes: this.initTailBytes, initEntries: this.initEntries };
-    this.serve(req, res, streamId, new TranscriptSource(streamId, path, o, this.sessionPollMs));
+    this.serve(req, res, streamId, new TranscriptSource(streamId, path, o, this.sessionPollMs), () => path);
   }
 
   /**
@@ -283,7 +288,7 @@ export class TerminalStreams {
   private earlierFrom(path: string, before: number, createParser: () => TerminalParser): EarlierPage | string {
     try {
       const page = readEarlier(path, before, createParser);
-      return { ...page, entries: page.entries.map((e) => this.mark(e)) };
+      return { ...page, entries: page.entries.filter((e) => !this.opts.hides?.(path, e)).map((e) => this.mark(e)) };
     } catch (err) {
       log.warnOnce(`terminal-earlier-read:${errMsg(err)}`, tr('Terminal: não foi possível ler a conversa anterior ({0}).', [errMsg(err)]));
       return tr('não foi possível ler o transcript');
@@ -291,7 +296,7 @@ export class TerminalStreams {
   }
 
   /** Limite de terminais, `init` e o stream SSE de uma fonte já escolhida. */
-  private serve(req: IncomingMessage, res: ServerResponse, id: string, source: ConversationSource): void {
+  private serve(req: IncomingMessage, res: ServerResponse, id: string, source: ConversationSource, pathOf: () => string | undefined): void {
     if (this.streams.size >= this.maxStreams) {
       return sendJson(res, 429, { error: tr('terminais abertos demais (máximo de {0}); feche algum e tente de novo', [this.maxStreams]) });
     }
@@ -311,9 +316,9 @@ export class TerminalStreams {
       'X-Accel-Buffering': 'no',
     });
     res.write('retry: 2000\n\n');
-    const s: Stream = { res, timer: null };
+    const s: Stream = { res, timer: null, source, pathOf };
     this.streams.add(s);
-    this.write(s, frame('init', this.marked(init)));
+    this.write(s, frame('init', this.marked(init, s)));
     s.timer = setInterval(() => this.pump(s, source, id), source.intervalMs);
     s.timer.unref?.();
     const drop = () => this.drop(s);
@@ -355,8 +360,9 @@ export class TerminalStreams {
       log.warnOnce(`terminal:${agentId}:${errMsg(err)}`, tr('Terminal de {0}: {1}', [agentId, errMsg(err)]));
       return;
     }
-    if (r.init) this.write(s, frame('init', this.marked(r.init)));
-    if (r.append?.length) this.write(s, frame('append', r.append.map((e) => this.mark(e))));
+    if (r.init) this.write(s, frame('init', this.marked(r.init, s)));
+    const append = r.append?.filter((e) => !this.opts.hides?.(s.pathOf(), e));
+    if (append?.length) this.write(s, frame('append', append.map((e) => this.mark(e))));
     // O agente sumiu (demo desligado ou sessão simulada encerrada): o stream fica aberto só com pings.
     if (r.stop && s.timer) {
       clearInterval(s.timer);
@@ -369,8 +375,22 @@ export class TerminalStreams {
     return this.opts.annotate ? this.opts.annotate(e) : e;
   }
 
-  private marked(init: TerminalInit): TerminalInit {
-    return this.opts.annotate ? { ...init, entries: init.entries.map((e) => this.mark(e)) } : init;
+  private marked(init: TerminalInit, s: Stream): TerminalInit {
+    const path = s.pathOf();
+    const entries = this.opts.hides ? init.entries.filter((e) => !this.opts.hides!(path, e)) : init.entries;
+    return this.opts.annotate ? { ...init, entries: entries.map((e) => this.mark(e)) } : { ...init, entries };
+  }
+
+  /** Reenvia a conversa às telas abertas dela (depois de apagar mensagens). */
+  refresh(path: string): void {
+    for (const s of [...this.streams]) {
+      if (s.pathOf() !== path) continue;
+      try {
+        this.write(s, frame('init', this.marked(s.source.load(), s)));
+      } catch (err) {
+        log.warnOnce(`terminal-refresh:${errMsg(err)}`, tr('Terminal: não foi possível reler a conversa ({0}).', [errMsg(err)]));
+      }
+    }
   }
 
   private write(s: Stream, chunk: string): void {

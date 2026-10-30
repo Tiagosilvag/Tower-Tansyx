@@ -27,7 +27,8 @@ import { markDocPaths, openDoc } from './docviewer';
 import { renderMarkdown } from './markdown';
 import { roleLabel, shellWaitIn } from './model';
 import { providerOf } from './provider';
-import { ptyControllable, ptyOfAgent, sendPtyKeys } from './ptyapi';
+import { confirmDelete } from './confirm';
+import { hideRemoved, ptyControllable, ptyOfAgent, sendPtyKeys } from './ptyapi';
 import { DELETE_LAST_STEPS } from './session-info';
 import {
   clearHits,
@@ -799,9 +800,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   private log = new TerminalLog();
   private rows = new Map<string, HTMLElement>();
   private undoBtn: HTMLButtonElement | null = null;
-  private undoArmed: ReturnType<typeof setTimeout> | null = null;
   private undoBusy = false;
-  private removedNow: Array<[number, number]> = [];
   private tools = new Map<string, ToolRefs>();
   /** Grudado no fim: mensagens novas rolam a tela. */
   private follow = true;
@@ -1700,10 +1699,9 @@ export class TerminalPanel implements UiComponent, TerminalControl {
 
   /** "Excluir" na última mensagem do usuário: só com a sessão do terminal do Tower e o agente parado. */
   private renderUndo(live: AgentInfo | null): void {
-    this.markRemoved();
     const ok = !!live && !this.session && ptyControllable(live) && !!ptyOfAgent(this.ctx.store, live.id) && live.status !== 'working';
     let last: Element | null = null;
-    if (ok) for (const c of Array.from(this.list.children).reverse()) if (c.classList.contains('ui-term__row--user') && !c.classList.contains('is-removed')) { last = c; break; }
+    if (ok) for (const c of Array.from(this.list.children).reverse()) if (c.classList.contains('ui-term__row--user')) { last = c; break; }
     if (!last) {
       this.undoBtn?.remove();
       return;
@@ -1721,15 +1719,9 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     const b = this.undoBtn;
     const agent = this.id !== null ? this.ctx.agent(this.id) : undefined;
     const pty = agent ? ptyOfAgent(this.ctx.store, agent.id) : undefined;
-    if (!b || !pty || this.undoBusy) return;
-    if (!this.undoArmed) {
-      setText(b, tr('Confirmar?'));
-      b.classList.add('is-armed');
-      this.undoArmed = setTimeout(() => this.disarmUndo(), 4000);
-      return;
-    }
-    this.disarmUndo();
-    const from = Number(this.undoBtn?.parentElement?.getAttribute('data-at'));
+    const from = Number(b?.parentElement?.getAttribute('data-at'));
+    if (!b || !agent || !pty || this.undoBusy || !Number.isFinite(from)) return;
+    if (!(await confirmDelete())) return;
     this.undoBusy = true;
     b.disabled = true;
     try {
@@ -1737,64 +1729,13 @@ export class TerminalPanel implements UiComponent, TerminalControl {
         await sendPtyKeys(pty.id, keys);
         if (wait) await new Promise((r) => setTimeout(r, wait));
       }
-      this.saveRemoved(from);
-      this.ctx.announce(tr('Mensagem apagada na sessão.'));
+      await hideRemoved(agent.id, from);
+      this.ctx.announce(tr('Mensagem apagada.'));
     } catch (err) {
       this.ctx.announce(`${tr('Não deu para apagar a mensagem')}: ${err instanceof Error ? err.message : ''}`);
     } finally {
       this.undoBusy = false;
       b.disabled = false;
-    }
-  }
-
-  private removedKey(): string {
-    return `habblaud.removed.${this.id ?? ''}`;
-  }
-
-  private loadRemoved(): Array<[number, number]> {
-    try {
-      const v: unknown = JSON.parse(localStorage.getItem(this.removedKey()) ?? '[]');
-      return Array.isArray(v) ? v.filter((r): r is [number, number] => Array.isArray(r) && Number.isFinite(r[0]) && Number.isFinite(r[1])) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  /** Guarda a faixa apagada (da mensagem até a última entrada de agora): o arquivo da conversa não perde nada. */
-  private saveRemoved(from: number): void {
-    if (!Number.isFinite(from)) return;
-    let to = from;
-    for (const c of Array.from(this.list.children)) to = Math.max(to, Number(c.getAttribute('data-at')) || 0);
-    try {
-      localStorage.setItem(this.removedKey(), JSON.stringify([...this.loadRemoved(), [from, to]].slice(-20)));
-    } catch {
-      // sem armazenamento: a marca vale só até recarregar
-      this.removedNow = [...this.removedNow, [from, to]];
-    }
-    this.markRemoved();
-  }
-
-  /** Marca no chat o que foi apagado da sessão e põe o aviso na primeira linha de cada faixa. */
-  private markRemoved(): void {
-    const ranges = [...this.loadRemoved(), ...this.removedNow];
-    if (!ranges.length && !this.list.querySelector('.is-removed')) return;
-    let prev = false;
-    for (const c of Array.from(this.list.children)) {
-      const at = Number(c.getAttribute('data-at'));
-      const gone = Number.isFinite(at) && ranges.some(([f, t]) => at >= f && at <= t);
-      c.classList.toggle('is-removed', gone);
-      c.querySelector(':scope > .ui-term__removed')?.remove();
-      if (gone && !prev && c instanceof HTMLElement) c.append(h('span', { class: 'ui-term__removed', text: tr('Apagada da sessão: o agente não a vê mais'), attrs: { 'data-chrome': '' } }));
-      prev = gone;
-    }
-  }
-
-  private disarmUndo(): void {
-    if (this.undoArmed) clearTimeout(this.undoArmed);
-    this.undoArmed = null;
-    if (this.undoBtn) {
-      setText(this.undoBtn, tr('Excluir'));
-      this.undoBtn.classList.remove('is-armed');
     }
   }
 

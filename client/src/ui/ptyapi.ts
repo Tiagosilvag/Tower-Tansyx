@@ -50,6 +50,11 @@ export function takeoverAgent(agentId: string): Promise<PtyInfo | undefined> {
   return postPty<PtyInfo>(`/api/agents/${encodeURIComponent(agentId)}/takeover`, SIZE);
 }
 
+/** Esconde, para todos, as mensagens da conversa do agente de `from` (hora da mensagem) até agora. */
+export async function hideRemoved(agentId: string, from: number): Promise<void> {
+  await postPty(`/api/agents/${encodeURIComponent(agentId)}/removed`, { from });
+}
+
 /** Encerra o agente (aqui ou noutro terminal). */
 export async function stopAgent(agentId: string): Promise<void> {
   await postPty(`/api/agents/${encodeURIComponent(agentId)}/stop`, {});
