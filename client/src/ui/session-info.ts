@@ -53,6 +53,20 @@ export function compactTokens(n: number, locale?: string): string {
 /** Esc: o Claude Code interrompe o que está fazendo e espera o próximo prompt. */
 export const PAUSE_KEYS = '\x1b';
 
+/**
+ * Apagar a última mensagem: o seletor de voltar a conversa do Claude Code (Esc Esc, a mensagem anterior, "Restaurar
+ * conversa") e, no fim, limpar o texto que volta para a caixa. Cada passo é uma tecla e quanto esperar depois dela.
+ */
+export const DELETE_LAST_STEPS: ReadonlyArray<readonly [keys: string, waitMs: number]> = [
+  ['\x15', 200],
+  ['\x1b', 400],
+  ['\x1b', 900],
+  ['\x1b[A', 500],
+  ['\r', 900],
+  ['\r', 900],
+  ['\x15', 0],
+];
+
 /** Comando que compacta a conversa do Claude Code (o Enter vai depois, em outro envio). */
 export const COMPACT_COMMAND = '/compact';
 

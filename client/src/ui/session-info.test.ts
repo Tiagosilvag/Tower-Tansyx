@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { choiceOf, compactTokens, contextPercent, contextWindow, modelLabel, PAUSE_KEYS, renameKeys, renameName, switchModelKeys } from './session-info';
+import { DELETE_LAST_STEPS, choiceOf, compactTokens, contextPercent, contextWindow, modelLabel, PAUSE_KEYS, renameKeys, renameName, switchModelKeys } from './session-info';
 
 describe('renomear a sessão', () => {
   it('limpa quebras de linha e teclas de controle e limita o tamanho', () => {
@@ -59,5 +59,11 @@ describe('teclas', () => {
   it('pausar é Esc; trocar de modelo limpa a linha e manda /model com Enter', () => {
     expect(PAUSE_KEYS).toBe('\x1b');
     expect(switchModelKeys('claude-opus-5-5')).toBe('\x15/model claude-opus-5-5\r');
+  });
+});
+
+describe('apagar a última mensagem', () => {
+  it('abre o seletor com Esc Esc, escolhe a última mensagem, confirma e limpa a caixa', () => {
+    expect(DELETE_LAST_STEPS.map(([k]) => k)).toEqual(['\x15', '\x1b', '\x1b', '\x1b[A', '\r', '\r', '\x15']);
   });
 });

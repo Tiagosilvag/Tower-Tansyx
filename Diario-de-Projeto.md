@@ -6,6 +6,17 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Excluir a última mensagem
+
+- **Problema:** não havia como desfazer uma mensagem enviada por engano.
+- **Decisão do dono:** só permitir com o agente parado (pausado) ou quando for a última mensagem; fazer da forma mais simples.
+- **O que foi feito:** botão "Excluir" na última mensagem do usuário (`client/src/ui/terminal.ts`, passos em `DELETE_LAST_STEPS` de `session-info.ts`): manda ao terminal o seletor de voltar a conversa do Claude Code (Esc Esc, mensagem anterior, restaurar conversa) e limpa o texto devolvido. Dois cliques; só com a sessão aberta pelo Tower e o agente parado. O caminho foi testado numa sessão descartável do Claude Code (v2.1.314).
+- **Limite conhecido:** o arquivo da conversa só cresce, então a mensagem continua aparecendo no chat do Tower, embora o agente já não a veja. Esconder exigiria guardar no servidor o que foi removido (não feito, por escolha do dono). Depende do menu do Claude Code, que pode mudar entre versões.
+- **Testes:** passos testados em `session-info.test.ts`; o botão não foi conferido no navegador. [CONFIRMAR]
+- **Para subir / Pendente:** aguardando deploy.
+
+---
+
 ## 30/10/2026 — Janelas voltam a respeitar a barra superior (com margem menor)
 
 - **Problema:** as janelas podiam cobrir a barra superior (pedido de 30/10/2026); o dono mudou de ideia.

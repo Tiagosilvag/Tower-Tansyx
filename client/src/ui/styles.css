@@ -13637,3 +13637,45 @@ html.is-replay #world {
     left: calc(var(--side-w) + var(--gap) * 2);
   }
 }
+
+/* Excluir a última mensagem (terminal.ts): aparece ao passar o mouse na mensagem. */
+.ui-term__undo {
+  position: absolute;
+  z-index: 1;
+  right: 4px;
+  bottom: 3px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: rgba(16, 19, 27, 0.94);
+  border: 1px solid var(--ui-line-strong);
+  font: 500 11px/1 var(--font-ui);
+  color: var(--ui-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.ui-term__row--user {
+  position: relative;
+}
+
+.ui-term__row--user:hover > .ui-term__undo,
+.ui-term__undo:focus-visible,
+.ui-term__undo.is-armed {
+  opacity: 1;
+}
+
+.ui-term__undo:hover,
+.ui-term__undo.is-armed {
+  color: var(--ui-bad, #ff6b6b);
+  border-color: currentColor;
+}
+
+.ui-term__undo:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}

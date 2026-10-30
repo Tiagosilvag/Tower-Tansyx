@@ -689,6 +689,9 @@ export const FR: Readonly<Record<string, string>> = {
   "Três colunas": "Trois colonnes",
   "Duas linhas": "Deux lignes",
   "Quatro cantos": "Quatre coins",
+  "Apaga esta mensagem e a resposta que veio depois, como se não tivessem existido. A conversa do Claude Code volta a antes dela.": "Supprime ce message et la réponse qui suit, comme s’ils n’avaient jamais existé. La conversation de Claude Code revient à avant lui.",
+  "Mensagem apagada na sessão. Ela ainda aparece neste chat.": "Message supprimé de la session. Il apparaît encore dans ce chat.",
+  "Não deu para apagar a mensagem": "Impossible de supprimer le message",
   "Ver {0}": "Voir {0}",
 
   // client/src/ui/terminal.ts

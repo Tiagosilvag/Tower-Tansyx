@@ -726,6 +726,9 @@ export const EN: Readonly<Record<string, string>> = {
   "Três colunas": "Three columns",
   "Duas linhas": "Two rows",
   "Quatro cantos": "Four corners",
+  "Apaga esta mensagem e a resposta que veio depois, como se não tivessem existido. A conversa do Claude Code volta a antes dela.": "Deletes this message and the reply after it, as if they never existed. The Claude Code conversation goes back to before it.",
+  "Mensagem apagada na sessão. Ela ainda aparece neste chat.": "Message deleted from the session. It still shows in this chat.",
+  "Não deu para apagar a mensagem": "Could not delete the message",
   "Ver {0}": "View {0}",
 
   // client/src/ui/termactions.ts

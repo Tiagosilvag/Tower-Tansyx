@@ -27,6 +27,8 @@ import { markDocPaths, openDoc } from './docviewer';
 import { renderMarkdown } from './markdown';
 import { roleLabel, shellWaitIn } from './model';
 import { providerOf } from './provider';
+import { ptyControllable, ptyOfAgent, sendPtyKeys } from './ptyapi';
+import { DELETE_LAST_STEPS } from './session-info';
 import {
   clearHits,
   copyTextOf,
@@ -796,6 +798,9 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   private keep = 0;
   private log = new TerminalLog();
   private rows = new Map<string, HTMLElement>();
+  private undoBtn: HTMLButtonElement | null = null;
+  private undoArmed: ReturnType<typeof setTimeout> | null = null;
+  private undoBusy = false;
   private tools = new Map<string, ToolRefs>();
   /** Grudado no fim: mensagens novas rolam a tela. */
   private follow = true;
@@ -1102,6 +1107,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     this.chips.render(live);
     this.tabs.render(live ? live.id : null);
     this.renderFooter();
+    this.renderUndo(live);
     this.renderState();
     this.renderAsk(live);
     // Mensagens só para a sessão ao vivo (no histórico, a caixa diz que a sessão foi encerrada).
@@ -1377,6 +1383,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
       added++;
     }
     this.list.append(frag);
+    this.renderUndo(this.id !== null && !this.session ? (this.ctx.agent(this.id) ?? null) : null);
     this.applyFilter();
     // A busca continua valendo: destaca o que chegou (sem mudar o resultado atual).
     if (!initial && this.folded) this.refreshHits(touched);
@@ -1689,6 +1696,61 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   }
 
   // ---------------------------------------------------------------- estado e rodapé
+
+  /** "Excluir" na última mensagem do usuário: só com a sessão do terminal do Tower e o agente parado. */
+  private renderUndo(live: AgentInfo | null): void {
+    const ok = !!live && !this.session && ptyControllable(live) && !!ptyOfAgent(this.ctx.store, live.id) && live.status !== 'working';
+    let last: Element | null = null;
+    if (ok) for (const c of Array.from(this.list.children).reverse()) if (c.classList.contains('ui-term__row--user')) { last = c; break; }
+    if (!last) {
+      this.undoBtn?.remove();
+      return;
+    }
+    if (!this.undoBtn) {
+      const b = h('button', { class: 'ui-term__undo', type: 'button', text: tr('Excluir'), attrs: { 'data-chrome': '' } });
+      b.title = tr('Apaga esta mensagem e a resposta que veio depois, como se não tivessem existido. A conversa do Claude Code volta a antes dela.');
+      b.addEventListener('click', () => void this.deleteLast());
+      this.undoBtn = b;
+    }
+    if (this.undoBtn.parentElement !== last) last.append(this.undoBtn);
+  }
+
+  private async deleteLast(): Promise<void> {
+    const b = this.undoBtn;
+    const agent = this.id !== null ? this.ctx.agent(this.id) : undefined;
+    const pty = agent ? ptyOfAgent(this.ctx.store, agent.id) : undefined;
+    if (!b || !pty || this.undoBusy) return;
+    if (!this.undoArmed) {
+      setText(b, tr('Confirmar?'));
+      b.classList.add('is-armed');
+      this.undoArmed = setTimeout(() => this.disarmUndo(), 4000);
+      return;
+    }
+    this.disarmUndo();
+    this.undoBusy = true;
+    b.disabled = true;
+    try {
+      for (const [keys, wait] of DELETE_LAST_STEPS) {
+        await sendPtyKeys(pty.id, keys);
+        if (wait) await new Promise((r) => setTimeout(r, wait));
+      }
+      this.ctx.announce(tr('Mensagem apagada na sessão. Ela ainda aparece neste chat.'));
+    } catch (err) {
+      this.ctx.announce(`${tr('Não deu para apagar a mensagem')}: ${err instanceof Error ? err.message : ''}`);
+    } finally {
+      this.undoBusy = false;
+      b.disabled = false;
+    }
+  }
+
+  private disarmUndo(): void {
+    if (this.undoArmed) clearTimeout(this.undoArmed);
+    this.undoArmed = null;
+    if (this.undoBtn) {
+      setText(this.undoBtn, tr('Excluir'));
+      this.undoBtn.classList.remove('is-armed');
+    }
+  }
 
   private renderState(): void {
     setHidden(this.reconnEl, this.conn !== 'reconnecting');
