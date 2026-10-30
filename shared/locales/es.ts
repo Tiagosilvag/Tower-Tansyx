@@ -697,6 +697,12 @@ export const ES: Readonly<Record<string, string>> = {
   "Copiar o texto": "Copiar el texto",
   "Exportar o .md": "Exportar el .md",
   "Documento grande: só o começo aparece aqui. Use Abrir para ver tudo.": "Documento grande: aquí solo se ve el principio. Usa Abrir para verlo todo.",
+  "Compactação pedida: o chat mostra \"Compactando a conversa…\" até terminar.": "Compactación solicitada: el chat muestra \"Compactando la conversación…\" hasta que termine.",
+  "Compactar a conversa": "Compactar la conversación",
+  "Compactar a conversa: manda /compact para a sessão (resume o histórico e libera contexto)": "Compactar la conversación: envía /compact a la sesión (resume el historial y libera contexto)",
+  "Compactar": "Compactar",
+  "Não deu para compactar": "No se pudo compactar",
+  "Para compactar, use \"Assumir daqui\": só dá para compactar sessões abertas pelo Habblaud": "Para compactar, usa \"Tomar desde aquí\": solo se pueden compactar sesiones abiertas por Habblaud",
   "Ver {0}": "Ver {0}",
 
   // client/src/ui/termactions.ts

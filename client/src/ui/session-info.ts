@@ -53,6 +53,9 @@ export function compactTokens(n: number, locale?: string): string {
 /** Esc: o Claude Code interrompe o que está fazendo e espera o próximo prompt. */
 export const PAUSE_KEYS = '\x1b';
 
+/** Comando que compacta a conversa do Claude Code (o Enter vai depois, em outro envio). */
+export const COMPACT_COMMAND = '/compact';
+
 /** Troca o modelo: limpa o que estiver digitado na linha (Ctrl+U) e manda o /model. */
 export function switchModelKeys(modelId: string): string {
   return `\x15/model ${modelId}\r`;

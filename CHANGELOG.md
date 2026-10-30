@@ -37,6 +37,9 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Botão Compactar no chat.** Ao lado de Pausar, o botão **Compactar** manda `/compact` para a sessão quando o agente está
+  parado. O primeiro toque pede a confirmação ("Confirmar?"), o segundo envia; o chat passa a mostrar "Compactando a
+  conversa…". Só em sessões abertas pelo Habblaud (terminal interativo).
 - **Clique num `.md` citado no chat para abri-lo.** Caminho de markdown escrito como código na resposta do agente
   (por exemplo `docs/plano.md`) fica sublinhado e abre o documento formatado numa janela flutuante, como o Kanban
   (arrasta pela barra, puxa as bordas, expande, não bloqueia o escritório), com Atualizar, Copiar e Abrir. Só abre `.md` de pasta de projeto conhecida, nunca arquivo com cara de segredo, e o arquivo é relido a cada

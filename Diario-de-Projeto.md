@@ -6,6 +6,18 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
 
 ---
 
+## 30/10/2026 — Botão Compactar no chat
+
+- **Problema:** só dava para ver a compactação acontecendo; não havia como pedi-la pelo chat.
+- **Decisão do dono:** botão para mandar compactar a sessão quando quiser.
+- **O que foi feito / Arquivos novos:** botão "Compactar" ao lado de "Pausar", com confirmação em dois toques; envia o comando e o Enter
+  em envios separados. Aparece só com o agente parado e sessão do terminal interativo; some enquanto compacta.
+- **Testes:** typecheck, build, traduções e testes da interface. O envio real do comando não foi testado numa sessão viva por mim.
+- **Limite conhecido:** sem terminal do Habblaud na sessão (precisa "Assumir daqui") o botão fica desligado.
+- **Para subir / Pendente:** aguardando aprovação do deploy. Conferir em uso real que o Claude Code aceita o comando enviado assim. [CONFIRMAR]
+
+---
+
 ## 29/10/2026 — Documentos de `docs/` saem do repositório
 
 - **Problema:** os desenhos e planos do login e do Kanban tinham detalhes de ambiente e de autenticação, e o repositório é público.

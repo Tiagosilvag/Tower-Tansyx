@@ -13080,6 +13080,28 @@ html.is-replay #world {
   opacity: 0.45;
   cursor: not-allowed;
 }
+.ui-msg__compact {
+  flex: none;
+  padding: 5px 10px;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ui-text);
+  font: 700 12.5px/1.2 var(--font-ui);
+  cursor: pointer;
+}
+.ui-msg__compact:hover:not(:disabled) {
+  border-color: var(--ui-accent);
+}
+.ui-msg__compact.is-confirm {
+  border-color: #8a6a2f;
+  background: rgba(242, 193, 78, 0.16);
+  color: #ffd9a0;
+}
+.ui-msg__compact:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .ui-msg__pause-bars {
   display: inline-flex;
   gap: 3px;
