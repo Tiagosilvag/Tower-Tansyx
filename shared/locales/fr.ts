@@ -672,6 +672,7 @@ export const FR: Readonly<Record<string, string>> = {
   "Nome da sessão": "Nom de la session",
   "Renomeação pedida: o novo nome aparece aqui em instantes.": "Renommage demandé : le nouveau nom apparaît ici dans un instant.",
   "Não deu para renomear": "Impossible de renommer",
+  "Espere o agente terminar para renomear.": "Attendez que l'agent ait fini pour renommer.",
   "Ver {0}": "Voir {0}",
 
   // client/src/ui/terminal.ts

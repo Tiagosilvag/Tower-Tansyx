@@ -565,9 +565,14 @@ class AgentView {
     setHidden(this.title, !a.title || !this.titleForm.hidden);
     setTitle(this.title, a.title ?? '');
     // Só renomeia com a sessão rodando aqui e parada: o /rename é digitado no terminal dela.
-    const canRename = !!live && !!ptyOfAgent(this.ctx.store, a.id) && a.status !== 'working' && ptyControllable(a);
-    if (this.titleForm.hidden === false && (!canRename || this.titleAgent !== a.id)) this.closeTitle();
+    const canRename = !!live && !!ptyOfAgent(this.ctx.store, a.id) && ptyControllable(a);
+    const busy = a.status === 'working';
+    if (this.titleForm.hidden === false && (!canRename || busy || this.titleAgent !== a.id)) this.closeTitle();
     setHidden(this.titleBtn, !canRename || !this.titleForm.hidden);
+    this.titleBtn.disabled = busy;
+    const why = busy ? tr('Espere o agente terminar para renomear.') : tr('Renomear a sessão');
+    setTitle(this.titleBtn, why);
+    setAttr(this.titleBtn, 'aria-label', why);
     setHidden(this.titleBox, !a.title && !canRename);
     updateAccountChip(this.accChip, account, a.account, a.provider);
     setText(this.accName, account?.name ?? a.account);

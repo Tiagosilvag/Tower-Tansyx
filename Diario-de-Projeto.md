@@ -14,6 +14,7 @@ esquema de banco, endpoints internos, fluxos de autenticação nem dados de pess
   teclas de controle, até 90 caracteres) e `renameKeys` em `client/src/ui/session-info.ts`; o comando e o Enter vão em envios
   separados. O título novo volta pelo histórico da própria sessão, então vale também no histórico e no Claude Code.
 - **Testes:** testes de `renameName`/`renameKeys`; tipos. Interface e envio real do `/rename` não conferidos no navegador. [CONFIRMAR]
+- **Atualização (30/10/2026):** o lápis sumia com o agente trabalhando e parecia não existir; agora fica visível e apagado, com dica "Espere o agente terminar para renomear."
 - **Limite conhecido:** só aparece com a sessão aberta pelo Tower e parada; sessão sem terminal ou do histórico fica só leitura.
 - **Para subir / Pendente:** aguardando deploy.
 

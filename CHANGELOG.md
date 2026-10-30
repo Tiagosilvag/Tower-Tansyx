@@ -13,7 +13,7 @@ do meio (0.**3**.0).
 ### Adicionado
 
 - **Renomear a sessão.** Um lápis ao lado do título da sessão, no painel do agente, manda `/rename` para o Claude Code. Aparece
-  com a sessão aberta pelo Habblaud e parada.
+  com a sessão aberta pelo Habblaud; fica apagado enquanto o agente trabalha.
 - **Histórico do cartão do Kanban mais legível.** Cada evento ganha um bloco com fundo e faixa colorida, o nome de quem agiu
   fica maior e em cor, e os comentários têm um fundo mais forte, como as mensagens do chat.
 - **Exportar o .md na janela do documento.** Um botão na barra baixa o arquivo com o nome original.

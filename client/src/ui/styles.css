@@ -13476,3 +13476,8 @@ html.is-replay #world {
 .ui-hero__title-form {
   margin: 0;
 }
+
+.ui-hero__title-edit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

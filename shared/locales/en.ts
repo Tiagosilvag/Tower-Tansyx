@@ -709,6 +709,7 @@ export const EN: Readonly<Record<string, string>> = {
   "Nome da sessão": "Session name",
   "Renomeação pedida: o novo nome aparece aqui em instantes.": "Rename requested: the new name shows up here shortly.",
   "Não deu para renomear": "Could not rename",
+  "Espere o agente terminar para renomear.": "Wait for the agent to finish before renaming.",
   "Ver {0}": "View {0}",
 
   // client/src/ui/termactions.ts
